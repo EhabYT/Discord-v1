@@ -1,48 +1,32 @@
-/* eslint-disable no-useless-catch -- legacy handlers rethrow into the shared Express error boundary */
 const express = require('express');
 const router = express.Router({ mergeParams: true });
 const { db } = require('../../../database/index');
 const { EmbedBuilder, WebhookClient, PermissionsBitField } = require('discord.js');
 const { getUserPermLevel } = require('../middleware/permissions');
-const { hierarchyError } = require('../middleware/guild-access');
+const { sessionUserId } = require('../middleware/auth');
+const guildAccess = require('../middleware/guild-access');
+const rl = require('../middleware/rate-limit');
+const { withKeyLock } = require('../../../database/lock');
 const logger = require('../../../shared/lib/logger');
 const { ENTRY_REACTION, finalizeGiveaway, rerollGiveaway } = require('../../../shared/services/giveaways');
 
 module.exports = (botClient) => {
-    function requirePerm(minLevel) {
-        return async (req, res, next) => {
-            const userId = req.session?.user?.id;
-            if (!userId) {
-                if (process.env.DASHBOARD_AUTH === 'true') {
-                    return res.status(401).json({ error: 'Not authenticated' });
-                }
-                return next();
-            }
-            const level = await getUserPermLevel(botClient, req.params.guildId, userId);
-            if (level < minLevel) {
-                const names = ['Viewer', 'DJ', 'Moderator', 'Admin'];
-                return res.status(403).json({ error: 'Insufficient permissions', required: names[minLevel], yours: names[level] });
-            }
-            next();
-        };
-    }
+    // Guard implementations live in middleware/guildAccess.js so that EVERY
+    // guild-scoped router shares one definition. They were previously closures
+    // here, which is why routes/permissions.js — mounted on a more specific
+    // path and therefore matched first — inherited none of them and shipped
+    // unauthenticated. Two copies of a security rule is how the next
+    // divergence happens.
+    const requirePerm = (minLevel) => guildAccess.requirePerm(botClient, minLevel);
+    const hierarchyError = guildAccess.hierarchyError;
 
-    // ── Middleware: Validate Guild Access ──
-    function validateGuild(req, res, next) {
-        const { guildId } = req.params;
-        if (!botClient) return res.status(503).json({ error: 'Bot is initializing' });
+    // Apply validation to all routes in this router.
+    // requirePerm(0) makes every route — including GETs — require a session.
+    // Order matters: authenticate BEFORE resolving the guild, so an anonymous
+    // caller cannot distinguish a real guild (401) from an unknown one (404).
+    router.use(guildAccess.guildAccessStack(botClient, 0));
 
-        const guild = botClient.guilds.cache.get(guildId);
-        if (!guild) return res.status(404).json({ error: 'Server not found' });
-
-        req.guild = guild;
-        next();
-    }
-
-    // Apply validation to all routes in this router
-    router.use(validateGuild);
-
-    router.get('/', async (req, res) => {
+    router.get('/', async (req, res, next) => {
         try {
             const { guildId } = req.params;
             const guild = req.guild;
@@ -113,10 +97,10 @@ module.exports = (botClient) => {
                 customFilters: customFilters || [],
                 autoresponder: autoresponder || []
             });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.get('/leaderboard', async (req, res) => {
+    router.get('/leaderboard', async (req, res, next) => {
         try {
             const { guildId } = req.params;
             const type = req.query.type || 'xp';
@@ -149,10 +133,10 @@ module.exports = (botClient) => {
             }));
 
             res.json(enrichedEntries);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.get('/warnings', async (req, res) => {
+    router.get('/warnings', async (req, res, next) => {
         try {
             const { guildId } = req.params;
             const allKeys = await db.all();
@@ -164,10 +148,10 @@ module.exports = (botClient) => {
                     id: w.id || String(w.timestamp || i),
                 })));
             res.json(warnings);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.get('/activity', async (req, res) => {
+    router.get('/activity', async (req, res, next) => {
         try {
             const { guildId } = req.params;
             const guild = req.guild;
@@ -249,10 +233,10 @@ module.exports = (botClient) => {
                 .slice(0, 20);
 
             res.json(combined);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/automod', requirePerm(2), async (req, res) => {
+    router.post('/automod', requirePerm(2), async (req, res, next) => {
         try {
             const { guildId } = req.params;
             const { setting, value, threshold } = req.body;
@@ -269,10 +253,10 @@ module.exports = (botClient) => {
             }
             await db.set(`automod_${guildId}`, automod);
             res.json({ automod });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/welcome', requirePerm(3), async (req, res) => {
+    router.post('/welcome', requirePerm(3), async (req, res, next) => {
         try {
             const { guildId } = req.params;
             const { enabled, message, channelId, autoRoleId, embed,
@@ -293,38 +277,38 @@ module.exports = (botClient) => {
             if (typeof dmMessage !== 'undefined') config.dmMessage = dmMessage;
             await db.set(`welcome_${guildId}`, config);
             res.json(config);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
     const verify = require('../../../shared/services/verification');
 
-    router.get('/verification', async (req, res) => {
+    router.get('/verification', async (req, res, next) => {
         try {
             const config = await verify.getConfig(db, req.params.guildId);
             res.json(config);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.get('/verification/overview', async (req, res) => {
+    router.get('/verification/overview', async (req, res, next) => {
         try {
             res.json(await verify.overview(req.guild, db));
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.get('/verification/pending', async (req, res) => {
+    router.get('/verification/pending', async (req, res, next) => {
         try {
             const cfg = await verify.getConfig(db, req.params.guildId);
             res.json(await verify.listPending(req.guild, db, cfg));
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.get('/verification/log', async (req, res) => {
+    router.get('/verification/log', async (req, res, next) => {
         try {
             res.json(await verify.getLog(db, req.params.guildId));
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/verification', requirePerm(3), async (req, res) => {
+    router.post('/verification', requirePerm(3), async (req, res, next) => {
         try {
             const current = await verify.getConfig(db, req.params.guildId);
             const body = req.body || {};
@@ -334,10 +318,10 @@ module.exports = (botClient) => {
             }
             const saved = await verify.saveConfig(db, req.params.guildId, merged);
             res.json(saved);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/verification/panel', requirePerm(3), async (req, res) => {
+    router.post('/verification/panel', requirePerm(3), rl.botMessaging(), async (req, res, next) => {
         try {
             const current = await verify.getConfig(db, req.params.guildId);
             if (!current.roleId && !req.body.roleId) {
@@ -363,10 +347,10 @@ module.exports = (botClient) => {
             cfg.enabled = true;
             await verify.saveConfig(db, req.params.guildId, cfg);
             res.json({ success: true, ...result });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/verification/members/:userId/verify', requirePerm(2), async (req, res) => {
+    router.post('/verification/members/:userId/verify', requirePerm(2), async (req, res, next) => {
         try {
             const cfg = await verify.getConfig(db, req.params.guildId);
             if (!cfg.roleId) return res.status(400).json({ error: 'Set a verified role first' });
@@ -375,10 +359,10 @@ module.exports = (botClient) => {
             const actor = req.session?.user?.username || 'Dashboard';
             const entry = await verify.applyVerification(member, cfg, { db, method: 'staff', actor });
             res.json({ success: true, entry });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/verification/members/:userId/unverify', requirePerm(2), async (req, res) => {
+    router.post('/verification/members/:userId/unverify', requirePerm(2), async (req, res, next) => {
         try {
             const cfg = await verify.getConfig(db, req.params.guildId);
             const member = await req.guild.members.fetch(req.params.userId).catch(() => null);
@@ -386,39 +370,51 @@ module.exports = (botClient) => {
             const actor = req.session?.user?.username || 'Dashboard';
             await verify.revokeVerification(member, cfg, { db, actor });
             res.json({ success: true });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/verification/kick-pending', requirePerm(3), async (req, res) => {
+    router.post('/verification/kick-pending', requirePerm(3), rl.bulkModeration(), async (req, res, next) => {
         try {
             const cfg = await verify.getConfig(db, req.params.guildId);
             const map = await verify.getPendingMap(db, req.params.guildId);
             const overdueOnly = req.body?.overdueOnly !== false;
             const now = Date.now();
+            // Bulk moderation guard rails. This loop previously ran uncapped over
+            // every pending entry, issuing one Discord kick per iteration with no
+            // hierarchy check — so an Admin could sweep out moderators, and a large
+            // pending list would burn the bot's global rate limit inside a single
+            // request. Cap the batch, respect hierarchy, and report what was skipped.
+            const MAX_KICKS = 50;
             let kicked = 0;
+            let skipped = 0;
+            let remaining = 0;
             for (const [userId, info] of Object.entries(map)) {
                 if (overdueOnly && info?.kickAt && info.kickAt > now) continue;
                 if (overdueOnly && !info?.kickAt) continue;
+                if (kicked >= MAX_KICKS) { remaining += 1; continue; }
                 const member = await req.guild.members.fetch(userId).catch(() => null);
                 if (member && !verify.isVerified(member, cfg) && !verify.hasBypass(member, cfg)) {
+                    // Never let a bulk sweep do what a single action would refuse.
+                    if (await hierarchyError(req, member)) { skipped += 1; continue; }
+                    if (member.kickable === false) { skipped += 1; continue; }
                     const ok = await member.kick(overdueOnly ? 'Did not verify in time' : 'Kicked unverified (dashboard)').catch(() => null);
                     if (ok) kicked += 1;
                 }
                 delete map[userId];
             }
             await verify.setPendingMap(db, req.params.guildId, map);
-            res.json({ success: true, kicked });
-        } catch (err) { throw err; }
+            res.json({ success: true, kicked, skipped, remaining });
+        } catch (err) { next(err); }
     });
 
-    router.delete('/verification/log', requirePerm(3), async (req, res) => {
+    router.delete('/verification/log', requirePerm(3), async (req, res, next) => {
         try {
             await verify.clearLog(db, req.params.guildId);
             res.json({ success: true });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/verification/roles', requirePerm(3), async (req, res) => {
+    router.post('/verification/roles', requirePerm(3), async (req, res, next) => {
         try {
             const which = ['verified', 'unverified', 'both'].includes(req.body?.which) ? req.body.which : 'both';
             const created = await verify.createRoles(req.guild, {
@@ -431,10 +427,10 @@ module.exports = (botClient) => {
             if (created.unverified) cfg.unverifiedRoleId = created.unverified.id;
             const saved = await verify.saveConfig(db, req.params.guildId, cfg);
             res.json({ success: true, created, config: saved });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/verification/lock', requirePerm(3), async (req, res) => {
+    router.post('/verification/lock', requirePerm(3), rl.bulkModeration(), async (req, res, next) => {
         try {
             const cfg = await verify.getConfig(db, req.params.guildId);
             if (req.body?.channelId) cfg.channelId = req.body.channelId;
@@ -451,10 +447,10 @@ module.exports = (botClient) => {
             cfg.enabled = true;
             const saved = await verify.saveConfig(db, req.params.guildId, cfg);
             res.json({ success: true, locked: true, channels: ids.length, config: saved });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/verification/quick-setup', requirePerm(3), async (req, res) => {
+    router.post('/verification/quick-setup', requirePerm(3), rl.bulkModeration(), async (req, res, next) => {
         try {
             let cfg = await verify.getConfig(db, req.params.guildId);
             if (req.body?.channelId) cfg.channelId = req.body.channelId;
@@ -478,19 +474,19 @@ module.exports = (botClient) => {
             cfg.channelId = panel.channelId;
             const saved = await verify.saveConfig(db, req.params.guildId, cfg);
             res.json({ success: true, panel, config: saved });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
     const rr = require('../../../shared/services/reaction-roles');
 
-    router.get('/reactionroles', async (req, res) => {
+    router.get('/reactionroles', async (req, res, next) => {
         try {
             const mappings = await rr.list(db, req.params.guildId);
             res.json({ mappings });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/reactionroles', requirePerm(3), async (req, res) => {
+    router.post('/reactionroles', requirePerm(3), async (req, res, next) => {
         try {
             const { messageId, channelId, emoji, roleId, mode, style, label, group } = req.body || {};
             if (!roleId) return res.status(400).json({ error: 'roleId required' });
@@ -515,22 +511,22 @@ module.exports = (botClient) => {
                 if (msg) await msg.react(emoji).catch(() => {});
             }
             res.json({ success: true, mappings });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.delete('/reactionroles/:id', requirePerm(3), async (req, res) => {
+    router.delete('/reactionroles/:id', requirePerm(3), async (req, res, next) => {
         try {
             const list = await rr.list(db, req.params.guildId);
             const mappings = await rr.save(db, req.params.guildId, list.filter((m) => m.id !== req.params.id));
             res.json({ success: true, mappings });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/reactionroles/panel', requirePerm(3), async (req, res) => {
+    router.post('/reactionroles/panel', requirePerm(3), rl.botMessaging(), async (req, res, next) => {
         try {
             const result = await rr.postPanel(req.guild, db, req.body || {});
             res.json({ success: true, ...result });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
     function daysUntil(month, day) {
@@ -540,7 +536,7 @@ module.exports = (botClient) => {
         return Math.ceil((next - now) / 86400000);
     }
 
-    router.get('/birthdays', async (req, res) => {
+    router.get('/birthdays', async (req, res, next) => {
         try {
             const { guildId } = req.params;
             const cfg = await db.get(`birthday_config_${guildId}`) || {};
@@ -584,10 +580,10 @@ module.exports = (botClient) => {
                 entries: enrichedEntries,
                 today: enrichedEntries.filter((entry) => entry.today).length,
             });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/birthdays/config', requirePerm(3), async (req, res) => {
+    router.post('/birthdays/config', requirePerm(3), async (req, res, next) => {
         try {
             const cfg = await db.get(`birthday_config_${req.params.guildId}`) || {};
             const body = req.body || {};
@@ -597,18 +593,18 @@ module.exports = (botClient) => {
             if (typeof body.message === 'string') cfg.message = body.message.slice(0, 1000);
             await db.set(`birthday_config_${req.params.guildId}`, cfg);
             res.json(cfg);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.delete('/birthdays/:userId', requirePerm(2), async (req, res) => {
+    router.delete('/birthdays/:userId', requirePerm(2), async (req, res, next) => {
         try {
             const key = `birthday_${req.params.guildId}_${req.params.userId}`;
             try { await db.delete(key); } catch { await db.set(key, null); }
             res.json({ success: true });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/birthdays/test', requirePerm(2), async (req, res) => {
+    router.post('/birthdays/test', requirePerm(2), rl.botMessaging(), async (req, res, next) => {
         try {
             const cfg = await db.get(`birthday_config_${req.params.guildId}`) || {};
             const channelId = req.body?.channelId || cfg.channelId;
@@ -619,7 +615,7 @@ module.exports = (botClient) => {
             msg = msg.replace(/{user}/g, String(me)).replace(/{name}/g, me.user.username);
             await channel.send({ content: `**[Test Birthday]** ${msg}` });
             res.json({ success: true });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
     const suggestions = require('../../../shared/services/suggestions');
@@ -628,33 +624,36 @@ module.exports = (botClient) => {
     const confessions = require('../../../shared/services/confessions');
     const board = require('../../../shared/services/staff-board');
 
-    router.get('/suggestions', async (req, res) => {
+    router.get('/suggestions', async (req, res, next) => {
         try {
             const items = await suggestions.list(db, req.params.guildId);
             const config = await suggestions.getConfig(db, req.params.guildId);
-            const level = await getUserPermLevel(botClient, req.params.guildId, req.session?.user?.id);
-            const visibleItems = items.map((item) => {
-                if (level >= 2 || !item.anonymous) return item;
-                const { authorId: _authorId, authorTag: _authorTag, ...safe } = item;
-                return safe;
-            });
+            // /suggest offers "anonymous — hide your username", and the posted embed
+            // honours it. The dashboard must honour it too: strip identity from
+            // anonymous suggestions below Moderator, or the promise is hollow.
+            const level = await getUserPermLevel(botClient, req.params.guildId, sessionUserId(req));
+            const visible = level >= 2
+                ? [...items].reverse()
+                : [...items].reverse().map((s) => (s.anonymous
+                    ? (({ authorId, authorTag, ...rest }) => rest)(s)
+                    : s));
             res.json({
-                items: [...visibleItems].reverse(),
+                items: visible,
                 config,
                 pending: items.filter((s) => s.status === 'pending').length,
             });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/suggestions/config', requirePerm(3), async (req, res) => {
+    router.post('/suggestions/config', requirePerm(3), async (req, res, next) => {
         try {
             const current = await suggestions.getConfig(db, req.params.guildId);
             const saved = await suggestions.saveConfig(db, req.params.guildId, { ...current, ...(req.body || {}) });
             res.json(saved);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/suggestions', requirePerm(2), async (req, res) => {
+    router.post('/suggestions', requirePerm(2), async (req, res, next) => {
         try {
             const item = await suggestions.create(req.guild, db, {
                 message: req.body?.message,
@@ -664,36 +663,36 @@ module.exports = (botClient) => {
                 authorTag: req.session?.user?.username || 'Dashboard',
             });
             res.json(item);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/suggestions/:id/approve', requirePerm(2), async (req, res) => {
+    router.post('/suggestions/:id/approve', requirePerm(2), async (req, res, next) => {
         try {
             const item = await suggestions.setStatus(req.guild, db, req.params.id, 'approved', {
                 note: req.body?.note,
                 reviewedBy: req.session?.user?.username || 'Dashboard',
             });
             res.json(item);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/suggestions/:id/deny', requirePerm(2), async (req, res) => {
+    router.post('/suggestions/:id/deny', requirePerm(2), async (req, res, next) => {
         try {
             const item = await suggestions.setStatus(req.guild, db, req.params.id, 'denied', {
                 note: req.body?.note,
                 reviewedBy: req.session?.user?.username || 'Dashboard',
             });
             res.json(item);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.delete('/suggestions/:id', requirePerm(2), async (req, res) => {
+    router.delete('/suggestions/:id', requirePerm(2), async (req, res, next) => {
         try {
             res.json(await suggestions.remove(req.guild, db, req.params.id));
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.get('/polls', async (req, res) => {
+    router.get('/polls', async (req, res, next) => {
         try {
             const list = await polls.list(db, req.params.guildId);
             const enriched = [];
@@ -702,10 +701,10 @@ module.exports = (botClient) => {
                 enriched.push({ ...p, liveResults });
             }
             res.json({ polls: enriched, open: list.filter((p) => !p.closed).length });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/polls', requirePerm(2), async (req, res) => {
+    router.post('/polls', requirePerm(2), async (req, res, next) => {
         try {
             const poll = await polls.create(req.guild, db, {
                 channelId: req.body?.channelId,
@@ -716,62 +715,63 @@ module.exports = (botClient) => {
                 authorTag: req.session?.user?.username || 'Dashboard',
             });
             res.json(poll);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/polls/:id/close', requirePerm(2), async (req, res) => {
+    router.post('/polls/:id/close', requirePerm(2), async (req, res, next) => {
         try {
             res.json(await polls.close(req.guild, db, req.params.id));
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.delete('/polls/:id', requirePerm(2), async (req, res) => {
+    router.delete('/polls/:id', requirePerm(2), async (req, res, next) => {
         try {
             res.json(await polls.remove(req.guild, db, req.params.id));
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.get('/tags', async (req, res) => {
+    router.get('/tags', async (req, res, next) => {
         try {
             res.json({ tags: await tags.list(db, req.params.guildId) });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/tags', requirePerm(2), async (req, res) => {
+    router.post('/tags', requirePerm(2), async (req, res, next) => {
         try {
             const item = await tags.upsert(db, req.params.guildId, req.body?.name, req.body?.content, req.session?.user?.id || 'dashboard');
             res.json(item);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.delete('/tags/:name', requirePerm(2), async (req, res) => {
+    router.delete('/tags/:name', requirePerm(2), async (req, res, next) => {
         try {
             res.json(await tags.remove(db, req.params.guildId, req.params.name));
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.get('/confessions', async (req, res) => {
+    router.get('/confessions', async (req, res, next) => {
         try {
             const config = await confessions.getConfig(db, req.params.guildId);
-            const level = await getUserPermLevel(botClient, req.params.guildId, req.session?.user?.id);
-            const rawItems = await confessions.list(db, req.params.guildId);
-            const items = rawItems.map((item) => {
-                if (level >= 2) return item;
-                const { authorId: _authorId, authorTag: _authorTag, ...safe } = item;
-                return safe;
-            }).reverse();
-            res.json({ items, config });
-        } catch (err) { throw err; }
+            const items = [...(await confessions.list(db, req.params.guildId))].reverse();
+            // Confessions are anonymous by design. authorId/authorTag are only
+            // retained when staffLog is enabled, and must not be handed to every
+            // dashboard Viewer — strip them below Moderator (level 2).
+            const level = await getUserPermLevel(botClient, req.params.guildId, sessionUserId(req));
+            const safe = level >= 2
+                ? items
+                : items.map(({ authorId, authorTag, ...rest }) => rest);
+            res.json({ items: safe, config });
+        } catch (err) { next(err); }
     });
 
-    router.post('/confessions/config', requirePerm(3), async (req, res) => {
+    router.post('/confessions/config', requirePerm(3), async (req, res, next) => {
         try {
             const current = await confessions.getConfig(db, req.params.guildId);
             res.json(await confessions.saveConfig(db, req.params.guildId, { ...current, ...(req.body || {}) }));
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/confessions', requirePerm(2), async (req, res) => {
+    router.post('/confessions', requirePerm(2), async (req, res, next) => {
         try {
             const item = await confessions.create(req.guild, db, {
                 message: req.body?.message,
@@ -781,16 +781,16 @@ module.exports = (botClient) => {
                 authorTag: req.session?.user?.username || 'Dashboard',
             });
             res.json(item);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.delete('/confessions/:id', requirePerm(2), async (req, res) => {
+    router.delete('/confessions/:id', requirePerm(2), async (req, res, next) => {
         try {
             res.json(await confessions.remove(req.guild, db, req.params.id));
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.get('/board', async (req, res) => {
+    router.get('/board', async (req, res, next) => {
         try {
             const [announcements, afk, reminders] = await Promise.all([
                 board.listAnnouncements(db, req.params.guildId),
@@ -802,47 +802,47 @@ module.exports = (botClient) => {
                 afk,
                 reminders,
             });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/board/announce', requirePerm(2), async (req, res) => {
+    router.post('/board/announce', requirePerm(2), rl.botMessaging(), async (req, res, next) => {
         try {
             res.json(await board.postAnnouncement(req.guild, db, {
                 ...(req.body || {}),
                 authorTag: req.session?.user?.username || 'Dashboard',
             }));
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.delete('/board/announce/:id', requirePerm(2), async (req, res) => {
+    router.delete('/board/announce/:id', requirePerm(2), async (req, res, next) => {
         try {
             res.json(await board.deleteAnnouncement(req.guild, db, req.params.id));
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.delete('/board/afk/:userId', requirePerm(2), async (req, res) => {
+    router.delete('/board/afk/:userId', requirePerm(2), async (req, res, next) => {
         try {
             res.json(await board.clearAfk(db, req.params.guildId, req.params.userId));
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/board/reminders', requirePerm(2), async (req, res) => {
+    router.post('/board/reminders', requirePerm(2), async (req, res, next) => {
         try {
             res.json(await board.addReminder(req.guild, db, {
                 ...(req.body || {}),
                 userId: req.session?.user?.id || 'dashboard',
             }));
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.delete('/board/reminders/:userId/:index', requirePerm(2), async (req, res) => {
+    router.delete('/board/reminders/:userId/:index', requirePerm(2), async (req, res, next) => {
         try {
             res.json(await board.cancelReminder(db, req.params.userId, Number(req.params.index)));
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
     // GET /tickets — list open tickets
-    router.get('/tickets', async (req, res) => {
+    router.get('/tickets', async (req, res, next) => {
         try {
             const { guildId } = req.params;
             const allKeys = await db.all();
@@ -850,17 +850,17 @@ module.exports = (botClient) => {
                 .filter(e => e.id.startsWith(`ticket_${guildId}_`))
                 .map(e => ({ id: e.id.replace(`ticket_${guildId}_`, ''), ...e.value }));
             res.json(tickets);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.get('/logging', async (req, res) => {
+    router.get('/logging', async (req, res, next) => {
         try {
             const logging = await db.get(`logging_${req.params.guildId}`) || {};
             res.json(logging);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/logging', requirePerm(2), async (req, res) => {
+    router.post('/logging', requirePerm(2), async (req, res, next) => {
         try {
             const { guildId } = req.params;
             const { type, channelId } = req.body;
@@ -871,10 +871,10 @@ module.exports = (botClient) => {
             logging[type] = channelId || null;
             await db.set(`logging_${guildId}`, logging);
             res.json(logging);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/config', requirePerm(3), async (req, res) => {
+    router.post('/config', requirePerm(3), async (req, res, next) => {
         try {
             const { xpEnabled, autoresponder, djRoleId } = req.body;
             if (typeof xpEnabled !== 'undefined') {
@@ -887,10 +887,10 @@ module.exports = (botClient) => {
                 await db.set(`djrole_${req.params.guildId}`, djRoleId || null);
             }
             res.json({ success: true });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.get('/commands', async (req, res) => {
+    router.get('/commands', async (req, res, next) => {
         try {
             const enabled = await db.get(`commands_enabled_${req.params.guildId}`) || {};
             const list = [];
@@ -922,18 +922,18 @@ module.exports = (botClient) => {
             }
             list.sort((a, b) => a.name.localeCompare(b.name));
             res.json({ commands: list, enabled, total: list.length });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.get('/giveaways', async (req, res) => {
+    router.get('/giveaways', async (req, res, next) => {
         try {
             const giveaways = (await db.get(`giveaways_${req.params.guildId}`) || [])
                 .sort((a, b) => (b.createdAt || b.endsAt || 0) - (a.createdAt || a.endsAt || 0));
             res.json(giveaways.map(g => ({ ...g, id: g.messageId })));
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/giveaways/create', requirePerm(2), async (req, res) => {
+    router.post('/giveaways/create', requirePerm(2), async (req, res, next) => {
         try {
             const {
                 prize, description = '', duration, winners = 1, channelId,
@@ -996,23 +996,30 @@ module.exports = (botClient) => {
             giveaways.push(giveaway);
             await db.set(`giveaways_${guild.id}`, giveaways);
             res.json({ success: true, giveaway: { ...giveaway, id: giveaway.messageId } });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/giveaways/:id/end', requirePerm(2), async (req, res) => {
+    router.post('/giveaways/:id/end', requirePerm(2), async (req, res, next) => {
         try {
             const { guildId, id } = req.params;
-            const giveaways = await db.get(`giveaways_${guildId}`) || [];
-            const giveaway = giveaways.find(g => g.messageId === id && g.active);
-            if (!giveaway) return res.status(404).json({ error: 'Active giveaway not found' });
-
-            await finalizeGiveaway(req.guild, giveaway, logger);
-            await db.set(`giveaways_${guildId}`, giveaways);
-            res.json({ success: true, giveaway: { ...giveaway, id: giveaway.messageId } });
-        } catch (err) { throw err; }
+            // Read-modify-write on giveaways_<guild>. The scheduler runs the same
+            // sequence every 10s, so without the lock one side's write is lost and
+            // a finalised giveaway stays active — it is then drawn a second time
+            // and the prize is awarded twice.
+            const result = await withKeyLock(`giveaways_${guildId}`, async () => {
+                const giveaways = await db.get(`giveaways_${guildId}`) || [];
+                const giveaway = giveaways.find(g => g.messageId === id && g.active);
+                if (!giveaway) return null;
+                await finalizeGiveaway(req.guild, giveaway, logger);
+                await db.set(`giveaways_${guildId}`, giveaways);
+                return giveaway;
+            });
+            if (!result) return res.status(404).json({ error: 'Active giveaway not found' });
+            res.json({ success: true, giveaway: { ...result, id: result.messageId } });
+        } catch (err) { next(err); }
     });
 
-    router.post('/giveaways/:id/reroll', requirePerm(2), async (req, res) => {
+    router.post('/giveaways/:id/reroll', requirePerm(2), async (req, res, next) => {
         try {
             const { id } = req.params;
             const giveaways = await db.get(`giveaways_${req.params.guildId}`) || [];
@@ -1022,10 +1029,10 @@ module.exports = (botClient) => {
             const winner = await rerollGiveaway(req.guild, giveaway);
             await db.set(`giveaways_${req.params.guildId}`, giveaways);
             res.json({ success: true, winnerId: winner, giveaway: { ...giveaway, id: giveaway.messageId } });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.delete('/giveaways/:id', requirePerm(2), async (req, res) => {
+    router.delete('/giveaways/:id', requirePerm(2), async (req, res, next) => {
         try {
             const { guildId, id } = req.params;
             const giveaways = await db.get(`giveaways_${guildId}`) || [];
@@ -1038,10 +1045,10 @@ module.exports = (botClient) => {
 
             await db.set(`giveaways_${guildId}`, giveaways.filter(g => g.messageId !== id));
             res.json({ success: true });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.get('/members', async (req, res) => {
+    router.get('/members', async (req, res, next) => {
         try {
             const query = (req.query.q || '').toLowerCase();
             let members = req.guild.members.cache;
@@ -1075,18 +1082,21 @@ module.exports = (botClient) => {
                 highestRole: m.roles.highest && m.roles.highest.name !== '@everyone' ? m.roles.highest.name : null,
             }));
             res.json(data);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/members/:userId/action', requirePerm(2), async (req, res) => {
+    router.post('/members/:userId/action', requirePerm(2), async (req, res, next) => {
         try {
             const { userId } = req.params;
             const { action, reason, duration } = req.body;
             const member = await req.guild.members.fetch(userId);
             if (!member) return res.status(404).json({ error: 'Member not found' });
-            const actor = await req.guild.members.fetch(req.session?.user?.id).catch(() => null);
-            const hierarchy = hierarchyError(req.guild, actor, member);
-            if (hierarchy) return res.status(403).json({ error: hierarchy, code: 'ROLE_HIERARCHY' });
+
+            // Note actions are record-keeping only; everything else touches the user.
+            if (action !== 'note') {
+                const hErr = await hierarchyError(req, member);
+                if (hErr) return res.status(403).json({ error: hErr, code: 'HIERARCHY' });
+            }
 
             if (action === 'kick') await member.kick(reason || 'Dashboard Action');
             else if (action === 'ban') await member.ban({ reason: reason || 'Dashboard Action' });
@@ -1106,16 +1116,19 @@ module.exports = (botClient) => {
                 const warnings = await db.get(`warnings_${req.params.guildId}_${userId}`) || [];
                 warnings.push({
                     id: randomUUID().split('-')[0],
-                    reason: reason || 'Dashboard Action',
+                    // Bound both the entry and the list: `reason` was unbounded, so a
+                    // 100 kb body became a 100 kb record, and the array itself never
+                    // stopped growing. Keep the most recent 200.
+                    reason: String(reason || 'Dashboard Action').slice(0, 500),
                     moderator: req.session?.user?.username || 'Dashboard',
                     timestamp: Date.now(),
                 });
-                await db.set(`warnings_${req.params.guildId}_${userId}`, warnings);
+                await db.set(`warnings_${req.params.guildId}_${userId}`, warnings.slice(-200));
             } else {
                 return res.status(400).json({ error: 'Unknown action' });
             }
             res.json({ success: true });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
     function normalizeNotes(list) {
@@ -1127,7 +1140,7 @@ module.exports = (botClient) => {
         }));
     }
 
-    router.get('/notes', async (req, res) => {
+    router.get('/notes', async (req, res, next) => {
         try {
             const { guildId } = req.params;
             const allKeys = await db.all();
@@ -1139,17 +1152,17 @@ module.exports = (botClient) => {
                 })))
                 .sort((a, b) => (b.ts || 0) - (a.ts || 0));
             res.json(notes);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.get('/members/:userId/notes', async (req, res) => {
+    router.get('/members/:userId/notes', async (req, res, next) => {
         try {
             const list = await db.get(`notes_${req.params.guildId}_${req.params.userId}`) || [];
             res.json(normalizeNotes(list));
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/members/:userId/notes', requirePerm(2), async (req, res) => {
+    router.post('/members/:userId/notes', requirePerm(2), async (req, res, next) => {
         try {
             const text = typeof req.body.text === 'string' ? req.body.text.trim() : '';
             if (!text) return res.status(400).json({ error: 'Note text required' });
@@ -1163,28 +1176,29 @@ module.exports = (botClient) => {
                 mod: req.session?.user?.username || 'Dashboard',
                 ts: Date.now(),
             });
-            await db.set(key, list);
-            res.json(list);
-        } catch (err) { throw err; }
+            const capped = list.slice(-200);   // text was bounded, the list was not
+            await db.set(key, capped);
+            res.json(capped);
+        } catch (err) { next(err); }
     });
 
-    router.delete('/members/:userId/notes/:noteId', requirePerm(2), async (req, res) => {
+    router.delete('/members/:userId/notes/:noteId', requirePerm(2), async (req, res, next) => {
         try {
             const key = `notes_${req.params.guildId}_${req.params.userId}`;
             const list = normalizeNotes(await db.get(key) || []).filter(n => n.id !== req.params.noteId);
             await db.set(key, list);
             res.json(list);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.delete('/members/:userId/notes', requirePerm(2), async (req, res) => {
+    router.delete('/members/:userId/notes', requirePerm(2), async (req, res, next) => {
         try {
             await db.set(`notes_${req.params.guildId}_${req.params.userId}`, []);
             res.json([]);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.patch('/members/:userId/warnings/:warningId', requirePerm(2), async (req, res) => {
+    router.patch('/members/:userId/warnings/:warningId', requirePerm(2), async (req, res, next) => {
         try {
             const key = `warnings_${req.params.guildId}_${req.params.userId}`;
             const reason = typeof req.body.reason === 'string' ? req.body.reason.trim() : '';
@@ -1195,10 +1209,10 @@ module.exports = (botClient) => {
             });
             await db.set(key, list);
             res.json(list);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.delete('/members/:userId/warnings/:warningId', requirePerm(2), async (req, res) => {
+    router.delete('/members/:userId/warnings/:warningId', requirePerm(2), async (req, res, next) => {
         try {
             const key = `warnings_${req.params.guildId}_${req.params.userId}`;
             const list = (await db.get(key) || []).filter((w, i) => {
@@ -1207,78 +1221,86 @@ module.exports = (botClient) => {
             });
             await db.set(key, list);
             res.json(list);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.delete('/members/:userId/warnings', requirePerm(2), async (req, res) => {
+    router.delete('/members/:userId/warnings', requirePerm(2), async (req, res, next) => {
         try {
             await db.set(`warnings_${req.params.guildId}_${req.params.userId}`, []);
             res.json([]);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.delete('/warnings', requirePerm(3), async (req, res) => {
+    router.delete('/warnings', requirePerm(3), rl.bulkModeration(), async (req, res, next) => {
         try {
             const { guildId } = req.params;
             const allKeys = await db.all();
             const keys = allKeys.filter(e => e.id.startsWith(`warnings_${guildId}_`));
             await Promise.all(keys.map(e => db.set(e.id, [])));
             res.json({ success: true, cleared: keys.length });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/members/:userId/roles', requirePerm(3), async (req, res) => {
+    router.post('/members/:userId/roles', requirePerm(3), async (req, res, next) => {
         try {
             const { userId } = req.params;
             const { roles } = req.body;
             if (!Array.isArray(roles)) return res.status(400).json({ error: 'roles must be an array' });
             const member = await req.guild.members.fetch(userId);
             if (!member) return res.status(404).json({ error: 'Member not found' });
-            const actor = await req.guild.members.fetch(req.session?.user?.id).catch(() => null);
-            const hierarchy = hierarchyError(req.guild, actor, member);
-            if (hierarchy) return res.status(403).json({ error: hierarchy, code: 'ROLE_HIERARCHY' });
-            for (const roleId of roles) {
-                const role = req.guild.roles.cache.get(roleId);
-                if (!role) return res.status(400).json({ error: `Unknown role: ${roleId}` });
-                if (role.managed) return res.status(403).json({ error: 'Managed roles cannot be assigned' });
-                if (role.position >= (actor.roles?.highest?.position ?? 0)) {
-                    return res.status(403).json({ error: 'Cannot assign a role at or above your role' });
-                }
-                if (role.position >= (req.guild.members.me?.roles?.highest?.position ?? -1)) {
-                    return res.status(403).json({ error: 'The bot role is not high enough' });
-                }
+
+            const hErr = await hierarchyError(req, member);
+            if (hErr) return res.status(403).json({ error: hErr, code: 'HIERARCHY' });
+
+            // Privilege escalation guard: roles.set() previously accepted ANY role id,
+            // so a level-3 dashboard user could grant themselves or others a role above
+            // their own — or a managed/integration role the bot must not touch.
+            const botTop = req.guild.members.me?.roles.highest.position ?? 0;
+            const actorId = sessionUserId(req);
+            let actorTop = Infinity;   // localhost dev bypass has no Discord identity
+            if (actorId && actorId !== req.guild.ownerId) {
+                const actor = await req.guild.members.fetch(actorId).catch(() => null);
+                actorTop = actor ? actor.roles.highest.position : 0;
             }
+            for (const rid of roles) {
+                const role = req.guild.roles.cache.get(String(rid));
+                if (!role) return res.status(400).json({ error: `Unknown role: ${rid}` });
+                if (role.managed) return res.status(403).json({ error: `${role.name} is managed by an integration`, code: 'MANAGED_ROLE' });
+                if (role.position >= botTop) return res.status(403).json({ error: `${role.name} is above the bot's highest role`, code: 'HIERARCHY' });
+                if (role.position >= actorTop) return res.status(403).json({ error: `${role.name} is at or above your highest role`, code: 'HIERARCHY' });
+            }
+
             await member.roles.set(roles);
             res.json({ success: true });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.get('/rewards', async (req, res) => {
+    router.get('/rewards', async (req, res, next) => {
         const rewards = await db.get(`rewards_${req.params.guildId}`) || [];
         res.json(rewards);
     });
 
-    router.post('/rewards', requirePerm(3), async (req, res) => {
+    router.post('/rewards', requirePerm(3), async (req, res, next) => {
         try {
             const { level, roleId } = req.body;
             const rewards = await db.get(`rewards_${req.params.guildId}`) || [];
             rewards.push({ level: parseInt(level), roleId });
             await db.set(`rewards_${req.params.guildId}`, rewards);
             res.json(rewards);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/rewards/delete', requirePerm(3), async (req, res) => {
+    router.post('/rewards/delete', requirePerm(3), async (req, res, next) => {
         try {
             const { level, roleId } = req.body;
             let rewards = await db.get(`rewards_${req.params.guildId}`) || [];
             rewards = rewards.filter(r => !(r.level === level && r.roleId === roleId));
             await db.set(`rewards_${req.params.guildId}`, rewards);
             res.json(rewards);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/nickname', requirePerm(3), async (req, res) => {
+    router.post('/nickname', requirePerm(3), async (req, res, next) => {
         try {
             const me = req.guild.members.me;
             if (!me) return res.status(503).json({ error: 'Bot member not available' });
@@ -1290,10 +1312,10 @@ module.exports = (botClient) => {
                 nickname: me.nickname || null,
                 displayName: me.displayName,
             });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/automod/custom', requirePerm(2), async (req, res) => {
+    router.post('/automod/custom', requirePerm(2), async (req, res, next) => {
         try {
             const { pattern } = req.body;
             if (!pattern) return res.status(400).json({ error: 'Missing pattern' });
@@ -1303,20 +1325,20 @@ module.exports = (botClient) => {
                 await db.set(`custom_filters_${req.params.guildId}`, filters);
             }
             res.json(filters);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/automod/custom/delete', requirePerm(2), async (req, res) => {
+    router.post('/automod/custom/delete', requirePerm(2), async (req, res, next) => {
         try {
             const { pattern } = req.body;
             let filters = await db.get(`custom_filters_${req.params.guildId}`) || [];
             filters = filters.filter(f => f !== pattern);
             await db.set(`custom_filters_${req.params.guildId}`, filters);
             res.json(filters);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/tickets', requirePerm(3), async (req, res) => {
+    router.post('/tickets', requirePerm(3), async (req, res, next) => {
         try {
             const { guildId } = req.params;
             const { categoryId, transcriptChannelId, supportRoleId, maxOpen } = req.body;
@@ -1336,11 +1358,11 @@ module.exports = (botClient) => {
             if (maxOpen !== undefined) config.maxOpen = maxOpen;
             await db.set(`tickets_${guildId}`, config);
             res.json(config);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
     // POST /welcome/test — send a test welcome message to a channel
-    router.post('/welcome/test', requirePerm(2), async (req, res) => {
+    router.post('/welcome/test', requirePerm(2), rl.botMessaging(), async (req, res, next) => {
         try {
             const { channelId } = req.body;
             const guild = req.guild;
@@ -1355,11 +1377,11 @@ module.exports = (botClient) => {
                 .replace(/{count}/g, guild.memberCount.toString());
             await channel.send({ content: `**[Test Welcome]** ${msg}` });
             res.json({ success: true });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
     // POST /tickets/panel — post a ticket button panel embed in a channel
-    router.post('/tickets/panel', requirePerm(2), async (req, res) => {
+    router.post('/tickets/panel', requirePerm(2), rl.botMessaging(), async (req, res, next) => {
         try {
             const { channelId, title, description } = req.body;
             const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
@@ -1380,11 +1402,11 @@ module.exports = (botClient) => {
             );
             await channel.send({ embeds: [embed], components: [row] });
             res.json({ success: true });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
     // POST /tickets/:ticketId/close — mark a ticket closed
-    router.post('/tickets/:ticketId/close', requirePerm(2), async (req, res) => {
+    router.post('/tickets/:ticketId/close', requirePerm(2), async (req, res, next) => {
         try {
             const { guildId, ticketId } = req.params;
             const key = `ticket_${guildId}_${ticketId}`;
@@ -1397,10 +1419,10 @@ module.exports = (botClient) => {
             const channel = await req.guild.channels.fetch(channelId).catch(() => null);
             if (channel) await channel.delete('Closed from dashboard').catch(() => {});
             res.json({ success: true, ticket });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/embed', requirePerm(3), async (req, res) => {
+    router.post('/embed', requirePerm(3), rl.botMessaging(), async (req, res, next) => {
         try {
             const { channelId, title, titleUrl, description, color,
                 author, authorIconUrl,
@@ -1421,18 +1443,18 @@ module.exports = (botClient) => {
 
             await channel.send({ embeds: [embed] });
             res.json({ success: true });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
     // ── Security Config (Anti-Raid / Anti-Spam) ──
-    router.get('/security', async (req, res) => {
+    router.get('/security', async (req, res, next) => {
         try {
             const config = await db.get(`security_${req.params.guildId}`) || {};
             res.json(config);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/security', requirePerm(3), async (req, res) => {
+    router.post('/security', requirePerm(3), async (req, res, next) => {
         try {
             const { guildId } = req.params;
             const { antiRaid, antiSpam } = req.body;
@@ -1441,10 +1463,10 @@ module.exports = (botClient) => {
             if (antiSpam) config.antiSpam = { ...config.antiSpam, ...antiSpam };
             await db.set(`security_${guildId}`, config);
             res.json(config);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/commands/toggle', requirePerm(3), async (req, res) => {
+    router.post('/commands/toggle', requirePerm(3), async (req, res, next) => {
         try {
             const { commandName, enabled } = req.body;
             if (!commandName) return res.status(400).json({ error: 'Missing command name' });
@@ -1452,10 +1474,16 @@ module.exports = (botClient) => {
             current[commandName] = !!enabled;
             await db.set(`commands_enabled_${req.params.guildId}`, current);
             res.json(current);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.get('/backup', requirePerm(3), async (req, res) => {
+    // Admin-only: a backup is a full configuration dump. It previously sat at
+
+    // level 0, handing Viewers confessions_* (with author ids) and every
+
+    // security/automod setting — routing around the redaction on /confessions.
+
+    router.get('/backup', requirePerm(3), rl.heavyRead(), async (req, res, next) => {
         try {
             const { guildId } = req.params;
             const keys = [
@@ -1469,28 +1497,34 @@ module.exports = (botClient) => {
             const backup = {};
             for (const key of keys) backup[key] = await db.get(key);
             res.json(backup);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/restore', requirePerm(3), async (req, res) => {
+    router.post('/restore', requirePerm(3), rl.restore(), async (req, res, next) => {
         try {
             const backup = req.body;
-            if (!backup || typeof backup !== 'object') return res.status(400).json({ error: 'Invalid backup data' });
+            if (!backup || typeof backup !== 'object' || Array.isArray(backup)) return res.status(400).json({ error: 'Invalid backup data' });
+            // key.includes(guildId) was a substring test: a key belonging to another
+            // guild whose id merely contains this one would be overwritten. Require an
+            // exact `<prefix>_<thisGuildId>` shape and skip prototype-polluting keys.
+            const gid = String(req.params.guildId);
+            const FORBIDDEN = new Set(['__proto__', 'constructor', 'prototype']);
+            let restored = 0;
             for (const [key, value] of Object.entries(backup)) {
-                if (key.endsWith(`_${req.params.guildId}`)) await db.set(key, value);
+                if (!FORBIDDEN.has(key) && key.endsWith(`_${gid}`) && typeof value !== 'undefined') { await db.set(key, value); restored += 1; }
             }
-            res.json({ success: true });
-        } catch (err) { throw err; }
+            res.json({ success: true, restored });
+        } catch (err) { next(err); }
     });
 
-    router.post('/leave', requirePerm(3), async (req, res) => {
+    router.post('/leave', requirePerm(3), async (req, res, next) => {
         try {
             await req.guild.leave();
             res.json({ success: true });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/autoresponder', requirePerm(2), async (req, res) => {
+    router.post('/autoresponder', requirePerm(2), async (req, res, next) => {
         try {
             const { trigger, response } = req.body;
             if (!trigger || !response) return res.status(400).json({ error: 'Trigger and response required' });
@@ -1498,48 +1532,48 @@ module.exports = (botClient) => {
             responders.push({ trigger, response, exact: !!req.body.exact, id: Date.now().toString() });
             await db.set(`autoresponder_${req.params.guildId}`, responders);
             res.json({ success: true, responders });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.delete('/autoresponder/:id', requirePerm(2), async (req, res) => {
+    router.delete('/autoresponder/:id', requirePerm(2), async (req, res, next) => {
         try {
             const { guildId, id } = req.params;
             let responders = await db.get(`autoresponder_${guildId}`) || [];
             responders = responders.filter(r => r.id !== id);
             await db.set(`autoresponder_${guildId}`, responders);
             res.json({ success: true, responders });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.get('/xp/details', async (req, res) => {
+    router.get('/xp/details', async (req, res, next) => {
         try {
             const guildId = req.params.guildId;
             const multiplier = (await db.get(`xp_multiplier_${guildId}`)) || 1.0;
             const ignoredChannels = (await db.get(`xp_ignored_channels_${guildId}`)) || [];
             const availableChannels = req.guild.channels.cache.filter(c => c.type === 0).map(c => ({ id: c.id, name: c.name }));
             res.json({ multiplier, ignoredChannels, availableChannels });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/xp/advanced', requirePerm(3), async (req, res) => {
+    router.post('/xp/advanced', requirePerm(3), async (req, res, next) => {
         try {
             const { multiplier, ignoredChannels } = req.body;
             await db.set(`xp_multiplier_${req.params.guildId}`, parseFloat(multiplier) || 1.0);
             await db.set(`xp_ignored_channels_${req.params.guildId}`, ignoredChannels || []);
             res.json({ success: true });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
 
     // ── XP Announce ──────────────────────────────────────────────────────────
-    router.get('/xp/announce', async (req, res) => {
+    router.get('/xp/announce', async (req, res, next) => {
         try {
             const cfg = await db.get(`levelup_announce_${req.params.guildId}`);
             res.json({ cfg: cfg === undefined ? null : cfg });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/xp/announce', requirePerm(3), async (req, res) => {
+    router.post('/xp/announce', requirePerm(3), async (req, res, next) => {
         try {
             const { channelId, disabled } = req.body;
             if (disabled) {
@@ -1550,18 +1584,18 @@ module.exports = (botClient) => {
                 await db.set(`levelup_announce_${req.params.guildId}`, null);
             }
             res.json({ success: true });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
     // ── XP Role Multipliers ───────────────────────────────────────────────────
-    router.get('/xp/rolemultipliers', async (req, res) => {
+    router.get('/xp/rolemultipliers', async (req, res, next) => {
         try {
             const list = await db.get(`xp_role_multipliers_${req.params.guildId}`) || [];
             res.json(list);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/xp/rolemultipliers', requirePerm(3), async (req, res) => {
+    router.post('/xp/rolemultipliers', requirePerm(3), async (req, res, next) => {
         try {
             const { roleId, value } = req.body;
             if (!roleId || !value) return res.status(400).json({ error: 'roleId and value required' });
@@ -1570,26 +1604,26 @@ module.exports = (botClient) => {
             if (parseFloat(value) !== 1) list.push({ roleId, value: parseFloat(value) });
             await db.set(`xp_role_multipliers_${req.params.guildId}`, list);
             res.json(list);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.delete('/xp/rolemultipliers/:roleId', requirePerm(3), async (req, res) => {
+    router.delete('/xp/rolemultipliers/:roleId', requirePerm(3), async (req, res, next) => {
         try {
             let list = await db.get(`xp_role_multipliers_${req.params.guildId}`) || [];
             list = list.filter(r => r.roleId !== req.params.roleId);
             await db.set(`xp_role_multipliers_${req.params.guildId}`, list);
             res.json(list);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
-    router.post('/webhook-logs', requirePerm(3), async (req, res) => {
+    router.post('/webhook-logs', requirePerm(3), async (req, res, next) => {
         try {
             const { url } = req.body;
             if (!url) return res.status(400).json({ error: 'URL required' });
             await db.set(`webhook_logs_${req.params.guildId}`, url);
             await sendToWebhook(req.params.guildId, { title: '🛰️ Log Bridge Established', description: `The dashboard audit bridge has been successfully established.\n**Executor:** System`, color: 0x00fbff });
             res.json({ success: true });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
     async function sendToWebhook(guildId, embedData) {
@@ -1603,7 +1637,7 @@ module.exports = (botClient) => {
     }
 
     // ── User Profile (for modal) ──
-    router.get('/user/:userId', async (req, res) => {
+    router.get('/user/:userId', async (req, res, next) => {
         try {
             const { guildId, userId } = req.params;
             const member = await req.guild.members.fetch(userId).catch(() => null);
@@ -1627,11 +1661,11 @@ module.exports = (botClient) => {
                 stats,
                 warnings
             });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
     // ── Growth Chart Data ──
-    router.get('/growth', async (req, res) => {
+    router.get('/growth', async (req, res, next) => {
         try {
             const guild = req.guild;
             const key = `growth_${guild.id}`;
@@ -1652,11 +1686,11 @@ module.exports = (botClient) => {
                 labels: last7.map(p => new Date(p.date + 'T00:00:00').toLocaleDateString('en', { weekday: 'short' })),
                 data: last7.map(p => p.count)
             });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
     // ── XP Reset ──
-    router.post('/xp/reset', requirePerm(3), async (req, res) => {
+    router.post('/xp/reset', requirePerm(3), rl.bulkModeration(), async (req, res, next) => {
         try {
             const { guildId } = req.params;
             const allKeys = await db.all();
@@ -1669,25 +1703,25 @@ module.exports = (botClient) => {
             ]);
 
             res.json({ success: true, cleared: xpKeys.length + statsKeys.length });
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
 
 
     // Analytics routes
     const _analytics = (() => { try { return require('../../../shared/services/analytics'); } catch(e) { return null; } })();
-    router.get('/analytics/chart', (req, res) => {
+    router.get('/analytics/chart', (req, res, next) => {
         try {
             const empty = Array.from({ length: 24 }, (_, i) => ({ hour: i, label: String(i).padStart(2,'0') + ':00', messages: 0, joins: 0, commands: 0 }));
             res.json(_analytics ? _analytics.getChart(req.params.guildId) : empty);
-        } catch (err) { throw err; }
+        } catch (err) { next(err); }
     });
-    router.get('/analytics/commands', (req, res) => {
+    router.get('/analytics/commands', (req, res, next) => {
         try { res.json(_analytics ? _analytics.getCommandUsage(req.params.guildId) : { commands: [], total: 0 }); }
-        catch (err) { throw err; }
+        catch (err) { next(err); }
     });
-    router.get('/analytics/summary', (req, res) => {
+    router.get('/analytics/summary', (req, res, next) => {
         try { res.json(_analytics ? _analytics.getSummary(req.params.guildId, req.guild) : { messages24h: 0, joins24h: 0, commands24h: 0, onlineCount: 0, totalCommands: 0 }); }
-        catch (err) { throw err; }
+        catch (err) { next(err); }
     });
 
     return router;

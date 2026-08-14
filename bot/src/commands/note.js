@@ -26,7 +26,8 @@ module.exports = {
         if (sub === 'add') {
             const text = interaction.options.getString('text');
             notes.push({ id: randomUUID().split('-')[0], text, mod: interaction.user.tag, ts: Date.now() });
-            await db.set(key, notes);
+            // Cap growth to match the dashboard endpoint.
+            await db.set(key, notes.slice(-200));
             return client.helpers.safeReply(interaction, {
                 embeds: [new EmbedBuilder().setColor('#00fbff').setDescription(`📝 Note added for ${user}. (${notes.length} total)`)]
             });

@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { withKeyLocks } = require('../../../database/lock');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -15,12 +16,21 @@ module.exports = {
         }
         const fromKey = `points_${interaction.guild.id}_${interaction.user.id}`;
         const toKey = `points_${interaction.guild.id}_${target.id}`;
-        const balance = Number(await db.get(fromKey)) || 0;
-        if (balance < amount) {
-            return client.helpers.safeReply(interaction, { content: `❌ You only have **${balance}** points.`, flags: [MessageFlags.Ephemeral] });
+
+        // Read-check-write must be atomic. Without the lock two concurrent /pay
+        // calls both read the same balance, both pass the check, and both debit
+        // it — letting the sender spend the same points twice.
+        const result = await withKeyLocks([fromKey, toKey], async () => {
+            const balance = Number(await db.get(fromKey)) || 0;
+            if (balance < amount) return { ok: false, balance };
+            await db.set(fromKey, balance - amount);
+            await db.set(toKey, (Number(await db.get(toKey)) || 0) + amount);
+            return { ok: true, balance };
+        });
+
+        if (!result.ok) {
+            return client.helpers.safeReply(interaction, { content: `❌ You only have **${result.balance}** points.`, flags: [MessageFlags.Ephemeral] });
         }
-        await db.set(fromKey, balance - amount);
-        await db.set(toKey, (Number(await db.get(toKey)) || 0) + amount);
         const embed = new EmbedBuilder()
             .setColor('#00fbff')
             .setTitle('💸 Payment sent')

@@ -96,9 +96,9 @@ Git rename detection at 50% similarity reports:
 | Files/blob instances analysed | 468 | 212 outer tracked paths + 256 recovery-tip paths |
 | Candidate files after safe overlay | 289 | Complete baseline plus newer files |
 | Rename/move operations detected | 135 | 118 same-basename moves + 17 basename changes (including the rebuilt asset hash) |
-| Added paths | 118 | Primarily recovered commands, missing backend files, and CI |
+| Added paths | 119 | Primarily recovered commands, missing backend files, tests, and CI |
 | Deleted old paths | 72 | Recovery archive, duplicate source, generated logs, placeholders, duplicate reports |
-| Final deliverable files | 257 | Excludes dependencies and ignored runtime logs; includes this report |
+| Final deliverable files | 258 | Excludes dependencies and ignored runtime logs; includes this report |
 
 No source implementation was duplicated between application areas. Duplicate old root fragments were removed only after their blobs were compared with the recovery baseline/newer overlay. Generated logs were removed from Git but retained as ignored runtime files in the workspace.
 
@@ -133,8 +133,8 @@ The runtime path is now explicit: `database/json.sqlite`, overridable with `DATA
 | Local import/require resolver audit | PASS | 0 unresolved paths |
 | JavaScript syntax audit | PASS | all non-generated `.js` files |
 | Unit/loader test | PASS | 100 commands, 0 errors; events/services load |
-| Security/regression tests | PASS | 8 suites, 127 assertions |
-| Route inventory | PASS | exactly 136 concrete API routes |
+| Security/regression tests | PASS | 9 suites, 137 assertions |
+| Route inventory | PASS | exactly 151 concrete API routes |
 | Dashboard build | PASS | 1,803 modules; reproducible asset hashes |
 | ESLint | PASS | 0 errors / 0 warnings; baseline locked at zero |
 | CI workflow | PASS | clean install, native SQLite, verify, bundle drift, DB integrity |
@@ -172,8 +172,8 @@ FILES ANALYZED: 468 blob instances / 289 assembled candidates
 FILES MOVED: 135 Git-detected moves/renames
 FILES RENAMED: 17 basename changes (including generated asset hash)
 FILES DELETED: 72 obsolete paths (archive/duplicates/logs/placeholders/reports)
-FILES CREATED: 118 paths (recovered source, backend infrastructure, and CI)
-BACKEND: PASS — 16 files, 136 API routes
+FILES CREATED: 119 paths (recovered source, backend infrastructure, tests, and CI)
+BACKEND: PASS — 16 files, 151 API routes
 FRONTEND: NOT SEPARATE — dashboard is the only frontend by design
 DASHBOARD: PASS — React/Vite source and generated output separated
 BOT: PASS — 100 commands and 23 event files load

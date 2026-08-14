@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const crypto = require('crypto');
+const { requireAuth } = require('../middleware/auth');
 
 function publicOrigin(req) {
     const xfHost = req.headers['x-forwarded-host'];
@@ -17,6 +18,12 @@ function redirectUriFor(req) {
     const origin = publicOrigin(req);
     if (origin) return `${origin}/api/auth/discord/callback`;
     return process.env.DISCORD_REDIRECT_URI || 'http://localhost:3000/api/auth/discord/callback';
+}
+
+function attachAuthenticatedSession(session, user, userGuilds) {
+    session.user = user;
+    session.userGuilds = userGuilds;
+    delete session.oauthRedirect;
 }
 
 function oauthErrorPage(res, title, detail, redirectUri) {
@@ -47,8 +54,11 @@ module.exports = (botClient) => {
             return oauthErrorPage(res, 'OAuth not configured', 'CLIENT_ID or DISCORD_CLIENT_SECRET is missing.');
         }
         const redirectUri = redirectUriFor(req);
-        const state = crypto.randomBytes(32).toString('hex');
         req.session.oauthRedirect = redirectUri;
+        // OAuth CSRF ("login CSRF"): without a state parameter an attacker can
+        // feed a victim their own authorization code and silently sign the
+        // victim's browser into the attacker's Discord account.
+        const state = crypto.randomBytes(32).toString('hex');
         req.session.oauthState = state;
         req.session.save((err) => {
             if (err) return res.redirect('/?oauth=session');
@@ -66,17 +76,21 @@ module.exports = (botClient) => {
                 req.session.oauthRedirect || redirectUriFor(req)
             );
         }
-        const { code, state } = req.query;
-        const expectedState = req.session?.oauthState;
-        if (req.session) delete req.session.oauthState; // state is always single-use
-        const stateValid = typeof state === 'string'
-            && typeof expectedState === 'string'
-            && state.length === expectedState.length
-            && crypto.timingSafeEqual(Buffer.from(state), Buffer.from(expectedState));
-        if (!stateValid) {
-            return oauthErrorPage(res, 'OAuth verification failed', 'The OAuth state verification failed. Please start the login again.');
+        const { code } = req.query;
+        if (!code) return res.redirect('/');
+
+        // Constant-time comparison of the state we issued against the one returned.
+        const expectedState = req.session.oauthState;
+        const gotState = typeof req.query.state === 'string' ? req.query.state : '';
+        delete req.session.oauthState;          // single use, whatever the outcome
+        const a = Buffer.from(String(expectedState || ''));
+        const b = Buffer.from(gotState);
+        const stateOk = !!expectedState && a.length === b.length && crypto.timingSafeEqual(a, b);
+        if (!stateOk) {
+            return oauthErrorPage(res, 'Login verification failed',
+                'The login request could not be verified (state mismatch). Start the login again from the dashboard.',
+                '');
         }
-        if (!code) return oauthErrorPage(res, 'OAuth verification failed', 'Discord returned no authorization code.');
 
         const redirectUri = req.session.oauthRedirect || redirectUriFor(req);
         try {
@@ -108,15 +122,16 @@ module.exports = (botClient) => {
                     ? `https://cdn.discordapp.com/avatars/${userResponse.data.id}/${userResponse.data.avatar}.png`
                     : `https://cdn.discordapp.com/embed/avatars/${parseInt(userResponse.data.id, 10) % 5}.png`
             };
-            const userGuilds = guildsResponse.data;
-            await new Promise((resolve, reject) => {
-                req.session.regenerate((regenerateError) => {
-                    if (regenerateError) return reject(regenerateError);
-                    req.session.user = user;
-                    req.session.userGuilds = userGuilds;
-                    req.session.save((saveError) => saveError ? reject(saveError) : resolve());
-                });
-            });
+            // Session fixation: an attacker who plants a known session id in the
+            // victim's browser before login would otherwise still hold a valid
+            // authenticated session afterwards. Issue a fresh id at the moment
+            // privileges change.
+            await new Promise((resolve) => req.session.regenerate(() => resolve()));
+            attachAuthenticatedSession(req.session, user, guildsResponse.data);
+            // The Discord access token is not needed after this point — the
+            // dashboard authorises from session identity + the bot's own gateway
+            // state — so it is deliberately not persisted into the session store.
+            await new Promise((resolve) => req.session.save(() => resolve()));
 
             res.redirect('/');
         } catch (err) {
@@ -142,16 +157,23 @@ module.exports = (botClient) => {
         res.json({
             loggedIn: !!req.session.user,
             oauthEnabled: !!(process.env.CLIENT_ID && process.env.DISCORD_CLIENT_SECRET),
-            authRequired: process.env.DASHBOARD_AUTH !== 'false',
+            // Auth is now enforced unless explicitly disabled (fails closed).
+            authRequired: String(process.env.DASHBOARD_AUTH).toLowerCase() !== 'false',
             redirectUri,
         });
     });
 
-    router.get('/me', (req, res) => {
+    // Duplicate of GET /api/me in server.js, which was gated during the first
+    // remediation. This copy was missed and kept serving the BOT OWNER's real
+    // username, tag and avatar to unauthenticated callers — verified live:
+    //   {"username":"RealOwner","tag":"RealOwner#0001","avatar":"https://…"}
+    //
+    // The dashboard client only calls /api/me, so gating this changes no UI
+    // behaviour. Kept rather than deleted because it is a published endpoint
+    // that external tooling may rely on; it now returns the same shape only to
+    // an authenticated caller.
+    router.get('/me', requireAuth, (req, res) => {
         try {
-            if (!req.session?.user?.id) {
-                return res.status(401).json({ error: 'Not authenticated', code: 'AUTH_REQUIRED' });
-            }
             if (req.session.user) {
                 return res.json({ ...req.session.user, loggedIn: true });
             }

@@ -19,7 +19,8 @@ module.exports = {
         const key = `warnings_${interaction.guild.id}_${user.id}`;
         const warnings = await db.get(key) || [];
         warnings.push(warning);
-        await db.set(key, warnings);
+        // Cap growth: this list is append-only and unbounded otherwise.
+        await db.set(key, warnings.slice(-200));
 
         const embed = new EmbedBuilder()
             .setColor('#00fbff') // Neon Blue

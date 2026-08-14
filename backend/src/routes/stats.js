@@ -1,8 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const os = require('os');
+const { requireAuth } = require('../middleware/auth');
 
 module.exports = (botClient) => {
+    // Was completely ungated: leaked guild/user counts, host CPU, memory
+    // and the bot client id to anonymous callers.
+    router.use(requireAuth);
+
     router.get('/', (req, res) => {
         try {
             const guilds = botClient ? botClient.guilds.cache.size : 0;

@@ -3,6 +3,7 @@ const router = express.Router({ mergeParams: true });
 const { QueueRepeatMode } = require('discord-player');
 const { Client: GeniusClient } = require('genius-lyrics');
 const { getUserPermLevel } = require('../middleware/permissions');
+const { allowAnonymous, sessionUserId } = require('../middleware/auth');
 const genius = new GeniusClient();
 
 module.exports = (botClient) => {
@@ -15,12 +16,14 @@ module.exports = (botClient) => {
     }
 
     async function requireDJ(req, res, next) {
-        if (req.method === 'GET') return next();
-        const userId = req.session?.user?.id;
+        const userId = sessionUserId(req);
         if (!userId) {
-            if (process.env.DASHBOARD_AUTH === 'true') return res.status(401).json({ error: 'Not authenticated' });
-            return next();
+            // Fails CLOSED — GETs included. Queue contents and lyrics are not
+            // public data, and anonymous writes controlled playback outright.
+            if (allowAnonymous(req)) return next();
+            return res.status(401).json({ error: 'Not authenticated', code: 'AUTH_REQUIRED' });
         }
+        if (req.method === 'GET') return next();   // any member may read the queue
         const level = await getUserPermLevel(botClient, req.params.guildId, userId);
         if (level < 1) return res.status(403).json({ error: 'DJ access required' });
         next();

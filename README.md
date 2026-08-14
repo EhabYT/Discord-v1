@@ -259,7 +259,7 @@ cannot be used to bypass them.
 ## Testing
 
 ```bash
-npm test              # command loader + 8 security suites (127 assertions)
+npm test              # command loader + 9 security suites (137 assertions)
 npm run test:security # security suites only
 npm run lint          # ESLint across bot, API and client
 npm run lint:gate     # CI gate — fails if lint problems increase
@@ -275,12 +275,13 @@ required — the suites mock Discord.
 | Suite | Assertions | Covers |
 | :--- | ---: | :--- |
 | `auth.test.js` | 20 | Fail-closed auth, loopback bypass, forged proxy headers, health minimisation |
-| `audit-sweep.test.js` | 11 | Sweeps all 136 routes: none ungated, no existence oracle, no side effects |
+| `audit-sweep.test.js` | 11 | Sweeps all 151 routes: none ungated, no existence oracle, no side effects |
 | `resilience.test.js` | 19 | Event-handler error boundary, non-Error rejections, fatal-exception exit |
 | `errors.test.js` | 19 | Error classification, no path/internal leakage, correlation ids |
 | `isolation.test.js` | 18 | Cross-guild access, backup/restore scoping, CSRF |
 | `hierarchy.test.js` | 16 | Role hierarchy on moderation and role assignment, anonymity redaction |
 | `oauth.test.js` | 13 | OAuth `state`, replay, session hygiene |
+| `abuse.test.js` | 10 | Bulk-kick cap, hierarchy in sweeps, per-endpoint rate limits |
 | `concurrency.test.js` | 11 | Points double-spend, giveaway double-draw, lock semantics |
 
 The suites run the real Express stack against a mocked Discord client — no

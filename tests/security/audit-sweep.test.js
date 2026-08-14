@@ -174,10 +174,9 @@ const check = (label, ok, detail = '') => {
         .filter((r) => r.path.startsWith('/api'))
         .filter((r) => !r.path.includes('*'));
 
-    // The recovered baseline exposes 136 concrete API routes. Pin the exact
-    // inventory so a refactor cannot silently drop (or accidentally duplicate)
-    // an endpoint while moving files.
-    check('route discovery found the full API surface', routes.length === 136, `${routes.length} routes`);
+    // Pin the authoritative API inventory so a refactor cannot silently drop
+    // (or accidentally duplicate) an endpoint while moving files.
+    check('route discovery found the full API surface', routes.length === 151, `${routes.length} routes`);
 
     const leaks = [];
     for (const r of routes) {
