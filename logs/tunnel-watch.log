@@ -1,0 +1,121 @@
+[2026-08-13T16:27:56Z] tunnel healthy https://gap-automotive-knitting-tubes.trycloudflare.com
+[2026-08-13T20:37:02Z] keep-tunnel start pid=1773 cf=/home/user/.npm/_npx/8a26fc3a61fe4212/node_modules/cloudflared/bin/cloudflared
+[2026-08-13T20:37:02Z] boot probe=dohfail url=http://127.0.0.1:3000
+[2026-08-13T20:37:12Z] new tunnel https://compete-thanks-recall-nature.trycloudflare.com
+[2026-08-13T20:37:20Z] tunnel healthy https://compete-thanks-recall-nature.trycloudflare.com
+[2026-08-13T20:52:45Z] health fail #1 probe=dohfail url=https://compete-thanks-recall-nature.trycloudflare.com
+[2026-08-13T20:52:55Z] health fail #2 probe=dohfail url=https://compete-thanks-recall-nature.trycloudflare.com
+[2026-08-13T20:53:05Z] health fail #3 probe=dohfail url=https://compete-thanks-recall-nature.trycloudflare.com
+[2026-08-13T20:53:15Z] health fail #4 probe=dohfail url=https://compete-thanks-recall-nature.trycloudflare.com
+[2026-08-13T20:53:26Z] health fail #5 probe=dohfail url=https://compete-thanks-recall-nature.trycloudflare.com
+[2026-08-13T20:53:36Z] health fail #6 probe=dohfail url=https://compete-thanks-recall-nature.trycloudflare.com
+[2026-08-13T20:53:43Z] new tunnel https://oak-casey-employ-messages.trycloudflare.com
+[2026-08-13T20:53:51Z] tunnel healthy https://oak-casey-employ-messages.trycloudflare.com
+[2026-08-13T21:23:55Z] health fail #1 probe=dohfail url=https://oak-casey-employ-messages.trycloudflare.com
+[2026-08-13T21:24:05Z] health fail #2 probe=dohfail url=https://oak-casey-employ-messages.trycloudflare.com
+[2026-08-13T21:24:15Z] health fail #3 probe=dohfail url=https://oak-casey-employ-messages.trycloudflare.com
+[2026-08-13T21:24:25Z] health fail #4 probe=dohfail url=https://oak-casey-employ-messages.trycloudflare.com
+[2026-08-13T21:24:35Z] health fail #5 probe=dohfail url=https://oak-casey-employ-messages.trycloudflare.com
+[2026-08-13T21:24:45Z] health fail #6 probe=dohfail url=https://oak-casey-employ-messages.trycloudflare.com
+[2026-08-13T21:24:54Z] new tunnel https://efforts-jvc-dat-pci.trycloudflare.com
+[2026-08-13T21:25:01Z] tunnel healthy https://efforts-jvc-dat-pci.trycloudflare.com
+[2026-08-13T21:27:05Z] keep-tunnel start pid=4872 cf=/home/user/.npm/_npx/8a26fc3a61fe4212/node_modules/cloudflared/bin/cloudflared
+[2026-08-13T21:32:47Z] keep-tunnel start pid=1729 cf=/home/user/.npm/_npx/8a26fc3a61fe4212/node_modules/cloudflared/bin/cloudflared
+[2026-08-13T21:32:48Z] auto-removed dead host 127.0.0.1:3000
+[2026-08-13T21:32:48Z] boot probe=e1033 url=http://127.0.0.1:3000
+[2026-08-13T21:32:53Z] new tunnel https://actively-mountain-parish-mystery.trycloudflare.com
+[2026-08-13T21:33:01Z] tunnel healthy https://actively-mountain-parish-mystery.trycloudflare.com
+[2026-08-13T21:34:59Z] auto-removed dead host actively-mountain-parish-mystery.trycloudflare.com
+[2026-08-13T21:34:59Z] health fail #1 probe=e1033 url=https://actively-mountain-parish-mystery.trycloudflare.com
+[2026-08-13T21:35:05Z] new tunnel https://filled-sacramento-style-special.trycloudflare.com
+[2026-08-13T21:35:13Z] tunnel healthy https://filled-sacramento-style-special.trycloudflare.com
+[2026-08-13T21:35:32Z] keep-tunnel start pid=2318 cf=/home/user/.npm/_npx/8a26fc3a61fe4212/node_modules/cloudflared/bin/cloudflared
+[2026-08-13T21:38:26Z] auto-removed dead host filled-sacramento-style-special.trycloudflare.com
+[2026-08-13T21:38:26Z] health fail #1 probe=e1033 url=https://filled-sacramento-style-special.trycloudflare.com
+[2026-08-13T21:38:35Z] new tunnel https://basketball-ceo-nutrition-promoting.trycloudflare.com
+[2026-08-13T21:38:43Z] tunnel healthy https://basketball-ceo-nutrition-promoting.trycloudflare.com
+[2026-08-13T21:43:30Z] local dashboard down — waiting
+[2026-08-13T21:43:36Z] local dashboard down — waiting
+[2026-08-13T21:45:22Z] auto-removed dead host basketball-ceo-nutrition-promoting.trycloudflare.com
+[2026-08-13T21:45:22Z] health fail #1 probe=e1033 url=https://basketball-ceo-nutrition-promoting.trycloudflare.com
+[2026-08-13T21:45:31Z] new tunnel https://identifier-bags-coverage-laboratories.trycloudflare.com
+[2026-08-13T21:45:35Z] auto-removed dead host identifier-bags-coverage-laboratories.trycloudflare.com
+[2026-08-13T21:45:35Z] 1033 on https://identifier-bags-coverage-laboratories.trycloudflare.com (1) — auto-removed
+[2026-08-13T21:46:21Z] keep-tunnel start pid=4323 cf=/home/user/.npm/_npx/8a26fc3a61fe4212/node_modules/cloudflared/bin/cloudflared
+[2026-08-13T21:58:22Z] health fail #1 probe=e1033 url=https://identifier-bags-coverage-laboratories.trycloudflare.com
+[2026-08-13T21:58:22Z] auto-removed dead host identifier-bags-coverage-laboratories.trycloudflare.com
+[2026-08-13T21:58:29Z] new tunnel https://producer-algorithm-belts-aging.trycloudflare.com
+[2026-08-13T21:58:40Z] tunnel healthy https://producer-algorithm-belts-aging.trycloudflare.com
+[2026-08-13T22:03:03Z] health fail #1 probe=e1033 url=https://producer-algorithm-belts-aging.trycloudflare.com
+[2026-08-13T22:03:03Z] auto-removed dead host producer-algorithm-belts-aging.trycloudflare.com
+[2026-08-13T22:03:12Z] new tunnel https://resulting-persons-amsterdam-donna.trycloudflare.com
+[2026-08-13T22:03:24Z] tunnel healthy https://resulting-persons-amsterdam-donna.trycloudflare.com
+[2026-08-13T22:24:30Z] auto-removed dead host resulting-persons-amsterdam-donna.trycloudflare.com
+[2026-08-13T22:24:30Z] health fail #1 probe=e1033 url=https://resulting-persons-amsterdam-donna.trycloudflare.com
+[2026-08-13T22:24:35Z] new tunnel https://dim-upon-implications-cancel.trycloudflare.com
+[2026-08-13T22:24:47Z] tunnel healthy https://dim-upon-implications-cancel.trycloudflare.com
+[2026-08-13T22:36:10Z] keep-tunnel start pid=7415 cf=cloudflared
+[2026-08-13T22:36:11Z] boot probe=e1033 url=https://dim-upon-implications-cancel.trycloudflare.com
+[2026-08-13T22:36:11Z] auto-removed dead host dim-upon-implications-cancel.trycloudflare.com
+[2026-08-13T22:36:53Z] failed to obtain tunnel URL
+[2026-08-13T22:36:53Z] open_once rc=1 attempt=1
+[2026-08-13T22:37:37Z] failed to obtain tunnel URL
+[2026-08-13T22:37:37Z] open_once rc=1 attempt=2
+[2026-08-13T22:38:13Z] keep-tunnel start pid=9347 cf=/home/user/.npm/_npx/8a26fc3a61fe4212/node_modules/cloudflared/bin/cloudflared
+[2026-08-13T22:38:13Z] boot: stored URL is blacklisted — purged
+[2026-08-13T22:38:13Z] boot probe=dead url=none
+[2026-08-13T22:38:21Z] new tunnel https://attachments-shot-ted-click.trycloudflare.com
+[2026-08-13T22:38:33Z] tunnel healthy https://attachments-shot-ted-click.trycloudflare.com
+[2026-08-13T22:40:49Z] health fail #1 probe=e1033 url=https://attachments-shot-ted-click.trycloudflare.com
+[2026-08-13T22:40:49Z] auto-removed dead host attachments-shot-ted-click.trycloudflare.com
+[2026-08-13T22:40:56Z] new tunnel https://casey-abstracts-adopt-vacation.trycloudflare.com
+[2026-08-13T22:41:08Z] tunnel healthy https://casey-abstracts-adopt-vacation.trycloudflare.com
+[2026-08-13T22:46:23Z] health fail #1 probe=e1033 url=https://casey-abstracts-adopt-vacation.trycloudflare.com
+[2026-08-13T22:46:23Z] auto-removed dead host casey-abstracts-adopt-vacation.trycloudflare.com
+[2026-08-13T22:46:29Z] new tunnel https://captured-custom-sql-workshop.trycloudflare.com
+[2026-08-13T22:46:41Z] tunnel healthy https://captured-custom-sql-workshop.trycloudflare.com
+[2026-08-13T22:49:35Z] health fail #1 probe=e1033 url=https://captured-custom-sql-workshop.trycloudflare.com
+[2026-08-13T22:49:35Z] auto-removed dead host captured-custom-sql-workshop.trycloudflare.com
+[2026-08-13T22:49:41Z] new tunnel https://conjunction-motorcycles-recipient-accent.trycloudflare.com
+[2026-08-13T22:49:53Z] tunnel healthy https://conjunction-motorcycles-recipient-accent.trycloudflare.com
+[2026-08-13T22:52:04Z] health fail #1 probe=e1033 url=https://conjunction-motorcycles-recipient-accent.trycloudflare.com
+[2026-08-13T22:52:04Z] auto-removed dead host conjunction-motorcycles-recipient-accent.trycloudflare.com
+[2026-08-13T22:52:10Z] new tunnel https://silly-recommends-sorts-reel.trycloudflare.com
+[2026-08-13T22:52:22Z] tunnel healthy https://silly-recommends-sorts-reel.trycloudflare.com
+[2026-08-13T22:54:29Z] health fail #1 probe=e1033 url=https://silly-recommends-sorts-reel.trycloudflare.com
+[2026-08-13T22:54:29Z] auto-removed dead host silly-recommends-sorts-reel.trycloudflare.com
+[2026-08-13T22:54:36Z] new tunnel https://question-standing-unavailable-listings.trycloudflare.com
+[2026-08-13T22:54:48Z] tunnel healthy https://question-standing-unavailable-listings.trycloudflare.com
+[2026-08-13T23:03:26Z] keep-tunnel start pid=14348 cf=/home/user/.npm/_npx/8a26fc3a61fe4212/node_modules/cloudflared/bin/cloudflared
+[2026-08-13T23:03:26Z] boot probe=e1033 url=https://question-standing-unavailable-listings.trycloudflare.com
+[2026-08-13T23:03:26Z] auto-removed dead host question-standing-unavailable-listings.trycloudflare.com
+[2026-08-13T23:03:32Z] new tunnel https://spring-chances-criticism-cabin.trycloudflare.com
+[2026-08-13T23:03:44Z] tunnel healthy https://spring-chances-criticism-cabin.trycloudflare.com
+[2026-08-13T23:07:50Z] health fail #1 probe=e1033 url=https://spring-chances-criticism-cabin.trycloudflare.com
+[2026-08-13T23:07:50Z] auto-removed dead host spring-chances-criticism-cabin.trycloudflare.com
+[2026-08-13T23:07:57Z] new tunnel https://full-slow-pics-bikes.trycloudflare.com
+[2026-08-13T23:08:09Z] tunnel healthy https://full-slow-pics-bikes.trycloudflare.com
+[2026-08-13T23:10:12Z] local dashboard down — waiting
+[2026-08-13T23:10:18Z] local dashboard down — waiting
+[2026-08-13T23:10:24Z] local dashboard down — waiting
+[2026-08-13T23:10:30Z] local dashboard down — waiting
+[2026-08-13T23:10:36Z] local dashboard down — waiting
+[2026-08-13T23:10:42Z] local dashboard down — waiting
+[2026-08-13T23:10:48Z] local dashboard down — waiting
+[2026-08-13T23:10:54Z] local dashboard down — waiting
+[2026-08-13T23:11:00Z] local dashboard down — waiting
+[2026-08-13T23:11:06Z] local dashboard down — waiting
+[2026-08-13T23:13:14Z] health fail #1 probe=e1033 url=https://full-slow-pics-bikes.trycloudflare.com
+[2026-08-13T23:13:14Z] auto-removed dead host full-slow-pics-bikes.trycloudflare.com
+[2026-08-13T23:13:21Z] new tunnel https://rental-stands-eng-electric.trycloudflare.com
+[2026-08-13T23:13:33Z] tunnel healthy https://rental-stands-eng-electric.trycloudflare.com
+[2026-08-13T23:17:47Z] health fail #1 probe=e1033 url=https://rental-stands-eng-electric.trycloudflare.com
+[2026-08-13T23:17:47Z] auto-removed dead host rental-stands-eng-electric.trycloudflare.com
+[2026-08-13T23:17:55Z] new tunnel https://inf-jul-formal-patients.trycloudflare.com
+[2026-08-13T23:18:07Z] tunnel healthy https://inf-jul-formal-patients.trycloudflare.com
+[2026-08-13T23:23:46Z] keep-tunnel start pid=19687 cf=/home/user/.npm/_npx/8a26fc3a61fe4212/node_modules/cloudflared/bin/cloudflared
+[2026-08-13T23:23:47Z] boot probe=e1033 url=https://inf-jul-formal-patients.trycloudflare.com
+[2026-08-13T23:23:47Z] auto-removed dead host inf-jul-formal-patients.trycloudflare.com
+[2026-08-13T23:23:53Z] new tunnel https://documentation-membership-accent-idea.trycloudflare.com
+[2026-08-13T23:24:01Z] wait https://documentation-membership-accent-idea.trycloudflare.com probe=http502
+[2026-08-13T23:24:08Z] tunnel healthy https://documentation-membership-accent-idea.trycloudflare.com
