@@ -1,0 +1,56 @@
+{
+  "name": "eb-bot",
+  "version": "3.1.0",
+  "description": "Discord.js bot with a React dashboard and Express API.",
+  "author": "EB-Bot Team",
+  "license": "MIT",
+  "private": true,
+  "main": "bot/src/index.js",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "start": "node bot/src/index.js",
+    "dev": "nodemon bot/src/index.js",
+    "dashboard": "node backend/src/server.js",
+    "deploy": "node -e \"require('dotenv').config(); require('./shared/services/startup').deployCommands(process.env.DISCORD_TOKEN, process.env.CLIENT_ID, process.env.GUILD_ID || null)\"",
+    "build:dashboard": "npm --prefix dashboard run build",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "lint:gate": "node scripts/lint-gate.js",
+    "test:unit": "node tests/unit/command-loader.test.js",
+    "test:security": "node tests/security/auth.test.js && node tests/security/hierarchy.test.js && node tests/security/isolation.test.js && node tests/security/oauth.test.js && node tests/security/concurrency.test.js && node tests/security/resilience.test.js && node tests/security/errors.test.js && node tests/security/audit-sweep.test.js",
+    "test": "npm run test:unit && npm run test:security",
+    "verify": "npm run lint:gate && npm test && npm run build:dashboard",
+    "rebuild": "npm rebuild better-sqlite3",
+    "postinstall": "npm rebuild better-sqlite3"
+  },
+  "dependencies": {
+    "@discord-player/extractor": "^7.2.0",
+    "@discord-player/opus": "^7.2.0",
+    "@discordjs/opus": "^0.10.0",
+    "@discordjs/rest": "^2.6.3",
+    "@discordjs/voice": "^0.19.2",
+    "@napi-rs/canvas": "^1.0.5",
+    "axios": "^1.19.0",
+    "better-sqlite3": "^12.11.1",
+    "compression": "^1.8.1",
+    "discord-player": "^7.2.0",
+    "discord.js": "^14.27.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-session": "^1.19.0",
+    "ffmpeg-static": "^5.3.0",
+    "genius-lyrics": "^4.4.7",
+    "mediaplex": "^1.0.0",
+    "play-dl": "^1.9.7",
+    "quick.db": "^9.1.7",
+    "socket.io": "^4.8.3",
+    "spotify-url-info": "^3.3.2",
+    "youtube-ext": "^1.1.25"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.5",
+    "nodemon": "^3.1.14"
+  }
+}

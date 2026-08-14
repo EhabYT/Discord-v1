@@ -1,0 +1,12 @@
+{
+  "note": "Lint debt budget. Lower it when you fix things; never raise it.",
+  "errors": 16,
+  "warnings": 22,
+  "byRule": {
+    "require-await": 13,
+    "require-atomic-updates": 7,
+    "curly": 8,
+    "(syntax)": 1,
+    "no-unused-vars": 9
+  }
+}
