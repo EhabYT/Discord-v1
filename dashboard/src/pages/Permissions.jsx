@@ -91,11 +91,11 @@ export default function Permissions({ guild, guildData }) {
     setSaving(false);
   };
 
-  if (!guild) return (
+  if (!guild) {return (
     <div className="p-6 flex items-center justify-center h-64">
       <p className="text-gray-500 text-sm">Select a server to manage permissions.</p>
     </div>
-  );
+  );}
 
   return (
     <div className="page-shell-sm animate-fade-in">

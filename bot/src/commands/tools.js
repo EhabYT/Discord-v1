@@ -374,7 +374,7 @@ module.exports = {
             if (sub === 'shorten') {
                 const url = str('url');
                 try {
-                    // eslint-disable-next-line no-new
+
                     new URL(url);
                 } catch {
                     return reply({ content: '❌ That is not a valid URL.', flags: [MessageFlags.Ephemeral] });

@@ -147,7 +147,7 @@ module.exports = (botClient) => {
         });
     });
 
-    router.get('/me', async (req, res) => {
+    router.get('/me', (req, res) => {
         try {
             if (!req.session?.user?.id) {
                 return res.status(401).json({ error: 'Not authenticated', code: 'AUTH_REQUIRED' });

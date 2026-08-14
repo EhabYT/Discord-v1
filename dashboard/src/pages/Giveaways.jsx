@@ -77,10 +77,6 @@ function GiveawayCard({ g, channels, roles, onEnd, onReroll, onDelete, onDuplica
   const rerollId   = g.id + 'reroll';
   const deleteId   = g.id + 'delete';
 
-  const winnerMentions = g.winnerIds?.length
-    ? g.winnerIds.map(id => <span key={id} className="text-yellow-400 font-semibold">#{id.slice(-4)}</span>)
-    : null;
-
   return (
     <div className={`cyber-card transition-all ${isActive ? 'border-cyan-500/25 hover:border-cyan-500/40' : 'opacity-70 hover:opacity-90'}`}>
       {/* Main row */}

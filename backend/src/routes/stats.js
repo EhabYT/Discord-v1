@@ -3,7 +3,7 @@ const router = express.Router();
 const os = require('os');
 
 module.exports = (botClient) => {
-    router.get('/', async (req, res) => {
+    router.get('/', (req, res) => {
         try {
             const guilds = botClient ? botClient.guilds.cache.size : 0;
             const users = botClient ? botClient.guilds.cache.reduce((a, g) => a + g.memberCount, 0) : 0;

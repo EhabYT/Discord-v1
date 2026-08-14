@@ -37,7 +37,6 @@ export default function Security({ guild, guildData, onNavigate }) {
   const [perf, setPerf] = useState(null);
   const [saving, setSaving] = useState('');
 
-  const roles    = guildData?.guild?.roles    || [];
   const channels = guildData?.guild?.channels?.filter(c => c.type === 0) || [];
 
   const loadPerf = useCallback(async () => {
@@ -97,11 +96,11 @@ export default function Security({ guild, guildData, onNavigate }) {
     }
   };
 
-  if (!guild) return (
+  if (!guild) {return (
     <div className="p-6 flex items-center justify-center h-64">
       <p className="text-gray-600 text-sm">Select a server first.</p>
     </div>
-  );
+  );}
 
   const pingColor = p => p < 100 ? '#00FF88' : p < 200 ? '#FFA500' : '#FF4444';
   const pingLabel = p => p < 100 ? 'Excellent' : p < 200 ? 'Good' : 'High Latency';

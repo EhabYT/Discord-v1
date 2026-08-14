@@ -20,6 +20,7 @@ Bot and backend remain in one process by design. The backend receives the live D
 
 ```text
 EB-Bot/
+├── .github/workflows/ci.yml       # clean install, lint, tests, build, DB check
 ├── backend/
 │   └── src/
 │       ├── middleware/
@@ -95,9 +96,9 @@ Git rename detection at 50% similarity reports:
 | Files/blob instances analysed | 468 | 212 outer tracked paths + 256 recovery-tip paths |
 | Candidate files after safe overlay | 289 | Complete baseline plus newer files |
 | Rename/move operations detected | 135 | 118 same-basename moves + 17 basename changes (including the rebuilt asset hash) |
-| Added paths | 117 | Primarily recovered commands and previously missing backend files |
+| Added paths | 118 | Primarily recovered commands, missing backend files, and CI |
 | Deleted old paths | 72 | Recovery archive, duplicate source, generated logs, placeholders, duplicate reports |
-| Final deliverable files | 256 | Excludes dependencies and ignored runtime logs; includes this report |
+| Final deliverable files | 257 | Excludes dependencies and ignored runtime logs; includes this report |
 
 No source implementation was duplicated between application areas. Duplicate old root fragments were removed only after their blobs were compared with the recovery baseline/newer overlay. Generated logs were removed from Git but retained as ignored runtime files in the workspace.
 
@@ -132,10 +133,11 @@ The runtime path is now explicit: `database/json.sqlite`, overridable with `DATA
 | Local import/require resolver audit | PASS | 0 unresolved paths |
 | JavaScript syntax audit | PASS | all non-generated `.js` files |
 | Unit/loader test | PASS | 100 commands, 0 errors; events/services load |
-| Security/regression tests | PASS | 8 suites, 126 assertions |
+| Security/regression tests | PASS | 8 suites, 127 assertions |
 | Route inventory | PASS | exactly 136 concrete API routes |
 | Dashboard build | PASS | 1,803 modules; reproducible asset hashes |
-| Lint ratchet | PASS | 16 errors / 22 warnings within lowered budget |
+| ESLint | PASS | 0 errors / 0 warnings; baseline locked at zero |
+| CI workflow | PASS | clean install, native SQLite, verify, bundle drift, DB integrity |
 | Backend start | PASS | bound `0.0.0.0`; `/api/health` returned 200 |
 | Dashboard serve | PASS | generated SPA returned 200 |
 | Database integrity | PASS | byte-for-byte SHA-256 match |
@@ -170,7 +172,7 @@ FILES ANALYZED: 468 blob instances / 289 assembled candidates
 FILES MOVED: 135 Git-detected moves/renames
 FILES RENAMED: 17 basename changes (including generated asset hash)
 FILES DELETED: 72 obsolete paths (archive/duplicates/logs/placeholders/reports)
-FILES CREATED: 117 paths (mostly recovered source and missing backend infrastructure)
+FILES CREATED: 118 paths (recovered source, backend infrastructure, and CI)
 BACKEND: PASS — 16 files, 136 API routes
 FRONTEND: NOT SEPARATE — dashboard is the only frontend by design
 DASHBOARD: PASS — React/Vite source and generated output separated

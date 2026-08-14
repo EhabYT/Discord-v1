@@ -49,7 +49,7 @@ async function deployCommands(token, clientId, guildId = null, extraGuildIds = [
     }
 }
 
-async function runDiagnostics(db) {
+function runDiagnostics(db) {
     logger.info('Running startup diagnostics...');
     const checks = {
         'Environment Variables': !!(process.env.DISCORD_TOKEN && process.env.CLIENT_ID),

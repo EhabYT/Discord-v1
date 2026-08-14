@@ -689,7 +689,6 @@ function WarningsDesk({ guild, warnings, members, onDeleted, onEdited, onCleared
 }
 
 function MemberRow({ member, guildId, warnCount, noteCount, onAction, onOpenNotes, onOpenProfile, index }) {
-  const toast = useToast();
   return (
     <div
       className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors group"

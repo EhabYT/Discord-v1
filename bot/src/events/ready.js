@@ -6,6 +6,7 @@ module.exports = {
     once: true,
     async execute(client) {
         logger.info(`Bot logged in as ${client.user.tag}`);
+        client.invites = new Collection();
 
         try {
             const saved = await client.db.get('bot_presence').catch(() => null);
@@ -33,7 +34,6 @@ module.exports = {
         }
 
         // Cache invites
-        client.invites = new Collection();
         const guilds = client.guilds.cache.map(g => g);
 
         for (const guild of guilds) {

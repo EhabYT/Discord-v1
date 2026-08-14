@@ -138,19 +138,7 @@ export default function ServerSettings({ guild, guildData, setGuildData }) {
   const filteredCmds = commands.filter((c) => c.name.includes(cmdQuery.toLowerCase()));
   const disabledCount = commands.filter((c) => !c.enabled).length;
 
-  const bulkCommands = async (enabled) => {
-    const targets = filteredCmds.filter((c) => c.enabled !== enabled);
-    if (!targets.length) return;
-    setCommands((prev) => prev.map((c) => (
-      targets.some((t) => t.name === c.name) ? { ...c, enabled } : c
-    )));
-    try {
-      await Promise.all(targets.map((c) => api.post(`/api/guild/${guild.id}/commands/toggle`, { commandName: c.name, enabled })));
-      toast.success(enabled ? `Enabled ${targets.length} commands` : `Disabled ${targets.length} commands`);
-    } catch {
-      toast.error('Some command toggles failed — refresh and retry.');
-    }
-  };
+
 
   return (
     <div className="page-shell-sm animate-fade-in">

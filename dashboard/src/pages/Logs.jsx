@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ScrollText, Circle, Filter, Trash2, WifiOff, Save, Pause, Play, Loader, Download } from 'lucide-react';
 import { getSocket, joinGuild, leaveGuild } from '../socket.js';
 import PageHeader from '../components/PageHeader.jsx';
@@ -164,11 +164,11 @@ export default function Logs({ guild, guildData }) {
     setSaving(false);
   };
 
-  if (!guild) return (
+  if (!guild) {return (
     <div className="p-6 flex items-center justify-center h-64">
       <p className="text-gray-600 text-sm">Select a server first.</p>
     </div>
-  );
+  );}
 
   return (
     <div className="page-shell-sm animate-fade-in">

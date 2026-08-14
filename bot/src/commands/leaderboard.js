@@ -28,8 +28,8 @@ module.exports = {
       if (type === 'messages') value = stats.messages;
       else if (type === 'voice') value = Math.floor(stats.voiceTime / 60000);
       else value = stats.messages + Math.floor(stats.voiceTime / 60000) + stats.reactions;
-      if (value > 0) entries.push({ userId: memberId, value
-            });
+      if (value > 0) {entries.push({ userId: memberId, value
+            });}
         }
     entries.sort((a, b) => b.value - a.value);
     const top10 = entries.slice(0,

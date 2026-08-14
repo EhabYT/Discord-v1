@@ -6,7 +6,7 @@ const { getUserPermLevel } = require('../middleware/permissions');
 const genius = new GeniusClient();
 
 module.exports = (botClient) => {
-    async function validateGuild(req, res, next) {
+    function validateGuild(req, res, next) {
         if (!botClient) return res.status(503).json({ error: 'Bot is initializing' });
         const guild = botClient.guilds.cache.get(req.params.guildId);
         if (!guild) return res.status(404).json({ error: 'Server not found' });
@@ -29,7 +29,7 @@ module.exports = (botClient) => {
     router.use(validateGuild);
     router.use(requireDJ);
 
-    router.get('/', async (req, res) => {
+    router.get('/', (req, res) => {
         try {
             if (!botClient.player) return res.json({ playing: false, paused: false, queue: [], volume: 50, filters: [], repeatMode: 0 });
             const queue = botClient.player.nodes.get(req.params.guildId);
@@ -171,7 +171,7 @@ module.exports = (botClient) => {
         } catch (err) { res.status(500).json({ error: err.message }); }
     });
 
-    router.get('/channels', async (req, res) => {
+    router.get('/channels', (req, res) => {
         try {
             const channels = req.guild.channels.cache
                 .filter((c) => c.type === 2)
@@ -180,7 +180,7 @@ module.exports = (botClient) => {
         } catch (err) { res.status(500).json({ error: err.message }); }
     });
 
-    router.post('/loop', async (req, res) => {
+    router.post('/loop', (req, res) => {
         try {
             const queue = botClient.player.nodes.get(req.params.guildId);
             if (!queue) return res.status(404).json({ error: 'Queue not found' });
@@ -198,7 +198,7 @@ module.exports = (botClient) => {
         } catch (err) { res.status(500).json({ error: err.message }); }
     });
 
-    router.post('/autoplay', async (req, res) => {
+    router.post('/autoplay', (req, res) => {
         try {
             const queue = botClient.player.nodes.get(req.params.guildId);
             if (!queue) return res.status(404).json({ error: 'No queue' });

@@ -14,7 +14,7 @@ module.exports = {
         .addUserOption(opt => opt.setName('first').setDescription('First member').setRequired(true))
         .addUserOption(opt => opt.setName('second').setDescription('Second member').setRequired(true)),
 
-    async execute(interaction) {
+    execute(interaction) {
         const first = interaction.options.getUser('first');
         const second = interaction.options.getUser('second');
         const score = compatibility(first, second);

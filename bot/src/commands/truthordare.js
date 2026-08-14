@@ -14,7 +14,7 @@ module.exports = {
                 { name: 'Random', value: 'random' }
             )),
 
-    async execute(interaction) {
+    execute(interaction) {
         const requested = interaction.options.getString('type') || 'random';
         const type = requested === 'random' ? (Math.random() < 0.5 ? 'truth' : 'dare') : requested;
         const prompt = getPrompt(type === 'truth' ? TRUTHS : DARES, interaction.guild.id);

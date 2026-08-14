@@ -6,7 +6,7 @@ module.exports = {
         .setName('daily')
         .setDescription('Post the daily community question'),
 
-    async execute(interaction) {
+    execute(interaction) {
         return interaction.reply({
             embeds: [
                 new EmbedBuilder()

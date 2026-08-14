@@ -28,7 +28,7 @@ module.exports = (botClient) => {
     }
 
     // ── Middleware: Validate Guild Access ──
-    async function validateGuild(req, res, next) {
+    function validateGuild(req, res, next) {
         const { guildId } = req.params;
         if (!botClient) return res.status(503).json({ error: 'Bot is initializing' });
 
@@ -139,13 +139,16 @@ module.exports = (botClient) => {
 
             entries = entries.slice(0, 15);
 
-            await Promise.all(entries.map(async entry => {
+            const enrichedEntries = await Promise.all(entries.map(async (entry) => {
                 const user = await botClient.users.fetch(entry.userId).catch(() => null);
-                entry.username = user ? user.username : entry.userId;
-                entry.avatar = user ? user.displayAvatarURL({ size: 32 }) : null;
+                return {
+                    ...entry,
+                    username: user ? user.username : entry.userId,
+                    avatar: user ? user.displayAvatarURL({ size: 32 }) : null,
+                };
             }));
 
-            res.json(entries);
+            res.json(enrichedEntries);
         } catch (err) { throw err; }
     });
 
@@ -563,10 +566,13 @@ module.exports = (botClient) => {
                     };
                 })
                 .sort((a, b) => a.days - b.days);
-            await Promise.all(entries.map(async (e) => {
-                const user = await botClient.users.fetch(e.userId).catch(() => null);
-                e.username = user?.username || e.userId;
-                e.avatar = user?.displayAvatarURL({ size: 64 }) || null;
+            const enrichedEntries = await Promise.all(entries.map(async (entry) => {
+                const user = await botClient.users.fetch(entry.userId).catch(() => null);
+                return {
+                    ...entry,
+                    username: user?.username || entry.userId,
+                    avatar: user?.displayAvatarURL({ size: 64 }) || null,
+                };
             }));
             res.json({
                 config: {
@@ -575,8 +581,8 @@ module.exports = (botClient) => {
                     roleId: cfg.roleId || null,
                     message: cfg.message || "🎉 {user} it's your birthday today! Happy Birthday! 🎂",
                 },
-                entries,
-                today: entries.filter((e) => e.today).length,
+                entries: enrichedEntries,
+                today: enrichedEntries.filter((entry) => entry.today).length,
             });
         } catch (err) { throw err; }
     });

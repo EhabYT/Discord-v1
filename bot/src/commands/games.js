@@ -88,12 +88,12 @@ function mineGrid(size = 5, mines = 5) {
     const around = (i) => {
         const x = i % size; const y = Math.floor(i / size);
         let n = 0;
-        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {for (let dx = -1; dx <= 1; dx++) {
             if (!dx && !dy) continue;
             const nx = x + dx; const ny = y + dy;
             if (nx < 0 || ny < 0 || nx >= size || ny >= size) continue;
             if (cells[ny * size + nx] === -1) n++;
-        }
+        }}
         return n;
     };
     return cells.map((v, i) => (v === -1 ? '💣' : String(around(i) || '·')));

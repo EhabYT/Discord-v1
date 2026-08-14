@@ -8,12 +8,12 @@ module.exports = {
 
   async execute(interaction, client, db) {
     const user = interaction.options.getUser('user');
-    if (!user) return interaction.reply({
+    if (!user) {return interaction.reply({
       content: '❌ User not found.', flags: [MessageFlags.Ephemeral]
-    });
-    if (user.id === interaction.user.id) return interaction.reply({
+    });}
+    if (user.id === interaction.user.id) {return interaction.reply({
       content: '❌ Cannot rep yourself.', flags: [MessageFlags.Ephemeral]
-    });
+    });}
     const cooldownKey = `rep_cooldown_${interaction.guild.id
       }_${interaction.user.id
       } `;

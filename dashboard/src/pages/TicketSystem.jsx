@@ -83,11 +83,11 @@ export default function TicketSystem({ guild, guildData }) {
     setConfirmClose(null);
   };
 
-  if (!guild) return (
+  if (!guild) {return (
     <div className="p-6 flex items-center justify-center h-64">
       <p className="text-gray-600 text-sm">Select a server first.</p>
     </div>
-  );
+  );}
 
   const openCount   = tickets.filter(t => t.status === 'open' || !t.status).length;
   const closedCount = tickets.filter(t => t.status === 'closed').length;

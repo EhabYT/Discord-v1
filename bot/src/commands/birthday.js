@@ -148,18 +148,21 @@ flags: [MessageFlags.Ephemeral]
                 });
             }
 
-            // Fetch usernames
-            await Promise.all(entries.map(async e => {
-                const user = await client.users.fetch(e.userId).catch(() => null);
-                e.username = user?.username || e.userId;
-                e.avatar   = user?.displayAvatarURL({ size: 32 });
+            // Fetch usernames without mutating entries across an await boundary.
+            const enrichedEntries = await Promise.all(entries.map(async (entry) => {
+                const user = await client.users.fetch(entry.userId).catch(() => null);
+                return {
+                    ...entry,
+                    username: user?.username || entry.userId,
+                    avatar: user?.displayAvatarURL({ size: 32 }),
+                };
             }));
 
             const today   = new Date();
             const todayM  = today.getMonth() + 1;
             const todayD  = today.getDate();
 
-            const lines = entries.map(e => {
+            const lines = enrichedEntries.map(e => {
                 const days   = daysUntil(e.month, e.day);
                 const isBday = todayM === e.month && todayD === e.day;
                 const dateStr = `${MONTHS[e.month - 1]} ${ordinal(e.day)}`;
@@ -171,7 +174,7 @@ flags: [MessageFlags.Ephemeral]
                 .setColor('#FF69B4')
                 .setTitle('🎂 Upcoming Birthdays')
                 .setDescription(lines.join('\n'))
-                .setFooter({ text: `${entries.length} birthday${entries.length !== 1 ? 's' : ''} registered` })
+                .setFooter({ text: `${enrichedEntries.length} birthday${enrichedEntries.length !== 1 ? 's' : ''} registered` })
                 .setTimestamp();
 
             return interaction.editReply({ embeds: [embed] });

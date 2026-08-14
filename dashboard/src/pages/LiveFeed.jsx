@@ -74,7 +74,7 @@ export default function LiveFeed({ guild }) {
   const [paused, setPaused] = useState(false);
   const [query, setQuery] = useState('');
   const [guildOnly, setGuildOnly] = useState(true);
-  const [tick, setTick] = useState(0);
+  const [, setTick] = useState(0);
   const pausedRef = useRef(false);
   const esRef = useRef(null);
   const topRef = useRef(null);

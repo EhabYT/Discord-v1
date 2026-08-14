@@ -76,7 +76,7 @@ function getGlobalTotal() { return globalCommands; }
 // Sweep old data every 30 minutes
 setInterval(() => {
     const now = Date.now();
-    for (const [guildId, b] of buckets.entries()) {
+    for (const b of buckets.values()) {
         b.forEach(bucket => {
             if (now - bucket.ts > HOURS * HOUR_MS) {
                 bucket.messages = 0;

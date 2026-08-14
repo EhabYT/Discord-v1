@@ -17,7 +17,6 @@ const { EventEmitter } = require('events');
 const { Collection } = require('discord.js');
 
 const PORT = process.env.DASHBOARD_PORT;
-const BASE = `http://127.0.0.1:${PORT}`;
 
 let presenceChanged = false;
 
