@@ -1,0 +1,1487 @@
+[2026-08-13T22:35:11.257Z] [DEBUG] Loaded command: serverstats
+[2026-08-13T22:35:11.258Z] [DEBUG] Loaded command: setlevel
+[2026-08-13T22:35:11.258Z] [DEBUG] Loaded command: setnick
+[2026-08-13T22:35:11.258Z] [DEBUG] Loaded command: setupverification
+[2026-08-13T22:35:11.259Z] [DEBUG] Loaded command: ship
+[2026-08-13T22:35:11.259Z] [DEBUG] Loaded command: shuffle
+[2026-08-13T22:35:11.259Z] [DEBUG] Loaded command: skip
+[2026-08-13T22:35:11.260Z] [DEBUG] Loaded command: slots
+[2026-08-13T22:35:11.260Z] [DEBUG] Loaded command: slowmode
+[2026-08-13T22:35:11.260Z] [DEBUG] Loaded command: snipe
+[2026-08-13T22:35:11.260Z] [DEBUG] Loaded command: softban
+[2026-08-13T22:35:11.261Z] [DEBUG] Loaded command: stats
+[2026-08-13T22:35:11.261Z] [DEBUG] Loaded command: steal
+[2026-08-13T22:35:11.261Z] [DEBUG] Loaded command: stop
+[2026-08-13T22:35:11.262Z] [DEBUG] Loaded command: streak
+[2026-08-13T22:35:11.262Z] [DEBUG] Loaded command: suggest
+[2026-08-13T22:35:11.263Z] [DEBUG] Loaded command: tag
+[2026-08-13T22:35:11.264Z] [DEBUG] Loaded command: ticket
+[2026-08-13T22:35:11.264Z] [DEBUG] Loaded command: timeout
+[2026-08-13T22:35:11.266Z] [DEBUG] Loaded command: tools
+[2026-08-13T22:35:11.267Z] [DEBUG] Loaded command: truthordare
+[2026-08-13T22:35:11.267Z] [DEBUG] Loaded command: unban
+[2026-08-13T22:35:11.268Z] [DEBUG] Loaded command: unlock
+[2026-08-13T22:35:11.268Z] [DEBUG] Loaded command: untimeout
+[2026-08-13T22:35:11.268Z] [DEBUG] Loaded command: unvmute
+[2026-08-13T22:35:11.268Z] [DEBUG] Loaded command: userinfo
+[2026-08-13T22:35:11.269Z] [DEBUG] Loaded command: vmute
+[2026-08-13T22:35:11.269Z] [DEBUG] Loaded command: volume
+[2026-08-13T22:35:11.269Z] [DEBUG] Loaded command: warn
+[2026-08-13T22:35:11.270Z] [DEBUG] Loaded command: warnings
+[2026-08-13T22:35:11.271Z] [DEBUG] Loaded command: welcome
+[2026-08-13T22:35:11.271Z] [DEBUG] Loaded command: whitelist
+[2026-08-13T22:35:11.271Z] [DEBUG] Loaded command: work
+[2026-08-13T22:35:11.272Z] [DEBUG] Loaded command: wouldyourather
+[2026-08-13T22:35:11.272Z] [INFO] Running startup diagnostics...
+[2026-08-13T22:35:11.272Z] [DEBUG] [PASS] Environment Variables
+[2026-08-13T22:35:11.272Z] [DEBUG] [PASS] Commands Directory
+[2026-08-13T22:35:11.272Z] [DEBUG] [PASS] Database Connection
+[2026-08-13T22:35:11.361Z] [INFO] Music extractors loaded
+[2026-08-13T22:35:11.363Z] [DEBUG] Loaded Client Event: guildMemberUpdate
+[2026-08-13T22:35:11.363Z] [DEBUG] Loaded Client Event: guildUpdate
+[2026-08-13T22:35:11.363Z] [DEBUG] Loaded Client Event: guildBanAdd
+[2026-08-13T22:35:11.363Z] [DEBUG] Loaded Client Event: guildBanRemove
+[2026-08-13T22:35:11.363Z] [DEBUG] Loaded Client Event: channelCreate
+[2026-08-13T22:35:11.363Z] [DEBUG] Loaded Client Event: channelDelete
+[2026-08-13T22:35:11.364Z] [DEBUG] Loaded Client Event: emojiCreate
+[2026-08-13T22:35:11.364Z] [DEBUG] Loaded Client Event: emojiDelete
+[2026-08-13T22:35:11.364Z] [DEBUG] Loaded Client Event: emojiUpdate
+[2026-08-13T22:35:11.364Z] [DEBUG] Loaded Client Event: stickerCreate
+[2026-08-13T22:35:11.364Z] [DEBUG] Loaded Client Event: stickerDelete
+[2026-08-13T22:35:11.365Z] [DEBUG] Loaded Client Event: interactionCreate
+[2026-08-13T22:35:11.365Z] [DEBUG] Loaded Client Event: guildMemberAdd
+[2026-08-13T22:35:11.365Z] [DEBUG] Loaded Client Event: guildMemberRemove
+[2026-08-13T22:35:11.366Z] [DEBUG] Loaded Client Event: inviteCreate
+[2026-08-13T22:35:11.366Z] [DEBUG] Loaded Client Event: inviteDelete
+[2026-08-13T22:35:11.366Z] [DEBUG] Loaded Client Event: messageCreate
+[2026-08-13T22:35:11.366Z] [DEBUG] Loaded Client Event: messageDelete
+[2026-08-13T22:35:11.366Z] [DEBUG] Loaded Client Event: messageUpdate
+[2026-08-13T22:35:11.367Z] [DEBUG] Loaded Client Event: messageReactionAdd
+[2026-08-13T22:35:11.367Z] [DEBUG] Loaded Client Event: messageReactionRemove
+[2026-08-13T22:35:11.367Z] [DEBUG] Loaded Client Event: clientReady
+[2026-08-13T22:35:11.367Z] [DEBUG] Loaded Client Event: roleCreate
+[2026-08-13T22:35:11.367Z] [DEBUG] Loaded Client Event: roleDelete
+[2026-08-13T22:35:11.367Z] [DEBUG] Loaded Client Event: roleUpdate
+[2026-08-13T22:35:11.368Z] [DEBUG] Loaded Client Event: threadCreate
+[2026-08-13T22:35:11.368Z] [DEBUG] Loaded Client Event: threadDelete
+[2026-08-13T22:35:11.368Z] [DEBUG] Loaded Client Event: voiceStateUpdate
+[2026-08-13T22:35:11.369Z] [DEBUG] Loaded Player Event: audioTrackAdd
+[2026-08-13T22:35:11.369Z] [DEBUG] Loaded Player Event: audioTracksAdd
+[2026-08-13T22:35:11.369Z] [DEBUG] Loaded Player Event: disconnect
+[2026-08-13T22:35:11.369Z] [DEBUG] Loaded Player Event: emptyChannel
+[2026-08-13T22:35:11.369Z] [DEBUG] Loaded Player Event: emptyQueue
+[2026-08-13T22:35:11.370Z] [DEBUG] Loaded Player Event: error
+[2026-08-13T22:35:11.370Z] [DEBUG] Loaded Player Event: playerError
+[2026-08-13T22:35:11.370Z] [DEBUG] Loaded Player Event: playerSkip
+[2026-08-13T22:35:11.370Z] [DEBUG] Loaded Player Event: playerStart
+[2026-08-13T22:35:11.371Z] [DEBUG] Scheduler job "timed-bans" started (interval: 60000ms)
+[2026-08-13T22:35:11.371Z] [DEBUG] Scheduler job "giveaways" started (interval: 10000ms)
+[2026-08-13T22:35:11.371Z] [DEBUG] Scheduler job "birthdays" started (interval: 3600000ms)
+[2026-08-13T22:35:11.371Z] [DEBUG] Scheduler job "birthday-roles" started (interval: 3600000ms)
+[2026-08-13T22:35:11.371Z] [DEBUG] Scheduler job "reminders" started (interval: 15000ms)
+[2026-08-13T22:35:11.371Z] [DEBUG] Scheduler job "map-cleanup" started (interval: 3600000ms)
+[2026-08-13T22:35:11.371Z] [DEBUG] Scheduler job "verification-kick" started (interval: 60000ms)
+[2026-08-13T22:35:11.371Z] [DEBUG] Scheduler job "public-url" started (interval: 15000ms)
+[2026-08-13T22:35:11.439Z] [INFO] ✨ Dashboard active at http://0.0.0.0:3000
+[2026-08-13T22:35:12.514Z] [INFO] Bot logged in as 𝑬𝑩#8552
+[2026-08-13T22:35:12.717Z] [DEBUG] Cached 3 invites for guild: 𝑬𝑩 𝑺𝒕𝒐𝒓𝒆
+[2026-08-13T22:35:12.952Z] [DEBUG] Cached 2 invites for guild: 𝑬𝑩
+[2026-08-13T22:38:26.402Z] [INFO] Dashboard public URL changed: https://attachments-shot-ted-click.trycloudflare.com
+[2026-08-13T22:41:05.865Z] [INFO] Dashboard public URL changed: https://casey-abstracts-adopt-vacation.trycloudflare.com
+[2026-08-13T22:43:49.551Z] [DEBUG] Loaded command: afk
+[2026-08-13T22:43:49.552Z] [DEBUG] Loaded command: announce
+[2026-08-13T22:43:49.553Z] [DEBUG] Loaded command: automod
+[2026-08-13T22:43:49.554Z] [DEBUG] Loaded command: autoplay
+[2026-08-13T22:43:49.554Z] [DEBUG] Loaded command: avatar
+[2026-08-13T22:43:49.555Z] [DEBUG] Loaded command: badges
+[2026-08-13T22:43:49.555Z] [DEBUG] Loaded command: ban
+[2026-08-13T22:43:49.556Z] [DEBUG] Loaded command: banner
+[2026-08-13T22:43:49.556Z] [DEBUG] Loaded command: birthday
+[2026-08-13T22:43:49.557Z] [DEBUG] Loaded command: birthdaysettings
+[2026-08-13T22:43:49.558Z] [DEBUG] Loaded command: channelinfo
+[2026-08-13T22:43:49.558Z] [DEBUG] Loaded command: clear
+[2026-08-13T22:43:49.559Z] [DEBUG] Loaded command: coinflip
+[2026-08-13T22:43:49.559Z] [DEBUG] Loaded command: confess
+[2026-08-13T22:43:49.560Z] [DEBUG] Loaded command: credits
+[2026-08-13T22:43:49.560Z] [DEBUG] Loaded command: daily
+[2026-08-13T22:43:49.583Z] [DEBUG] Loaded command: define
+[2026-08-13T22:43:49.584Z] [DEBUG] Loaded command: editsnipe
+[2026-08-13T22:43:49.584Z] [DEBUG] Loaded command: filters
+[2026-08-13T22:43:49.585Z] [DEBUG] Loaded command: firstmessage
+[2026-08-13T22:43:49.586Z] [DEBUG] Loaded command: fun
+[2026-08-13T22:43:49.589Z] [DEBUG] Loaded command: games
+[2026-08-13T22:43:49.590Z] [DEBUG] Loaded command: giveaway
+[2026-08-13T22:43:49.591Z] [DEBUG] Loaded command: givexp
+[2026-08-13T22:43:49.591Z] [DEBUG] Loaded command: help
+[2026-08-13T22:43:49.592Z] [DEBUG] Loaded command: info
+[2026-08-13T22:43:49.592Z] [DEBUG] Loaded command: invites
+[2026-08-13T22:43:49.592Z] [DEBUG] Loaded command: jumbo
+[2026-08-13T22:43:49.593Z] [DEBUG] Loaded command: kick
+[2026-08-13T22:43:49.593Z] [DEBUG] Loaded command: leaderboard
+[2026-08-13T22:43:49.593Z] [DEBUG] Loaded command: leave
+[2026-08-13T22:43:49.594Z] [DEBUG] Loaded command: levelsettings
+[2026-08-13T22:43:49.595Z] [DEBUG] Loaded command: lock
+[2026-08-13T22:43:49.595Z] [DEBUG] Loaded command: lockdown
+[2026-08-13T22:43:49.596Z] [DEBUG] Loaded command: logging
+[2026-08-13T22:43:49.597Z] [DEBUG] Loaded command: loop
+[2026-08-13T22:43:49.597Z] [DEBUG] Loaded command: lyrics
+[2026-08-13T22:43:49.597Z] [DEBUG] Loaded command: math
+[2026-08-13T22:43:49.598Z] [DEBUG] Loaded command: membercount
+[2026-08-13T22:43:49.598Z] [DEBUG] Loaded command: move
+[2026-08-13T22:43:49.599Z] [DEBUG] Loaded command: note
+[2026-08-13T22:43:49.599Z] [DEBUG] Loaded command: nowplaying
+[2026-08-13T22:43:49.599Z] [DEBUG] Loaded command: pause
+[2026-08-13T22:43:49.600Z] [DEBUG] Loaded command: pay
+[2026-08-13T22:43:49.600Z] [DEBUG] Loaded command: ping
+[2026-08-13T22:43:49.600Z] [DEBUG] Loaded command: play
+[2026-08-13T22:43:49.601Z] [DEBUG] Loaded command: points
+[2026-08-13T22:43:49.601Z] [DEBUG] Loaded command: poll
+[2026-08-13T22:43:49.601Z] [DEBUG] Loaded command: qr
+[2026-08-13T22:43:49.601Z] [DEBUG] Loaded command: queue
+[2026-08-13T22:43:49.618Z] [DEBUG] Loaded command: rank
+[2026-08-13T22:43:49.619Z] [DEBUG] Loaded command: reactionrole
+[2026-08-13T22:43:49.620Z] [DEBUG] Loaded command: remind
+[2026-08-13T22:43:49.620Z] [DEBUG] Loaded command: reminders
+[2026-08-13T22:43:49.620Z] [DEBUG] Loaded command: remove
+[2026-08-13T22:43:49.621Z] [DEBUG] Loaded command: removewarn
+[2026-08-13T22:43:49.621Z] [DEBUG] Loaded command: rep
+[2026-08-13T22:43:49.621Z] [DEBUG] Loaded command: replay
+[2026-08-13T22:43:49.622Z] [DEBUG] Loaded command: resetxp
+[2026-08-13T22:43:49.622Z] [DEBUG] Loaded command: resume
+[2026-08-13T22:43:49.622Z] [DEBUG] Loaded command: role
+[2026-08-13T22:43:49.623Z] [DEBUG] Loaded command: roleinfo
+[2026-08-13T22:43:49.623Z] [DEBUG] Loaded command: roll
+[2026-08-13T22:43:49.623Z] [DEBUG] Loaded command: say
+[2026-08-13T22:43:49.624Z] [DEBUG] Loaded command: seek
+[2026-08-13T22:43:49.624Z] [DEBUG] Loaded command: serverinfo
+[2026-08-13T22:43:49.624Z] [DEBUG] Loaded command: serverstats
+[2026-08-13T22:43:49.624Z] [DEBUG] Loaded command: setlevel
+[2026-08-13T22:43:49.625Z] [DEBUG] Loaded command: setnick
+[2026-08-13T22:43:49.625Z] [DEBUG] Loaded command: setupverification
+[2026-08-13T22:43:49.626Z] [DEBUG] Loaded command: ship
+[2026-08-13T22:43:49.626Z] [DEBUG] Loaded command: shuffle
+[2026-08-13T22:43:49.626Z] [DEBUG] Loaded command: skip
+[2026-08-13T22:43:49.626Z] [DEBUG] Loaded command: slots
+[2026-08-13T22:43:49.627Z] [DEBUG] Loaded command: slowmode
+[2026-08-13T22:43:49.627Z] [DEBUG] Loaded command: snipe
+[2026-08-13T22:43:49.627Z] [DEBUG] Loaded command: softban
+[2026-08-13T22:43:49.628Z] [DEBUG] Loaded command: stats
+[2026-08-13T22:43:49.628Z] [DEBUG] Loaded command: steal
+[2026-08-13T22:43:49.628Z] [DEBUG] Loaded command: stop
+[2026-08-13T22:43:49.628Z] [DEBUG] Loaded command: streak
+[2026-08-13T22:43:49.629Z] [DEBUG] Loaded command: suggest
+[2026-08-13T22:43:49.630Z] [DEBUG] Loaded command: tag
+[2026-08-13T22:43:49.630Z] [DEBUG] Loaded command: ticket
+[2026-08-13T22:43:49.631Z] [DEBUG] Loaded command: timeout
+[2026-08-13T22:43:49.633Z] [DEBUG] Loaded command: tools
+[2026-08-13T22:43:49.633Z] [DEBUG] Loaded command: truthordare
+[2026-08-13T22:43:49.634Z] [DEBUG] Loaded command: unban
+[2026-08-13T22:43:49.634Z] [DEBUG] Loaded command: unlock
+[2026-08-13T22:43:49.634Z] [DEBUG] Loaded command: untimeout
+[2026-08-13T22:43:49.635Z] [DEBUG] Loaded command: unvmute
+[2026-08-13T22:43:49.635Z] [DEBUG] Loaded command: userinfo
+[2026-08-13T22:43:49.635Z] [DEBUG] Loaded command: vmute
+[2026-08-13T22:43:49.636Z] [DEBUG] Loaded command: volume
+[2026-08-13T22:43:49.636Z] [DEBUG] Loaded command: warn
+[2026-08-13T22:43:49.637Z] [DEBUG] Loaded command: warnings
+[2026-08-13T22:43:49.637Z] [DEBUG] Loaded command: welcome
+[2026-08-13T22:43:49.638Z] [DEBUG] Loaded command: whitelist
+[2026-08-13T22:43:49.638Z] [DEBUG] Loaded command: work
+[2026-08-13T22:43:49.638Z] [DEBUG] Loaded command: wouldyourather
+[2026-08-13T22:43:49.638Z] [INFO] Running startup diagnostics...
+[2026-08-13T22:43:49.638Z] [DEBUG] [PASS] Environment Variables
+[2026-08-13T22:43:49.638Z] [DEBUG] [PASS] Commands Directory
+[2026-08-13T22:43:49.638Z] [DEBUG] [PASS] Database Connection
+[2026-08-13T22:43:49.721Z] [INFO] Music extractors loaded
+[2026-08-13T22:43:49.722Z] [DEBUG] Loaded Client Event: guildMemberUpdate
+[2026-08-13T22:43:49.722Z] [DEBUG] Loaded Client Event: guildUpdate
+[2026-08-13T22:43:49.722Z] [DEBUG] Loaded Client Event: guildBanAdd
+[2026-08-13T22:43:49.722Z] [DEBUG] Loaded Client Event: guildBanRemove
+[2026-08-13T22:43:49.722Z] [DEBUG] Loaded Client Event: channelCreate
+[2026-08-13T22:43:49.722Z] [DEBUG] Loaded Client Event: channelDelete
+[2026-08-13T22:43:49.723Z] [DEBUG] Loaded Client Event: emojiCreate
+[2026-08-13T22:43:49.723Z] [DEBUG] Loaded Client Event: emojiDelete
+[2026-08-13T22:43:49.723Z] [DEBUG] Loaded Client Event: emojiUpdate
+[2026-08-13T22:43:49.723Z] [DEBUG] Loaded Client Event: stickerCreate
+[2026-08-13T22:43:49.723Z] [DEBUG] Loaded Client Event: stickerDelete
+[2026-08-13T22:43:49.724Z] [DEBUG] Loaded Client Event: interactionCreate
+[2026-08-13T22:43:49.725Z] [DEBUG] Loaded Client Event: guildMemberAdd
+[2026-08-13T22:43:49.725Z] [DEBUG] Loaded Client Event: guildMemberRemove
+[2026-08-13T22:43:49.725Z] [DEBUG] Loaded Client Event: inviteCreate
+[2026-08-13T22:43:49.725Z] [DEBUG] Loaded Client Event: inviteDelete
+[2026-08-13T22:43:49.726Z] [DEBUG] Loaded Client Event: messageCreate
+[2026-08-13T22:43:49.726Z] [DEBUG] Loaded Client Event: messageDelete
+[2026-08-13T22:43:49.726Z] [DEBUG] Loaded Client Event: messageUpdate
+[2026-08-13T22:43:49.726Z] [DEBUG] Loaded Client Event: messageReactionAdd
+[2026-08-13T22:43:49.726Z] [DEBUG] Loaded Client Event: messageReactionRemove
+[2026-08-13T22:43:49.727Z] [DEBUG] Loaded Client Event: clientReady
+[2026-08-13T22:43:49.727Z] [DEBUG] Loaded Client Event: roleCreate
+[2026-08-13T22:43:49.727Z] [DEBUG] Loaded Client Event: roleDelete
+[2026-08-13T22:43:49.727Z] [DEBUG] Loaded Client Event: roleUpdate
+[2026-08-13T22:43:49.727Z] [DEBUG] Loaded Client Event: threadCreate
+[2026-08-13T22:43:49.727Z] [DEBUG] Loaded Client Event: threadDelete
+[2026-08-13T22:43:49.728Z] [DEBUG] Loaded Client Event: voiceStateUpdate
+[2026-08-13T22:43:49.728Z] [DEBUG] Loaded Player Event: audioTrackAdd
+[2026-08-13T22:43:49.728Z] [DEBUG] Loaded Player Event: audioTracksAdd
+[2026-08-13T22:43:49.728Z] [DEBUG] Loaded Player Event: disconnect
+[2026-08-13T22:43:49.729Z] [DEBUG] Loaded Player Event: emptyChannel
+[2026-08-13T22:43:49.729Z] [DEBUG] Loaded Player Event: emptyQueue
+[2026-08-13T22:43:49.729Z] [DEBUG] Loaded Player Event: error
+[2026-08-13T22:43:49.729Z] [DEBUG] Loaded Player Event: playerError
+[2026-08-13T22:43:49.729Z] [DEBUG] Loaded Player Event: playerSkip
+[2026-08-13T22:43:49.730Z] [DEBUG] Loaded Player Event: playerStart
+[2026-08-13T22:43:49.730Z] [DEBUG] Scheduler job "timed-bans" started (interval: 60000ms)
+[2026-08-13T22:43:49.730Z] [DEBUG] Scheduler job "giveaways" started (interval: 10000ms)
+[2026-08-13T22:43:49.730Z] [DEBUG] Scheduler job "birthdays" started (interval: 3600000ms)
+[2026-08-13T22:43:49.730Z] [DEBUG] Scheduler job "birthday-roles" started (interval: 3600000ms)
+[2026-08-13T22:43:49.730Z] [DEBUG] Scheduler job "reminders" started (interval: 15000ms)
+[2026-08-13T22:43:49.730Z] [DEBUG] Scheduler job "map-cleanup" started (interval: 3600000ms)
+[2026-08-13T22:43:49.730Z] [DEBUG] Scheduler job "verification-kick" started (interval: 60000ms)
+[2026-08-13T22:43:49.730Z] [DEBUG] Scheduler job "public-url" started (interval: 15000ms)
+[2026-08-13T22:43:49.796Z] [INFO] ✨ Dashboard active at http://0.0.0.0:3000
+[2026-08-13T22:43:50.399Z] [INFO] Bot logged in as 𝑬𝑩#8552
+[2026-08-13T22:43:50.573Z] [DEBUG] Cached 3 invites for guild: 𝑬𝑩 𝑺𝒕𝒐𝒓𝒆
+[2026-08-13T22:43:50.771Z] [DEBUG] Cached 2 invites for guild: 𝑬𝑩
+[2026-08-13T22:46:30.245Z] [INFO] Dashboard public URL changed: https://captured-custom-sql-workshop.trycloudflare.com
+[2026-08-13T22:48:22.951Z] [DEBUG] Loaded command: afk
+[2026-08-13T22:48:22.952Z] [DEBUG] Loaded command: announce
+[2026-08-13T22:48:22.954Z] [DEBUG] Loaded command: automod
+[2026-08-13T22:48:22.954Z] [DEBUG] Loaded command: autoplay
+[2026-08-13T22:48:22.955Z] [DEBUG] Loaded command: avatar
+[2026-08-13T22:48:22.955Z] [DEBUG] Loaded command: badges
+[2026-08-13T22:48:22.956Z] [DEBUG] Loaded command: ban
+[2026-08-13T22:48:22.956Z] [DEBUG] Loaded command: banner
+[2026-08-13T22:48:22.957Z] [DEBUG] Loaded command: birthday
+[2026-08-13T22:48:22.958Z] [DEBUG] Loaded command: birthdaysettings
+[2026-08-13T22:48:22.958Z] [DEBUG] Loaded command: channelinfo
+[2026-08-13T22:48:22.959Z] [DEBUG] Loaded command: clear
+[2026-08-13T22:48:22.959Z] [DEBUG] Loaded command: coinflip
+[2026-08-13T22:48:22.960Z] [DEBUG] Loaded command: confess
+[2026-08-13T22:48:22.960Z] [DEBUG] Loaded command: credits
+[2026-08-13T22:48:22.961Z] [DEBUG] Loaded command: daily
+[2026-08-13T22:48:22.985Z] [DEBUG] Loaded command: define
+[2026-08-13T22:48:22.986Z] [DEBUG] Loaded command: editsnipe
+[2026-08-13T22:48:22.986Z] [DEBUG] Loaded command: filters
+[2026-08-13T22:48:22.987Z] [DEBUG] Loaded command: firstmessage
+[2026-08-13T22:48:22.988Z] [DEBUG] Loaded command: fun
+[2026-08-13T22:48:22.991Z] [DEBUG] Loaded command: games
+[2026-08-13T22:48:22.992Z] [DEBUG] Loaded command: giveaway
+[2026-08-13T22:48:22.993Z] [DEBUG] Loaded command: givexp
+[2026-08-13T22:48:22.993Z] [DEBUG] Loaded command: help
+[2026-08-13T22:48:22.994Z] [DEBUG] Loaded command: info
+[2026-08-13T22:48:22.994Z] [DEBUG] Loaded command: invites
+[2026-08-13T22:48:22.994Z] [DEBUG] Loaded command: jumbo
+[2026-08-13T22:48:22.995Z] [DEBUG] Loaded command: kick
+[2026-08-13T22:48:22.995Z] [DEBUG] Loaded command: leaderboard
+[2026-08-13T22:48:22.996Z] [DEBUG] Loaded command: leave
+[2026-08-13T22:48:22.997Z] [DEBUG] Loaded command: levelsettings
+[2026-08-13T22:48:22.997Z] [DEBUG] Loaded command: lock
+[2026-08-13T22:48:22.997Z] [DEBUG] Loaded command: lockdown
+[2026-08-13T22:48:22.998Z] [DEBUG] Loaded command: logging
+[2026-08-13T22:48:22.999Z] [DEBUG] Loaded command: loop
+[2026-08-13T22:48:22.999Z] [DEBUG] Loaded command: lyrics
+[2026-08-13T22:48:23.000Z] [DEBUG] Loaded command: math
+[2026-08-13T22:48:23.000Z] [DEBUG] Loaded command: membercount
+[2026-08-13T22:48:23.000Z] [DEBUG] Loaded command: move
+[2026-08-13T22:48:23.001Z] [DEBUG] Loaded command: note
+[2026-08-13T22:48:23.001Z] [DEBUG] Loaded command: nowplaying
+[2026-08-13T22:48:23.002Z] [DEBUG] Loaded command: pause
+[2026-08-13T22:48:23.002Z] [DEBUG] Loaded command: pay
+[2026-08-13T22:48:23.002Z] [DEBUG] Loaded command: ping
+[2026-08-13T22:48:23.003Z] [DEBUG] Loaded command: play
+[2026-08-13T22:48:23.003Z] [DEBUG] Loaded command: points
+[2026-08-13T22:48:23.003Z] [DEBUG] Loaded command: poll
+[2026-08-13T22:48:23.004Z] [DEBUG] Loaded command: qr
+[2026-08-13T22:48:23.004Z] [DEBUG] Loaded command: queue
+[2026-08-13T22:48:23.021Z] [DEBUG] Loaded command: rank
+[2026-08-13T22:48:23.022Z] [DEBUG] Loaded command: reactionrole
+[2026-08-13T22:48:23.022Z] [DEBUG] Loaded command: remind
+[2026-08-13T22:48:23.022Z] [DEBUG] Loaded command: reminders
+[2026-08-13T22:48:23.023Z] [DEBUG] Loaded command: remove
+[2026-08-13T22:48:23.023Z] [DEBUG] Loaded command: removewarn
+[2026-08-13T22:48:23.023Z] [DEBUG] Loaded command: rep
+[2026-08-13T22:48:23.024Z] [DEBUG] Loaded command: replay
+[2026-08-13T22:48:23.024Z] [DEBUG] Loaded command: resetxp
+[2026-08-13T22:48:23.024Z] [DEBUG] Loaded command: resume
+[2026-08-13T22:48:23.025Z] [DEBUG] Loaded command: role
+[2026-08-13T22:48:23.025Z] [DEBUG] Loaded command: roleinfo
+[2026-08-13T22:48:23.025Z] [DEBUG] Loaded command: roll
+[2026-08-13T22:48:23.026Z] [DEBUG] Loaded command: say
+[2026-08-13T22:48:23.026Z] [DEBUG] Loaded command: seek
+[2026-08-13T22:48:23.026Z] [DEBUG] Loaded command: serverinfo
+[2026-08-13T22:48:23.027Z] [DEBUG] Loaded command: serverstats
+[2026-08-13T22:48:23.027Z] [DEBUG] Loaded command: setlevel
+[2026-08-13T22:48:23.027Z] [DEBUG] Loaded command: setnick
+[2026-08-13T22:48:23.028Z] [DEBUG] Loaded command: setupverification
+[2026-08-13T22:48:23.028Z] [DEBUG] Loaded command: ship
+[2026-08-13T22:48:23.029Z] [DEBUG] Loaded command: shuffle
+[2026-08-13T22:48:23.029Z] [DEBUG] Loaded command: skip
+[2026-08-13T22:48:23.029Z] [DEBUG] Loaded command: slots
+[2026-08-13T22:48:23.029Z] [DEBUG] Loaded command: slowmode
+[2026-08-13T22:48:23.030Z] [DEBUG] Loaded command: snipe
+[2026-08-13T22:48:23.030Z] [DEBUG] Loaded command: softban
+[2026-08-13T22:48:23.030Z] [DEBUG] Loaded command: stats
+[2026-08-13T22:48:23.031Z] [DEBUG] Loaded command: steal
+[2026-08-13T22:48:23.031Z] [DEBUG] Loaded command: stop
+[2026-08-13T22:48:23.031Z] [DEBUG] Loaded command: streak
+[2026-08-13T22:48:23.032Z] [DEBUG] Loaded command: suggest
+[2026-08-13T22:48:23.032Z] [DEBUG] Loaded command: tag
+[2026-08-13T22:48:23.033Z] [DEBUG] Loaded command: ticket
+[2026-08-13T22:48:23.034Z] [DEBUG] Loaded command: timeout
+[2026-08-13T22:48:23.036Z] [DEBUG] Loaded command: tools
+[2026-08-13T22:48:23.036Z] [DEBUG] Loaded command: truthordare
+[2026-08-13T22:48:23.037Z] [DEBUG] Loaded command: unban
+[2026-08-13T22:48:23.037Z] [DEBUG] Loaded command: unlock
+[2026-08-13T22:48:23.037Z] [DEBUG] Loaded command: untimeout
+[2026-08-13T22:48:23.038Z] [DEBUG] Loaded command: unvmute
+[2026-08-13T22:48:23.038Z] [DEBUG] Loaded command: userinfo
+[2026-08-13T22:48:23.038Z] [DEBUG] Loaded command: vmute
+[2026-08-13T22:48:23.039Z] [DEBUG] Loaded command: volume
+[2026-08-13T22:48:23.039Z] [DEBUG] Loaded command: warn
+[2026-08-13T22:48:23.040Z] [DEBUG] Loaded command: warnings
+[2026-08-13T22:48:23.040Z] [DEBUG] Loaded command: welcome
+[2026-08-13T22:48:23.041Z] [DEBUG] Loaded command: whitelist
+[2026-08-13T22:48:23.041Z] [DEBUG] Loaded command: work
+[2026-08-13T22:48:23.041Z] [DEBUG] Loaded command: wouldyourather
+[2026-08-13T22:48:23.041Z] [INFO] Running startup diagnostics...
+[2026-08-13T22:48:23.041Z] [DEBUG] [PASS] Environment Variables
+[2026-08-13T22:48:23.041Z] [DEBUG] [PASS] Commands Directory
+[2026-08-13T22:48:23.041Z] [DEBUG] [PASS] Database Connection
+[2026-08-13T22:48:23.123Z] [INFO] Music extractors loaded
+[2026-08-13T22:48:23.124Z] [DEBUG] Loaded Client Event: guildMemberUpdate
+[2026-08-13T22:48:23.124Z] [DEBUG] Loaded Client Event: guildUpdate
+[2026-08-13T22:48:23.124Z] [DEBUG] Loaded Client Event: guildBanAdd
+[2026-08-13T22:48:23.124Z] [DEBUG] Loaded Client Event: guildBanRemove
+[2026-08-13T22:48:23.124Z] [DEBUG] Loaded Client Event: channelCreate
+[2026-08-13T22:48:23.124Z] [DEBUG] Loaded Client Event: channelDelete
+[2026-08-13T22:48:23.125Z] [DEBUG] Loaded Client Event: emojiCreate
+[2026-08-13T22:48:23.125Z] [DEBUG] Loaded Client Event: emojiDelete
+[2026-08-13T22:48:23.125Z] [DEBUG] Loaded Client Event: emojiUpdate
+[2026-08-13T22:48:23.125Z] [DEBUG] Loaded Client Event: stickerCreate
+[2026-08-13T22:48:23.125Z] [DEBUG] Loaded Client Event: stickerDelete
+[2026-08-13T22:48:23.126Z] [DEBUG] Loaded Client Event: interactionCreate
+[2026-08-13T22:48:23.126Z] [DEBUG] Loaded Client Event: guildMemberAdd
+[2026-08-13T22:48:23.126Z] [DEBUG] Loaded Client Event: guildMemberRemove
+[2026-08-13T22:48:23.127Z] [DEBUG] Loaded Client Event: inviteCreate
+[2026-08-13T22:48:23.127Z] [DEBUG] Loaded Client Event: inviteDelete
+[2026-08-13T22:48:23.127Z] [DEBUG] Loaded Client Event: messageCreate
+[2026-08-13T22:48:23.127Z] [DEBUG] Loaded Client Event: messageDelete
+[2026-08-13T22:48:23.127Z] [DEBUG] Loaded Client Event: messageUpdate
+[2026-08-13T22:48:23.128Z] [DEBUG] Loaded Client Event: messageReactionAdd
+[2026-08-13T22:48:23.128Z] [DEBUG] Loaded Client Event: messageReactionRemove
+[2026-08-13T22:48:23.128Z] [DEBUG] Loaded Client Event: clientReady
+[2026-08-13T22:48:23.128Z] [DEBUG] Loaded Client Event: roleCreate
+[2026-08-13T22:48:23.128Z] [DEBUG] Loaded Client Event: roleDelete
+[2026-08-13T22:48:23.128Z] [DEBUG] Loaded Client Event: roleUpdate
+[2026-08-13T22:48:23.128Z] [DEBUG] Loaded Client Event: threadCreate
+[2026-08-13T22:48:23.129Z] [DEBUG] Loaded Client Event: threadDelete
+[2026-08-13T22:48:23.129Z] [DEBUG] Loaded Client Event: voiceStateUpdate
+[2026-08-13T22:48:23.129Z] [DEBUG] Loaded Player Event: audioTrackAdd
+[2026-08-13T22:48:23.129Z] [DEBUG] Loaded Player Event: audioTracksAdd
+[2026-08-13T22:48:23.130Z] [DEBUG] Loaded Player Event: disconnect
+[2026-08-13T22:48:23.130Z] [DEBUG] Loaded Player Event: emptyChannel
+[2026-08-13T22:48:23.130Z] [DEBUG] Loaded Player Event: emptyQueue
+[2026-08-13T22:48:23.130Z] [DEBUG] Loaded Player Event: error
+[2026-08-13T22:48:23.131Z] [DEBUG] Loaded Player Event: playerError
+[2026-08-13T22:48:23.131Z] [DEBUG] Loaded Player Event: playerSkip
+[2026-08-13T22:48:23.131Z] [DEBUG] Loaded Player Event: playerStart
+[2026-08-13T22:48:23.131Z] [DEBUG] Scheduler job "timed-bans" started (interval: 60000ms)
+[2026-08-13T22:48:23.131Z] [DEBUG] Scheduler job "giveaways" started (interval: 10000ms)
+[2026-08-13T22:48:23.131Z] [DEBUG] Scheduler job "birthdays" started (interval: 3600000ms)
+[2026-08-13T22:48:23.131Z] [DEBUG] Scheduler job "birthday-roles" started (interval: 3600000ms)
+[2026-08-13T22:48:23.131Z] [DEBUG] Scheduler job "reminders" started (interval: 15000ms)
+[2026-08-13T22:48:23.131Z] [DEBUG] Scheduler job "map-cleanup" started (interval: 3600000ms)
+[2026-08-13T22:48:23.132Z] [DEBUG] Scheduler job "verification-kick" started (interval: 60000ms)
+[2026-08-13T22:48:23.132Z] [DEBUG] Scheduler job "public-url" started (interval: 15000ms)
+[2026-08-13T22:48:23.193Z] [INFO] ✨ Dashboard active at http://0.0.0.0:3000
+[2026-08-13T22:48:23.966Z] [INFO] Bot logged in as 𝑬𝑩#8552
+[2026-08-13T22:48:24.143Z] [DEBUG] Cached 3 invites for guild: 𝑬𝑩 𝑺𝒕𝒐𝒓𝒆
+[2026-08-13T22:48:24.388Z] [DEBUG] Cached 2 invites for guild: 𝑬𝑩
+[2026-08-13T22:49:44.136Z] [INFO] Dashboard public URL changed: https://conjunction-motorcycles-recipient-accent.trycloudflare.com
+[2026-08-13T22:52:18.876Z] [INFO] Dashboard public URL changed: https://silly-recommends-sorts-reel.trycloudflare.com
+[2026-08-13T22:54:38.787Z] [INFO] Dashboard public URL changed: https://question-standing-unavailable-listings.trycloudflare.com
+[2026-08-13T22:55:38.274Z] [DEBUG] Loaded command: afk
+[2026-08-13T22:55:38.276Z] [DEBUG] Loaded command: announce
+[2026-08-13T22:55:38.277Z] [DEBUG] Loaded command: automod
+[2026-08-13T22:55:38.278Z] [DEBUG] Loaded command: autoplay
+[2026-08-13T22:55:38.278Z] [DEBUG] Loaded command: avatar
+[2026-08-13T22:55:38.279Z] [DEBUG] Loaded command: badges
+[2026-08-13T22:55:38.279Z] [DEBUG] Loaded command: ban
+[2026-08-13T22:55:38.280Z] [DEBUG] Loaded command: banner
+[2026-08-13T22:55:38.281Z] [DEBUG] Loaded command: birthday
+[2026-08-13T22:55:38.282Z] [DEBUG] Loaded command: birthdaysettings
+[2026-08-13T22:55:38.282Z] [DEBUG] Loaded command: channelinfo
+[2026-08-13T22:55:38.282Z] [DEBUG] Loaded command: clear
+[2026-08-13T22:55:38.283Z] [DEBUG] Loaded command: coinflip
+[2026-08-13T22:55:38.283Z] [DEBUG] Loaded command: confess
+[2026-08-13T22:55:38.284Z] [DEBUG] Loaded command: credits
+[2026-08-13T22:55:38.284Z] [DEBUG] Loaded command: daily
+[2026-08-13T22:55:38.307Z] [DEBUG] Loaded command: define
+[2026-08-13T22:55:38.308Z] [DEBUG] Loaded command: editsnipe
+[2026-08-13T22:55:38.308Z] [DEBUG] Loaded command: filters
+[2026-08-13T22:55:38.309Z] [DEBUG] Loaded command: firstmessage
+[2026-08-13T22:55:38.310Z] [DEBUG] Loaded command: fun
+[2026-08-13T22:55:38.313Z] [DEBUG] Loaded command: games
+[2026-08-13T22:55:38.314Z] [DEBUG] Loaded command: giveaway
+[2026-08-13T22:55:38.315Z] [DEBUG] Loaded command: givexp
+[2026-08-13T22:55:38.315Z] [DEBUG] Loaded command: help
+[2026-08-13T22:55:38.315Z] [DEBUG] Loaded command: info
+[2026-08-13T22:55:38.316Z] [DEBUG] Loaded command: invites
+[2026-08-13T22:55:38.316Z] [DEBUG] Loaded command: jumbo
+[2026-08-13T22:55:38.316Z] [DEBUG] Loaded command: kick
+[2026-08-13T22:55:38.317Z] [DEBUG] Loaded command: leaderboard
+[2026-08-13T22:55:38.317Z] [DEBUG] Loaded command: leave
+[2026-08-13T22:55:38.318Z] [DEBUG] Loaded command: levelsettings
+[2026-08-13T22:55:38.318Z] [DEBUG] Loaded command: lock
+[2026-08-13T22:55:38.319Z] [DEBUG] Loaded command: lockdown
+[2026-08-13T22:55:38.320Z] [DEBUG] Loaded command: logging
+[2026-08-13T22:55:38.320Z] [DEBUG] Loaded command: loop
+[2026-08-13T22:55:38.321Z] [DEBUG] Loaded command: lyrics
+[2026-08-13T22:55:38.321Z] [DEBUG] Loaded command: math
+[2026-08-13T22:55:38.321Z] [DEBUG] Loaded command: membercount
+[2026-08-13T22:55:38.322Z] [DEBUG] Loaded command: move
+[2026-08-13T22:55:38.322Z] [DEBUG] Loaded command: note
+[2026-08-13T22:55:38.323Z] [DEBUG] Loaded command: nowplaying
+[2026-08-13T22:55:38.323Z] [DEBUG] Loaded command: pause
+[2026-08-13T22:55:38.323Z] [DEBUG] Loaded command: pay
+[2026-08-13T22:55:38.324Z] [DEBUG] Loaded command: ping
+[2026-08-13T22:55:38.324Z] [DEBUG] Loaded command: play
+[2026-08-13T22:55:38.324Z] [DEBUG] Loaded command: points
+[2026-08-13T22:55:38.325Z] [DEBUG] Loaded command: poll
+[2026-08-13T22:55:38.325Z] [DEBUG] Loaded command: qr
+[2026-08-13T22:55:38.325Z] [DEBUG] Loaded command: queue
+[2026-08-13T22:55:38.342Z] [DEBUG] Loaded command: rank
+[2026-08-13T22:55:38.342Z] [DEBUG] Loaded command: reactionrole
+[2026-08-13T22:55:38.344Z] [DEBUG] Loaded command: remind
+[2026-08-13T22:55:38.344Z] [DEBUG] Loaded command: reminders
+[2026-08-13T22:55:38.344Z] [DEBUG] Loaded command: remove
+[2026-08-13T22:55:38.345Z] [DEBUG] Loaded command: removewarn
+[2026-08-13T22:55:38.345Z] [DEBUG] Loaded command: rep
+[2026-08-13T22:55:38.345Z] [DEBUG] Loaded command: replay
+[2026-08-13T22:55:38.346Z] [DEBUG] Loaded command: resetxp
+[2026-08-13T22:55:38.346Z] [DEBUG] Loaded command: resume
+[2026-08-13T22:55:38.346Z] [DEBUG] Loaded command: role
+[2026-08-13T22:55:38.347Z] [DEBUG] Loaded command: roleinfo
+[2026-08-13T22:55:38.347Z] [DEBUG] Loaded command: roll
+[2026-08-13T22:55:38.348Z] [DEBUG] Loaded command: say
+[2026-08-13T22:55:38.348Z] [DEBUG] Loaded command: seek
+[2026-08-13T22:55:38.349Z] [DEBUG] Loaded command: serverinfo
+[2026-08-13T22:55:38.349Z] [DEBUG] Loaded command: serverstats
+[2026-08-13T22:55:38.349Z] [DEBUG] Loaded command: setlevel
+[2026-08-13T22:55:38.350Z] [DEBUG] Loaded command: setnick
+[2026-08-13T22:55:38.350Z] [DEBUG] Loaded command: setupverification
+[2026-08-13T22:55:38.350Z] [DEBUG] Loaded command: ship
+[2026-08-13T22:55:38.351Z] [DEBUG] Loaded command: shuffle
+[2026-08-13T22:55:38.351Z] [DEBUG] Loaded command: skip
+[2026-08-13T22:55:38.351Z] [DEBUG] Loaded command: slots
+[2026-08-13T22:55:38.352Z] [DEBUG] Loaded command: slowmode
+[2026-08-13T22:55:38.352Z] [DEBUG] Loaded command: snipe
+[2026-08-13T22:55:38.352Z] [DEBUG] Loaded command: softban
+[2026-08-13T22:55:38.353Z] [DEBUG] Loaded command: stats
+[2026-08-13T22:55:38.353Z] [DEBUG] Loaded command: steal
+[2026-08-13T22:55:38.353Z] [DEBUG] Loaded command: stop
+[2026-08-13T22:55:38.354Z] [DEBUG] Loaded command: streak
+[2026-08-13T22:55:38.354Z] [DEBUG] Loaded command: suggest
+[2026-08-13T22:55:38.355Z] [DEBUG] Loaded command: tag
+[2026-08-13T22:55:38.356Z] [DEBUG] Loaded command: ticket
+[2026-08-13T22:55:38.356Z] [DEBUG] Loaded command: timeout
+[2026-08-13T22:55:38.358Z] [DEBUG] Loaded command: tools
+[2026-08-13T22:55:38.359Z] [DEBUG] Loaded command: truthordare
+[2026-08-13T22:55:38.359Z] [DEBUG] Loaded command: unban
+[2026-08-13T22:55:38.360Z] [DEBUG] Loaded command: unlock
+[2026-08-13T22:55:38.360Z] [DEBUG] Loaded command: untimeout
+[2026-08-13T22:55:38.360Z] [DEBUG] Loaded command: unvmute
+[2026-08-13T22:55:38.361Z] [DEBUG] Loaded command: userinfo
+[2026-08-13T22:55:38.361Z] [DEBUG] Loaded command: vmute
+[2026-08-13T22:55:38.361Z] [DEBUG] Loaded command: volume
+[2026-08-13T22:55:38.362Z] [DEBUG] Loaded command: warn
+[2026-08-13T22:55:38.362Z] [DEBUG] Loaded command: warnings
+[2026-08-13T22:55:38.363Z] [DEBUG] Loaded command: welcome
+[2026-08-13T22:55:38.363Z] [DEBUG] Loaded command: whitelist
+[2026-08-13T22:55:38.363Z] [DEBUG] Loaded command: work
+[2026-08-13T22:55:38.364Z] [DEBUG] Loaded command: wouldyourather
+[2026-08-13T22:55:38.364Z] [INFO] Running startup diagnostics...
+[2026-08-13T22:55:38.364Z] [DEBUG] [PASS] Environment Variables
+[2026-08-13T22:55:38.364Z] [DEBUG] [PASS] Commands Directory
+[2026-08-13T22:55:38.364Z] [DEBUG] [PASS] Database Connection
+[2026-08-13T22:55:38.448Z] [INFO] Music extractors loaded
+[2026-08-13T22:55:38.449Z] [DEBUG] Loaded Client Event: guildMemberUpdate
+[2026-08-13T22:55:38.449Z] [DEBUG] Loaded Client Event: guildUpdate
+[2026-08-13T22:55:38.449Z] [DEBUG] Loaded Client Event: guildBanAdd
+[2026-08-13T22:55:38.449Z] [DEBUG] Loaded Client Event: guildBanRemove
+[2026-08-13T22:55:38.449Z] [DEBUG] Loaded Client Event: channelCreate
+[2026-08-13T22:55:38.449Z] [DEBUG] Loaded Client Event: channelDelete
+[2026-08-13T22:55:38.450Z] [DEBUG] Loaded Client Event: emojiCreate
+[2026-08-13T22:55:38.450Z] [DEBUG] Loaded Client Event: emojiDelete
+[2026-08-13T22:55:38.450Z] [DEBUG] Loaded Client Event: emojiUpdate
+[2026-08-13T22:55:38.450Z] [DEBUG] Loaded Client Event: stickerCreate
+[2026-08-13T22:55:38.450Z] [DEBUG] Loaded Client Event: stickerDelete
+[2026-08-13T22:55:38.451Z] [DEBUG] Loaded Client Event: interactionCreate
+[2026-08-13T22:55:38.451Z] [DEBUG] Loaded Client Event: guildMemberAdd
+[2026-08-13T22:55:38.451Z] [DEBUG] Loaded Client Event: guildMemberRemove
+[2026-08-13T22:55:38.451Z] [DEBUG] Loaded Client Event: inviteCreate
+[2026-08-13T22:55:38.451Z] [DEBUG] Loaded Client Event: inviteDelete
+[2026-08-13T22:55:38.452Z] [DEBUG] Loaded Client Event: messageCreate
+[2026-08-13T22:55:38.452Z] [DEBUG] Loaded Client Event: messageDelete
+[2026-08-13T22:55:38.452Z] [DEBUG] Loaded Client Event: messageUpdate
+[2026-08-13T22:55:38.452Z] [DEBUG] Loaded Client Event: messageReactionAdd
+[2026-08-13T22:55:38.452Z] [DEBUG] Loaded Client Event: messageReactionRemove
+[2026-08-13T22:55:38.453Z] [DEBUG] Loaded Client Event: clientReady
+[2026-08-13T22:55:38.453Z] [DEBUG] Loaded Client Event: roleCreate
+[2026-08-13T22:55:38.453Z] [DEBUG] Loaded Client Event: roleDelete
+[2026-08-13T22:55:38.453Z] [DEBUG] Loaded Client Event: roleUpdate
+[2026-08-13T22:55:38.453Z] [DEBUG] Loaded Client Event: threadCreate
+[2026-08-13T22:55:38.453Z] [DEBUG] Loaded Client Event: threadDelete
+[2026-08-13T22:55:38.454Z] [DEBUG] Loaded Client Event: voiceStateUpdate
+[2026-08-13T22:55:38.454Z] [DEBUG] Loaded Player Event: audioTrackAdd
+[2026-08-13T22:55:38.454Z] [DEBUG] Loaded Player Event: audioTracksAdd
+[2026-08-13T22:55:38.455Z] [DEBUG] Loaded Player Event: disconnect
+[2026-08-13T22:55:38.455Z] [DEBUG] Loaded Player Event: emptyChannel
+[2026-08-13T22:55:38.455Z] [DEBUG] Loaded Player Event: emptyQueue
+[2026-08-13T22:55:38.455Z] [DEBUG] Loaded Player Event: error
+[2026-08-13T22:55:38.455Z] [DEBUG] Loaded Player Event: playerError
+[2026-08-13T22:55:38.456Z] [DEBUG] Loaded Player Event: playerSkip
+[2026-08-13T22:55:38.456Z] [DEBUG] Loaded Player Event: playerStart
+[2026-08-13T22:55:38.456Z] [DEBUG] Scheduler job "timed-bans" started (interval: 60000ms)
+[2026-08-13T22:55:38.456Z] [DEBUG] Scheduler job "giveaways" started (interval: 10000ms)
+[2026-08-13T22:55:38.456Z] [DEBUG] Scheduler job "birthdays" started (interval: 3600000ms)
+[2026-08-13T22:55:38.456Z] [DEBUG] Scheduler job "birthday-roles" started (interval: 3600000ms)
+[2026-08-13T22:55:38.456Z] [DEBUG] Scheduler job "reminders" started (interval: 15000ms)
+[2026-08-13T22:55:38.456Z] [DEBUG] Scheduler job "map-cleanup" started (interval: 3600000ms)
+[2026-08-13T22:55:38.457Z] [DEBUG] Scheduler job "verification-kick" started (interval: 60000ms)
+[2026-08-13T22:55:38.457Z] [DEBUG] Scheduler job "public-url" started (interval: 15000ms)
+[2026-08-13T22:55:38.527Z] [INFO] ✨ Dashboard active at http://0.0.0.0:3000
+[2026-08-13T22:55:39.521Z] [INFO] Bot logged in as 𝑬𝑩#8552
+[2026-08-13T22:55:39.691Z] [DEBUG] Cached 3 invites for guild: 𝑬𝑩 𝑺𝒕𝒐𝒓𝒆
+[2026-08-13T22:55:39.923Z] [DEBUG] Cached 2 invites for guild: 𝑬𝑩
+[2026-08-13T23:03:17.168Z] [DEBUG] Loaded command: afk
+[2026-08-13T23:03:17.169Z] [DEBUG] Loaded command: announce
+[2026-08-13T23:03:17.170Z] [DEBUG] Loaded command: automod
+[2026-08-13T23:03:17.171Z] [DEBUG] Loaded command: autoplay
+[2026-08-13T23:03:17.171Z] [DEBUG] Loaded command: avatar
+[2026-08-13T23:03:17.172Z] [DEBUG] Loaded command: badges
+[2026-08-13T23:03:17.172Z] [DEBUG] Loaded command: ban
+[2026-08-13T23:03:17.173Z] [DEBUG] Loaded command: banner
+[2026-08-13T23:03:17.174Z] [DEBUG] Loaded command: birthday
+[2026-08-13T23:03:17.174Z] [DEBUG] Loaded command: birthdaysettings
+[2026-08-13T23:03:17.175Z] [DEBUG] Loaded command: channelinfo
+[2026-08-13T23:03:17.175Z] [DEBUG] Loaded command: clear
+[2026-08-13T23:03:17.176Z] [DEBUG] Loaded command: coinflip
+[2026-08-13T23:03:17.176Z] [DEBUG] Loaded command: confess
+[2026-08-13T23:03:17.177Z] [DEBUG] Loaded command: credits
+[2026-08-13T23:03:17.177Z] [DEBUG] Loaded command: daily
+[2026-08-13T23:03:17.202Z] [DEBUG] Loaded command: define
+[2026-08-13T23:03:17.203Z] [DEBUG] Loaded command: editsnipe
+[2026-08-13T23:03:17.203Z] [DEBUG] Loaded command: filters
+[2026-08-13T23:03:17.204Z] [DEBUG] Loaded command: firstmessage
+[2026-08-13T23:03:17.205Z] [DEBUG] Loaded command: fun
+[2026-08-13T23:03:17.208Z] [DEBUG] Loaded command: games
+[2026-08-13T23:03:17.209Z] [DEBUG] Loaded command: giveaway
+[2026-08-13T23:03:17.210Z] [DEBUG] Loaded command: givexp
+[2026-08-13T23:03:17.210Z] [DEBUG] Loaded command: help
+[2026-08-13T23:03:17.210Z] [DEBUG] Loaded command: info
+[2026-08-13T23:03:17.211Z] [DEBUG] Loaded command: invites
+[2026-08-13T23:03:17.211Z] [DEBUG] Loaded command: jumbo
+[2026-08-13T23:03:17.211Z] [DEBUG] Loaded command: kick
+[2026-08-13T23:03:17.212Z] [DEBUG] Loaded command: leaderboard
+[2026-08-13T23:03:17.212Z] [DEBUG] Loaded command: leave
+[2026-08-13T23:03:17.213Z] [DEBUG] Loaded command: levelsettings
+[2026-08-13T23:03:17.213Z] [DEBUG] Loaded command: lock
+[2026-08-13T23:03:17.214Z] [DEBUG] Loaded command: lockdown
+[2026-08-13T23:03:17.215Z] [DEBUG] Loaded command: logging
+[2026-08-13T23:03:17.215Z] [DEBUG] Loaded command: loop
+[2026-08-13T23:03:17.216Z] [DEBUG] Loaded command: lyrics
+[2026-08-13T23:03:17.216Z] [DEBUG] Loaded command: math
+[2026-08-13T23:03:17.217Z] [DEBUG] Loaded command: membercount
+[2026-08-13T23:03:17.217Z] [DEBUG] Loaded command: move
+[2026-08-13T23:03:17.218Z] [DEBUG] Loaded command: note
+[2026-08-13T23:03:17.218Z] [DEBUG] Loaded command: nowplaying
+[2026-08-13T23:03:17.218Z] [DEBUG] Loaded command: pause
+[2026-08-13T23:03:17.219Z] [DEBUG] Loaded command: pay
+[2026-08-13T23:03:17.219Z] [DEBUG] Loaded command: ping
+[2026-08-13T23:03:17.219Z] [DEBUG] Loaded command: play
+[2026-08-13T23:03:17.220Z] [DEBUG] Loaded command: points
+[2026-08-13T23:03:17.220Z] [DEBUG] Loaded command: poll
+[2026-08-13T23:03:17.221Z] [DEBUG] Loaded command: qr
+[2026-08-13T23:03:17.221Z] [DEBUG] Loaded command: queue
+[2026-08-13T23:03:17.238Z] [DEBUG] Loaded command: rank
+[2026-08-13T23:03:17.239Z] [DEBUG] Loaded command: reactionrole
+[2026-08-13T23:03:17.239Z] [DEBUG] Loaded command: remind
+[2026-08-13T23:03:17.240Z] [DEBUG] Loaded command: reminders
+[2026-08-13T23:03:17.240Z] [DEBUG] Loaded command: remove
+[2026-08-13T23:03:17.240Z] [DEBUG] Loaded command: removewarn
+[2026-08-13T23:03:17.241Z] [DEBUG] Loaded command: rep
+[2026-08-13T23:03:17.241Z] [DEBUG] Loaded command: replay
+[2026-08-13T23:03:17.241Z] [DEBUG] Loaded command: resetxp
+[2026-08-13T23:03:17.242Z] [DEBUG] Loaded command: resume
+[2026-08-13T23:03:17.242Z] [DEBUG] Loaded command: role
+[2026-08-13T23:03:17.242Z] [DEBUG] Loaded command: roleinfo
+[2026-08-13T23:03:17.243Z] [DEBUG] Loaded command: roll
+[2026-08-13T23:03:17.243Z] [DEBUG] Loaded command: say
+[2026-08-13T23:03:17.243Z] [DEBUG] Loaded command: seek
+[2026-08-13T23:03:17.244Z] [DEBUG] Loaded command: serverinfo
+[2026-08-13T23:03:17.244Z] [DEBUG] Loaded command: serverstats
+[2026-08-13T23:03:17.244Z] [DEBUG] Loaded command: setlevel
+[2026-08-13T23:03:17.245Z] [DEBUG] Loaded command: setnick
+[2026-08-13T23:03:17.245Z] [DEBUG] Loaded command: setupverification
+[2026-08-13T23:03:17.246Z] [DEBUG] Loaded command: ship
+[2026-08-13T23:03:17.246Z] [DEBUG] Loaded command: shuffle
+[2026-08-13T23:03:17.246Z] [DEBUG] Loaded command: skip
+[2026-08-13T23:03:17.246Z] [DEBUG] Loaded command: slots
+[2026-08-13T23:03:17.247Z] [DEBUG] Loaded command: slowmode
+[2026-08-13T23:03:17.247Z] [DEBUG] Loaded command: snipe
+[2026-08-13T23:03:17.248Z] [DEBUG] Loaded command: softban
+[2026-08-13T23:03:17.248Z] [DEBUG] Loaded command: stats
+[2026-08-13T23:03:17.248Z] [DEBUG] Loaded command: steal
+[2026-08-13T23:03:17.249Z] [DEBUG] Loaded command: stop
+[2026-08-13T23:03:17.249Z] [DEBUG] Loaded command: streak
+[2026-08-13T23:03:17.249Z] [DEBUG] Loaded command: suggest
+[2026-08-13T23:03:17.250Z] [DEBUG] Loaded command: tag
+[2026-08-13T23:03:17.251Z] [DEBUG] Loaded command: ticket
+[2026-08-13T23:03:17.251Z] [DEBUG] Loaded command: timeout
+[2026-08-13T23:03:17.253Z] [DEBUG] Loaded command: tools
+[2026-08-13T23:03:17.254Z] [DEBUG] Loaded command: truthordare
+[2026-08-13T23:03:17.254Z] [DEBUG] Loaded command: unban
+[2026-08-13T23:03:17.255Z] [DEBUG] Loaded command: unlock
+[2026-08-13T23:03:17.255Z] [DEBUG] Loaded command: untimeout
+[2026-08-13T23:03:17.255Z] [DEBUG] Loaded command: unvmute
+[2026-08-13T23:03:17.256Z] [DEBUG] Loaded command: userinfo
+[2026-08-13T23:03:17.256Z] [DEBUG] Loaded command: vmute
+[2026-08-13T23:03:17.256Z] [DEBUG] Loaded command: volume
+[2026-08-13T23:03:17.257Z] [DEBUG] Loaded command: warn
+[2026-08-13T23:03:17.257Z] [DEBUG] Loaded command: warnings
+[2026-08-13T23:03:17.258Z] [DEBUG] Loaded command: welcome
+[2026-08-13T23:03:17.258Z] [DEBUG] Loaded command: whitelist
+[2026-08-13T23:03:17.259Z] [DEBUG] Loaded command: work
+[2026-08-13T23:03:17.259Z] [DEBUG] Loaded command: wouldyourather
+[2026-08-13T23:03:17.259Z] [INFO] Running startup diagnostics...
+[2026-08-13T23:03:17.259Z] [DEBUG] [PASS] Environment Variables
+[2026-08-13T23:03:17.259Z] [DEBUG] [PASS] Commands Directory
+[2026-08-13T23:03:17.259Z] [DEBUG] [PASS] Database Connection
+[2026-08-13T23:03:17.347Z] [INFO] Music extractors loaded
+[2026-08-13T23:03:17.348Z] [DEBUG] Loaded Client Event: guildMemberUpdate
+[2026-08-13T23:03:17.348Z] [DEBUG] Loaded Client Event: guildUpdate
+[2026-08-13T23:03:17.348Z] [DEBUG] Loaded Client Event: guildBanAdd
+[2026-08-13T23:03:17.348Z] [DEBUG] Loaded Client Event: guildBanRemove
+[2026-08-13T23:03:17.348Z] [DEBUG] Loaded Client Event: channelCreate
+[2026-08-13T23:03:17.348Z] [DEBUG] Loaded Client Event: channelDelete
+[2026-08-13T23:03:17.349Z] [DEBUG] Loaded Client Event: emojiCreate
+[2026-08-13T23:03:17.349Z] [DEBUG] Loaded Client Event: emojiDelete
+[2026-08-13T23:03:17.349Z] [DEBUG] Loaded Client Event: emojiUpdate
+[2026-08-13T23:03:17.349Z] [DEBUG] Loaded Client Event: stickerCreate
+[2026-08-13T23:03:17.349Z] [DEBUG] Loaded Client Event: stickerDelete
+[2026-08-13T23:03:17.350Z] [DEBUG] Loaded Client Event: interactionCreate
+[2026-08-13T23:03:17.351Z] [DEBUG] Loaded Client Event: guildMemberAdd
+[2026-08-13T23:03:17.351Z] [DEBUG] Loaded Client Event: guildMemberRemove
+[2026-08-13T23:03:17.351Z] [DEBUG] Loaded Client Event: inviteCreate
+[2026-08-13T23:03:17.351Z] [DEBUG] Loaded Client Event: inviteDelete
+[2026-08-13T23:03:17.351Z] [DEBUG] Loaded Client Event: messageCreate
+[2026-08-13T23:03:17.352Z] [DEBUG] Loaded Client Event: messageDelete
+[2026-08-13T23:03:17.352Z] [DEBUG] Loaded Client Event: messageUpdate
+[2026-08-13T23:03:17.352Z] [DEBUG] Loaded Client Event: messageReactionAdd
+[2026-08-13T23:03:17.352Z] [DEBUG] Loaded Client Event: messageReactionRemove
+[2026-08-13T23:03:17.352Z] [DEBUG] Loaded Client Event: clientReady
+[2026-08-13T23:03:17.352Z] [DEBUG] Loaded Client Event: roleCreate
+[2026-08-13T23:03:17.353Z] [DEBUG] Loaded Client Event: roleDelete
+[2026-08-13T23:03:17.353Z] [DEBUG] Loaded Client Event: roleUpdate
+[2026-08-13T23:03:17.353Z] [DEBUG] Loaded Client Event: threadCreate
+[2026-08-13T23:03:17.353Z] [DEBUG] Loaded Client Event: threadDelete
+[2026-08-13T23:03:17.353Z] [DEBUG] Loaded Client Event: voiceStateUpdate
+[2026-08-13T23:03:17.354Z] [DEBUG] Loaded Player Event: audioTrackAdd
+[2026-08-13T23:03:17.354Z] [DEBUG] Loaded Player Event: audioTracksAdd
+[2026-08-13T23:03:17.354Z] [DEBUG] Loaded Player Event: disconnect
+[2026-08-13T23:03:17.354Z] [DEBUG] Loaded Player Event: emptyChannel
+[2026-08-13T23:03:17.355Z] [DEBUG] Loaded Player Event: emptyQueue
+[2026-08-13T23:03:17.355Z] [DEBUG] Loaded Player Event: error
+[2026-08-13T23:03:17.355Z] [DEBUG] Loaded Player Event: playerError
+[2026-08-13T23:03:17.355Z] [DEBUG] Loaded Player Event: playerSkip
+[2026-08-13T23:03:17.355Z] [DEBUG] Loaded Player Event: playerStart
+[2026-08-13T23:03:17.356Z] [DEBUG] Scheduler job "timed-bans" started (interval: 60000ms)
+[2026-08-13T23:03:17.356Z] [DEBUG] Scheduler job "giveaways" started (interval: 10000ms)
+[2026-08-13T23:03:17.356Z] [DEBUG] Scheduler job "birthdays" started (interval: 3600000ms)
+[2026-08-13T23:03:17.356Z] [DEBUG] Scheduler job "birthday-roles" started (interval: 3600000ms)
+[2026-08-13T23:03:17.356Z] [DEBUG] Scheduler job "reminders" started (interval: 15000ms)
+[2026-08-13T23:03:17.356Z] [DEBUG] Scheduler job "map-cleanup" started (interval: 3600000ms)
+[2026-08-13T23:03:17.356Z] [DEBUG] Scheduler job "verification-kick" started (interval: 60000ms)
+[2026-08-13T23:03:17.356Z] [DEBUG] Scheduler job "public-url" started (interval: 15000ms)
+[2026-08-13T23:03:17.425Z] [INFO] ✨ Dashboard active at http://0.0.0.0:3000
+[2026-08-13T23:03:20.212Z] [INFO] Bot logged in as 𝑬𝑩#8552
+[2026-08-13T23:03:20.411Z] [DEBUG] Cached 3 invites for guild: 𝑬𝑩 𝑺𝒕𝒐𝒓𝒆
+[2026-08-13T23:03:20.637Z] [DEBUG] Cached 2 invites for guild: 𝑬𝑩
+[2026-08-13T23:07:59.752Z] [INFO] Dashboard public URL changed: https://full-slow-pics-bikes.trycloudflare.com
+[2026-08-13T23:11:07.503Z] [DEBUG] Loaded command: afk
+[2026-08-13T23:11:07.505Z] [DEBUG] Loaded command: announce
+[2026-08-13T23:11:07.506Z] [DEBUG] Loaded command: automod
+[2026-08-13T23:11:07.506Z] [DEBUG] Loaded command: autoplay
+[2026-08-13T23:11:07.507Z] [DEBUG] Loaded command: avatar
+[2026-08-13T23:11:07.508Z] [DEBUG] Loaded command: badges
+[2026-08-13T23:11:07.508Z] [DEBUG] Loaded command: ban
+[2026-08-13T23:11:07.513Z] [DEBUG] Loaded command: banner
+[2026-08-13T23:11:07.514Z] [DEBUG] Loaded command: birthday
+[2026-08-13T23:11:07.514Z] [DEBUG] Loaded command: birthdaysettings
+[2026-08-13T23:11:07.515Z] [DEBUG] Loaded command: channelinfo
+[2026-08-13T23:11:07.515Z] [DEBUG] Loaded command: clear
+[2026-08-13T23:11:07.516Z] [DEBUG] Loaded command: coinflip
+[2026-08-13T23:11:07.516Z] [DEBUG] Loaded command: confess
+[2026-08-13T23:11:07.517Z] [DEBUG] Loaded command: credits
+[2026-08-13T23:11:07.517Z] [DEBUG] Loaded command: daily
+[2026-08-13T23:11:07.540Z] [DEBUG] Loaded command: define
+[2026-08-13T23:11:07.540Z] [DEBUG] Loaded command: editsnipe
+[2026-08-13T23:11:07.541Z] [DEBUG] Loaded command: filters
+[2026-08-13T23:11:07.541Z] [DEBUG] Loaded command: firstmessage
+[2026-08-13T23:11:07.543Z] [DEBUG] Loaded command: fun
+[2026-08-13T23:11:07.545Z] [DEBUG] Loaded command: games
+[2026-08-13T23:11:07.547Z] [DEBUG] Loaded command: giveaway
+[2026-08-13T23:11:07.547Z] [DEBUG] Loaded command: givexp
+[2026-08-13T23:11:07.548Z] [DEBUG] Loaded command: help
+[2026-08-13T23:11:07.548Z] [DEBUG] Loaded command: info
+[2026-08-13T23:11:07.548Z] [DEBUG] Loaded command: invites
+[2026-08-13T23:11:07.549Z] [DEBUG] Loaded command: jumbo
+[2026-08-13T23:11:07.549Z] [DEBUG] Loaded command: kick
+[2026-08-13T23:11:07.549Z] [DEBUG] Loaded command: leaderboard
+[2026-08-13T23:11:07.550Z] [DEBUG] Loaded command: leave
+[2026-08-13T23:11:07.551Z] [DEBUG] Loaded command: levelsettings
+[2026-08-13T23:11:07.551Z] [DEBUG] Loaded command: lock
+[2026-08-13T23:11:07.552Z] [DEBUG] Loaded command: lockdown
+[2026-08-13T23:11:07.553Z] [DEBUG] Loaded command: logging
+[2026-08-13T23:11:07.553Z] [DEBUG] Loaded command: loop
+[2026-08-13T23:11:07.554Z] [DEBUG] Loaded command: lyrics
+[2026-08-13T23:11:07.554Z] [DEBUG] Loaded command: math
+[2026-08-13T23:11:07.554Z] [DEBUG] Loaded command: membercount
+[2026-08-13T23:11:07.555Z] [DEBUG] Loaded command: move
+[2026-08-13T23:11:07.555Z] [DEBUG] Loaded command: note
+[2026-08-13T23:11:07.556Z] [DEBUG] Loaded command: nowplaying
+[2026-08-13T23:11:07.556Z] [DEBUG] Loaded command: pause
+[2026-08-13T23:11:07.556Z] [DEBUG] Loaded command: pay
+[2026-08-13T23:11:07.557Z] [DEBUG] Loaded command: ping
+[2026-08-13T23:11:07.557Z] [DEBUG] Loaded command: play
+[2026-08-13T23:11:07.557Z] [DEBUG] Loaded command: points
+[2026-08-13T23:11:07.558Z] [DEBUG] Loaded command: poll
+[2026-08-13T23:11:07.558Z] [DEBUG] Loaded command: qr
+[2026-08-13T23:11:07.558Z] [DEBUG] Loaded command: queue
+[2026-08-13T23:11:07.575Z] [DEBUG] Loaded command: rank
+[2026-08-13T23:11:07.575Z] [DEBUG] Loaded command: reactionrole
+[2026-08-13T23:11:07.576Z] [DEBUG] Loaded command: remind
+[2026-08-13T23:11:07.576Z] [DEBUG] Loaded command: reminders
+[2026-08-13T23:11:07.577Z] [DEBUG] Loaded command: remove
+[2026-08-13T23:11:07.577Z] [DEBUG] Loaded command: removewarn
+[2026-08-13T23:11:07.578Z] [DEBUG] Loaded command: rep
+[2026-08-13T23:11:07.578Z] [DEBUG] Loaded command: replay
+[2026-08-13T23:11:07.578Z] [DEBUG] Loaded command: resetxp
+[2026-08-13T23:11:07.578Z] [DEBUG] Loaded command: resume
+[2026-08-13T23:11:07.579Z] [DEBUG] Loaded command: role
+[2026-08-13T23:11:07.579Z] [DEBUG] Loaded command: roleinfo
+[2026-08-13T23:11:07.579Z] [DEBUG] Loaded command: roll
+[2026-08-13T23:11:07.580Z] [DEBUG] Loaded command: say
+[2026-08-13T23:11:07.580Z] [DEBUG] Loaded command: seek
+[2026-08-13T23:11:07.580Z] [DEBUG] Loaded command: serverinfo
+[2026-08-13T23:11:07.581Z] [DEBUG] Loaded command: serverstats
+[2026-08-13T23:11:07.581Z] [DEBUG] Loaded command: setlevel
+[2026-08-13T23:11:07.581Z] [DEBUG] Loaded command: setnick
+[2026-08-13T23:11:07.582Z] [DEBUG] Loaded command: setupverification
+[2026-08-13T23:11:07.582Z] [DEBUG] Loaded command: ship
+[2026-08-13T23:11:07.582Z] [DEBUG] Loaded command: shuffle
+[2026-08-13T23:11:07.583Z] [DEBUG] Loaded command: skip
+[2026-08-13T23:11:07.583Z] [DEBUG] Loaded command: slots
+[2026-08-13T23:11:07.583Z] [DEBUG] Loaded command: slowmode
+[2026-08-13T23:11:07.584Z] [DEBUG] Loaded command: snipe
+[2026-08-13T23:11:07.584Z] [DEBUG] Loaded command: softban
+[2026-08-13T23:11:07.584Z] [DEBUG] Loaded command: stats
+[2026-08-13T23:11:07.585Z] [DEBUG] Loaded command: steal
+[2026-08-13T23:11:07.585Z] [DEBUG] Loaded command: stop
+[2026-08-13T23:11:07.585Z] [DEBUG] Loaded command: streak
+[2026-08-13T23:11:07.586Z] [DEBUG] Loaded command: suggest
+[2026-08-13T23:11:07.586Z] [DEBUG] Loaded command: tag
+[2026-08-13T23:11:07.587Z] [DEBUG] Loaded command: ticket
+[2026-08-13T23:11:07.588Z] [DEBUG] Loaded command: timeout
+[2026-08-13T23:11:07.590Z] [DEBUG] Loaded command: tools
+[2026-08-13T23:11:07.590Z] [DEBUG] Loaded command: truthordare
+[2026-08-13T23:11:07.591Z] [DEBUG] Loaded command: unban
+[2026-08-13T23:11:07.591Z] [DEBUG] Loaded command: unlock
+[2026-08-13T23:11:07.592Z] [DEBUG] Loaded command: untimeout
+[2026-08-13T23:11:07.592Z] [DEBUG] Loaded command: unvmute
+[2026-08-13T23:11:07.592Z] [DEBUG] Loaded command: userinfo
+[2026-08-13T23:11:07.593Z] [DEBUG] Loaded command: vmute
+[2026-08-13T23:11:07.593Z] [DEBUG] Loaded command: volume
+[2026-08-13T23:11:07.593Z] [DEBUG] Loaded command: warn
+[2026-08-13T23:11:07.594Z] [DEBUG] Loaded command: warnings
+[2026-08-13T23:11:07.594Z] [DEBUG] Loaded command: welcome
+[2026-08-13T23:11:07.595Z] [DEBUG] Loaded command: whitelist
+[2026-08-13T23:11:07.595Z] [DEBUG] Loaded command: work
+[2026-08-13T23:11:07.595Z] [DEBUG] Loaded command: wouldyourather
+[2026-08-13T23:11:07.596Z] [INFO] Running startup diagnostics...
+[2026-08-13T23:11:07.596Z] [DEBUG] [PASS] Environment Variables
+[2026-08-13T23:11:07.596Z] [DEBUG] [PASS] Commands Directory
+[2026-08-13T23:11:07.596Z] [DEBUG] [PASS] Database Connection
+[2026-08-13T23:11:07.681Z] [INFO] Music extractors loaded
+[2026-08-13T23:11:07.682Z] [DEBUG] Loaded Client Event: guildMemberUpdate
+[2026-08-13T23:11:07.682Z] [DEBUG] Loaded Client Event: guildUpdate
+[2026-08-13T23:11:07.682Z] [DEBUG] Loaded Client Event: guildBanAdd
+[2026-08-13T23:11:07.682Z] [DEBUG] Loaded Client Event: guildBanRemove
+[2026-08-13T23:11:07.682Z] [DEBUG] Loaded Client Event: channelCreate
+[2026-08-13T23:11:07.682Z] [DEBUG] Loaded Client Event: channelDelete
+[2026-08-13T23:11:07.682Z] [DEBUG] Loaded Client Event: emojiCreate
+[2026-08-13T23:11:07.682Z] [DEBUG] Loaded Client Event: emojiDelete
+[2026-08-13T23:11:07.683Z] [DEBUG] Loaded Client Event: emojiUpdate
+[2026-08-13T23:11:07.683Z] [DEBUG] Loaded Client Event: stickerCreate
+[2026-08-13T23:11:07.683Z] [DEBUG] Loaded Client Event: stickerDelete
+[2026-08-13T23:11:07.684Z] [DEBUG] Loaded Client Event: interactionCreate
+[2026-08-13T23:11:07.684Z] [DEBUG] Loaded Client Event: guildMemberAdd
+[2026-08-13T23:11:07.684Z] [DEBUG] Loaded Client Event: guildMemberRemove
+[2026-08-13T23:11:07.684Z] [DEBUG] Loaded Client Event: inviteCreate
+[2026-08-13T23:11:07.684Z] [DEBUG] Loaded Client Event: inviteDelete
+[2026-08-13T23:11:07.685Z] [DEBUG] Loaded Client Event: messageCreate
+[2026-08-13T23:11:07.685Z] [DEBUG] Loaded Client Event: messageDelete
+[2026-08-13T23:11:07.685Z] [DEBUG] Loaded Client Event: messageUpdate
+[2026-08-13T23:11:07.686Z] [DEBUG] Loaded Client Event: messageReactionAdd
+[2026-08-13T23:11:07.686Z] [DEBUG] Loaded Client Event: messageReactionRemove
+[2026-08-13T23:11:07.686Z] [DEBUG] Loaded Client Event: clientReady
+[2026-08-13T23:11:07.686Z] [DEBUG] Loaded Client Event: roleCreate
+[2026-08-13T23:11:07.686Z] [DEBUG] Loaded Client Event: roleDelete
+[2026-08-13T23:11:07.686Z] [DEBUG] Loaded Client Event: roleUpdate
+[2026-08-13T23:11:07.686Z] [DEBUG] Loaded Client Event: threadCreate
+[2026-08-13T23:11:07.686Z] [DEBUG] Loaded Client Event: threadDelete
+[2026-08-13T23:11:07.687Z] [DEBUG] Loaded Client Event: voiceStateUpdate
+[2026-08-13T23:11:07.687Z] [DEBUG] Loaded Player Event: audioTrackAdd
+[2026-08-13T23:11:07.687Z] [DEBUG] Loaded Player Event: audioTracksAdd
+[2026-08-13T23:11:07.688Z] [DEBUG] Loaded Player Event: disconnect
+[2026-08-13T23:11:07.688Z] [DEBUG] Loaded Player Event: emptyChannel
+[2026-08-13T23:11:07.688Z] [DEBUG] Loaded Player Event: emptyQueue
+[2026-08-13T23:11:07.688Z] [DEBUG] Loaded Player Event: error
+[2026-08-13T23:11:07.689Z] [DEBUG] Loaded Player Event: playerError
+[2026-08-13T23:11:07.689Z] [DEBUG] Loaded Player Event: playerSkip
+[2026-08-13T23:11:07.689Z] [DEBUG] Loaded Player Event: playerStart
+[2026-08-13T23:11:07.689Z] [DEBUG] Scheduler job "timed-bans" started (interval: 60000ms)
+[2026-08-13T23:11:07.689Z] [DEBUG] Scheduler job "giveaways" started (interval: 10000ms)
+[2026-08-13T23:11:07.689Z] [DEBUG] Scheduler job "birthdays" started (interval: 3600000ms)
+[2026-08-13T23:11:07.689Z] [DEBUG] Scheduler job "birthday-roles" started (interval: 3600000ms)
+[2026-08-13T23:11:07.690Z] [DEBUG] Scheduler job "reminders" started (interval: 15000ms)
+[2026-08-13T23:11:07.690Z] [DEBUG] Scheduler job "map-cleanup" started (interval: 3600000ms)
+[2026-08-13T23:11:07.690Z] [DEBUG] Scheduler job "verification-kick" started (interval: 60000ms)
+[2026-08-13T23:11:07.690Z] [DEBUG] Scheduler job "public-url" started (interval: 15000ms)
+[2026-08-13T23:11:07.762Z] [INFO] ✨ Dashboard active at http://0.0.0.0:3000
+[2026-08-13T23:11:08.725Z] [INFO] Bot logged in as 𝑬𝑩#8552
+[2026-08-13T23:11:08.933Z] [DEBUG] Cached 3 invites for guild: 𝑬𝑩 𝑺𝒕𝒐𝒓𝒆
+[2026-08-13T23:11:09.145Z] [DEBUG] Cached 2 invites for guild: 𝑬𝑩
+[2026-08-13T23:13:32.940Z] [INFO] Dashboard public URL changed: https://rental-stands-eng-electric.trycloudflare.com
+[2026-08-13T23:15:39.807Z] [DEBUG] Loaded command: afk
+[2026-08-13T23:15:39.808Z] [DEBUG] Loaded command: announce
+[2026-08-13T23:15:39.810Z] [DEBUG] Loaded command: automod
+[2026-08-13T23:15:39.811Z] [DEBUG] Loaded command: autoplay
+[2026-08-13T23:15:39.811Z] [DEBUG] Loaded command: avatar
+[2026-08-13T23:15:39.812Z] [DEBUG] Loaded command: badges
+[2026-08-13T23:15:39.812Z] [DEBUG] Loaded command: ban
+[2026-08-13T23:15:39.813Z] [DEBUG] Loaded command: banner
+[2026-08-13T23:15:39.815Z] [DEBUG] Loaded command: birthday
+[2026-08-13T23:15:39.817Z] [DEBUG] Loaded command: birthdaysettings
+[2026-08-13T23:15:39.818Z] [DEBUG] Loaded command: channelinfo
+[2026-08-13T23:15:39.819Z] [DEBUG] Loaded command: clear
+[2026-08-13T23:15:39.820Z] [DEBUG] Loaded command: coinflip
+[2026-08-13T23:15:39.820Z] [DEBUG] Loaded command: confess
+[2026-08-13T23:15:39.821Z] [DEBUG] Loaded command: credits
+[2026-08-13T23:15:39.822Z] [DEBUG] Loaded command: daily
+[2026-08-13T23:15:39.848Z] [DEBUG] Loaded command: define
+[2026-08-13T23:15:39.848Z] [DEBUG] Loaded command: editsnipe
+[2026-08-13T23:15:39.849Z] [DEBUG] Loaded command: filters
+[2026-08-13T23:15:39.849Z] [DEBUG] Loaded command: firstmessage
+[2026-08-13T23:15:39.851Z] [DEBUG] Loaded command: fun
+[2026-08-13T23:15:39.853Z] [DEBUG] Loaded command: games
+[2026-08-13T23:15:39.855Z] [DEBUG] Loaded command: giveaway
+[2026-08-13T23:15:39.857Z] [DEBUG] Loaded command: givexp
+[2026-08-13T23:15:39.857Z] [DEBUG] Loaded command: help
+[2026-08-13T23:15:39.857Z] [DEBUG] Loaded command: info
+[2026-08-13T23:15:39.858Z] [DEBUG] Loaded command: invites
+[2026-08-13T23:15:39.858Z] [DEBUG] Loaded command: jumbo
+[2026-08-13T23:15:39.858Z] [DEBUG] Loaded command: kick
+[2026-08-13T23:15:39.859Z] [DEBUG] Loaded command: leaderboard
+[2026-08-13T23:15:39.859Z] [DEBUG] Loaded command: leave
+[2026-08-13T23:15:39.860Z] [DEBUG] Loaded command: levelsettings
+[2026-08-13T23:15:39.860Z] [DEBUG] Loaded command: lock
+[2026-08-13T23:15:39.861Z] [DEBUG] Loaded command: lockdown
+[2026-08-13T23:15:39.862Z] [DEBUG] Loaded command: logging
+[2026-08-13T23:15:39.862Z] [DEBUG] Loaded command: loop
+[2026-08-13T23:15:39.863Z] [DEBUG] Loaded command: lyrics
+[2026-08-13T23:15:39.863Z] [DEBUG] Loaded command: math
+[2026-08-13T23:15:39.864Z] [DEBUG] Loaded command: membercount
+[2026-08-13T23:15:39.864Z] [DEBUG] Loaded command: move
+[2026-08-13T23:15:39.865Z] [DEBUG] Loaded command: note
+[2026-08-13T23:15:39.866Z] [DEBUG] Loaded command: nowplaying
+[2026-08-13T23:15:39.866Z] [DEBUG] Loaded command: pause
+[2026-08-13T23:15:39.866Z] [DEBUG] Loaded command: pay
+[2026-08-13T23:15:39.866Z] [DEBUG] Loaded command: ping
+[2026-08-13T23:15:39.867Z] [DEBUG] Loaded command: play
+[2026-08-13T23:15:39.867Z] [DEBUG] Loaded command: points
+[2026-08-13T23:15:39.868Z] [DEBUG] Loaded command: poll
+[2026-08-13T23:15:39.868Z] [DEBUG] Loaded command: qr
+[2026-08-13T23:15:39.868Z] [DEBUG] Loaded command: queue
+[2026-08-13T23:15:39.886Z] [DEBUG] Loaded command: rank
+[2026-08-13T23:15:39.887Z] [DEBUG] Loaded command: reactionrole
+[2026-08-13T23:15:39.888Z] [DEBUG] Loaded command: remind
+[2026-08-13T23:15:39.888Z] [DEBUG] Loaded command: reminders
+[2026-08-13T23:15:39.889Z] [DEBUG] Loaded command: remove
+[2026-08-13T23:15:39.889Z] [DEBUG] Loaded command: removewarn
+[2026-08-13T23:15:39.889Z] [DEBUG] Loaded command: rep
+[2026-08-13T23:15:39.890Z] [DEBUG] Loaded command: replay
+[2026-08-13T23:15:39.890Z] [DEBUG] Loaded command: resetxp
+[2026-08-13T23:15:39.890Z] [DEBUG] Loaded command: resume
+[2026-08-13T23:15:39.891Z] [DEBUG] Loaded command: role
+[2026-08-13T23:15:39.891Z] [DEBUG] Loaded command: roleinfo
+[2026-08-13T23:15:39.891Z] [DEBUG] Loaded command: roll
+[2026-08-13T23:15:39.892Z] [DEBUG] Loaded command: say
+[2026-08-13T23:15:39.892Z] [DEBUG] Loaded command: seek
+[2026-08-13T23:15:39.892Z] [DEBUG] Loaded command: serverinfo
+[2026-08-13T23:15:39.893Z] [DEBUG] Loaded command: serverstats
+[2026-08-13T23:15:39.893Z] [DEBUG] Loaded command: setlevel
+[2026-08-13T23:15:39.893Z] [DEBUG] Loaded command: setnick
+[2026-08-13T23:15:39.894Z] [DEBUG] Loaded command: setupverification
+[2026-08-13T23:15:39.894Z] [DEBUG] Loaded command: ship
+[2026-08-13T23:15:39.894Z] [DEBUG] Loaded command: shuffle
+[2026-08-13T23:15:39.895Z] [DEBUG] Loaded command: skip
+[2026-08-13T23:15:39.895Z] [DEBUG] Loaded command: slots
+[2026-08-13T23:15:39.895Z] [DEBUG] Loaded command: slowmode
+[2026-08-13T23:15:39.896Z] [DEBUG] Loaded command: snipe
+[2026-08-13T23:15:39.896Z] [DEBUG] Loaded command: softban
+[2026-08-13T23:15:39.896Z] [DEBUG] Loaded command: stats
+[2026-08-13T23:15:39.897Z] [DEBUG] Loaded command: steal
+[2026-08-13T23:15:39.897Z] [DEBUG] Loaded command: stop
+[2026-08-13T23:15:39.897Z] [DEBUG] Loaded command: streak
+[2026-08-13T23:15:39.899Z] [DEBUG] Loaded command: suggest
+[2026-08-13T23:15:39.900Z] [DEBUG] Loaded command: tag
+[2026-08-13T23:15:39.901Z] [DEBUG] Loaded command: ticket
+[2026-08-13T23:15:39.902Z] [DEBUG] Loaded command: timeout
+[2026-08-13T23:15:39.904Z] [DEBUG] Loaded command: tools
+[2026-08-13T23:15:39.905Z] [DEBUG] Loaded command: truthordare
+[2026-08-13T23:15:39.905Z] [DEBUG] Loaded command: unban
+[2026-08-13T23:15:39.905Z] [DEBUG] Loaded command: unlock
+[2026-08-13T23:15:39.906Z] [DEBUG] Loaded command: untimeout
+[2026-08-13T23:15:39.906Z] [DEBUG] Loaded command: unvmute
+[2026-08-13T23:15:39.906Z] [DEBUG] Loaded command: userinfo
+[2026-08-13T23:15:39.907Z] [DEBUG] Loaded command: vmute
+[2026-08-13T23:15:39.907Z] [DEBUG] Loaded command: volume
+[2026-08-13T23:15:39.908Z] [DEBUG] Loaded command: warn
+[2026-08-13T23:15:39.908Z] [DEBUG] Loaded command: warnings
+[2026-08-13T23:15:39.909Z] [DEBUG] Loaded command: welcome
+[2026-08-13T23:15:39.910Z] [DEBUG] Loaded command: whitelist
+[2026-08-13T23:15:39.910Z] [DEBUG] Loaded command: work
+[2026-08-13T23:15:39.910Z] [DEBUG] Loaded command: wouldyourather
+[2026-08-13T23:15:39.911Z] [INFO] Running startup diagnostics...
+[2026-08-13T23:15:39.911Z] [DEBUG] [PASS] Environment Variables
+[2026-08-13T23:15:39.911Z] [DEBUG] [PASS] Commands Directory
+[2026-08-13T23:15:39.911Z] [DEBUG] [PASS] Database Connection
+[2026-08-13T23:15:40.002Z] [INFO] Music extractors loaded
+[2026-08-13T23:15:40.003Z] [DEBUG] Loaded Client Event: guildMemberUpdate
+[2026-08-13T23:15:40.003Z] [DEBUG] Loaded Client Event: guildUpdate
+[2026-08-13T23:15:40.004Z] [DEBUG] Loaded Client Event: guildBanAdd
+[2026-08-13T23:15:40.004Z] [DEBUG] Loaded Client Event: guildBanRemove
+[2026-08-13T23:15:40.004Z] [DEBUG] Loaded Client Event: channelCreate
+[2026-08-13T23:15:40.004Z] [DEBUG] Loaded Client Event: channelDelete
+[2026-08-13T23:15:40.004Z] [DEBUG] Loaded Client Event: emojiCreate
+[2026-08-13T23:15:40.004Z] [DEBUG] Loaded Client Event: emojiDelete
+[2026-08-13T23:15:40.004Z] [DEBUG] Loaded Client Event: emojiUpdate
+[2026-08-13T23:15:40.004Z] [DEBUG] Loaded Client Event: stickerCreate
+[2026-08-13T23:15:40.004Z] [DEBUG] Loaded Client Event: stickerDelete
+[2026-08-13T23:15:40.005Z] [DEBUG] Loaded Client Event: interactionCreate
+[2026-08-13T23:15:40.006Z] [DEBUG] Loaded Client Event: guildMemberAdd
+[2026-08-13T23:15:40.006Z] [DEBUG] Loaded Client Event: guildMemberRemove
+[2026-08-13T23:15:40.006Z] [DEBUG] Loaded Client Event: inviteCreate
+[2026-08-13T23:15:40.006Z] [DEBUG] Loaded Client Event: inviteDelete
+[2026-08-13T23:15:40.007Z] [DEBUG] Loaded Client Event: messageCreate
+[2026-08-13T23:15:40.007Z] [DEBUG] Loaded Client Event: messageDelete
+[2026-08-13T23:15:40.007Z] [DEBUG] Loaded Client Event: messageUpdate
+[2026-08-13T23:15:40.007Z] [DEBUG] Loaded Client Event: messageReactionAdd
+[2026-08-13T23:15:40.007Z] [DEBUG] Loaded Client Event: messageReactionRemove
+[2026-08-13T23:15:40.008Z] [DEBUG] Loaded Client Event: clientReady
+[2026-08-13T23:15:40.008Z] [DEBUG] Loaded Client Event: roleCreate
+[2026-08-13T23:15:40.008Z] [DEBUG] Loaded Client Event: roleDelete
+[2026-08-13T23:15:40.008Z] [DEBUG] Loaded Client Event: roleUpdate
+[2026-08-13T23:15:40.008Z] [DEBUG] Loaded Client Event: threadCreate
+[2026-08-13T23:15:40.008Z] [DEBUG] Loaded Client Event: threadDelete
+[2026-08-13T23:15:40.009Z] [DEBUG] Loaded Client Event: voiceStateUpdate
+[2026-08-13T23:15:40.009Z] [DEBUG] Loaded Player Event: audioTrackAdd
+[2026-08-13T23:15:40.010Z] [DEBUG] Loaded Player Event: audioTracksAdd
+[2026-08-13T23:15:40.010Z] [DEBUG] Loaded Player Event: disconnect
+[2026-08-13T23:15:40.010Z] [DEBUG] Loaded Player Event: emptyChannel
+[2026-08-13T23:15:40.011Z] [DEBUG] Loaded Player Event: emptyQueue
+[2026-08-13T23:15:40.011Z] [DEBUG] Loaded Player Event: error
+[2026-08-13T23:15:40.011Z] [DEBUG] Loaded Player Event: playerError
+[2026-08-13T23:15:40.011Z] [DEBUG] Loaded Player Event: playerSkip
+[2026-08-13T23:15:40.011Z] [DEBUG] Loaded Player Event: playerStart
+[2026-08-13T23:15:40.012Z] [DEBUG] Scheduler job "timed-bans" started (interval: 60000ms)
+[2026-08-13T23:15:40.012Z] [DEBUG] Scheduler job "giveaways" started (interval: 10000ms)
+[2026-08-13T23:15:40.012Z] [DEBUG] Scheduler job "birthdays" started (interval: 3600000ms)
+[2026-08-13T23:15:40.012Z] [DEBUG] Scheduler job "birthday-roles" started (interval: 3600000ms)
+[2026-08-13T23:15:40.012Z] [DEBUG] Scheduler job "reminders" started (interval: 15000ms)
+[2026-08-13T23:15:40.012Z] [DEBUG] Scheduler job "map-cleanup" started (interval: 3600000ms)
+[2026-08-13T23:15:40.012Z] [DEBUG] Scheduler job "verification-kick" started (interval: 60000ms)
+[2026-08-13T23:15:40.012Z] [DEBUG] Scheduler job "polls-close" started (interval: 30000ms)
+[2026-08-13T23:15:40.012Z] [DEBUG] Scheduler job "public-url" started (interval: 15000ms)
+[2026-08-13T23:15:40.085Z] [INFO] ✨ Dashboard active at http://0.0.0.0:3000
+[2026-08-13T23:15:40.793Z] [INFO] Bot logged in as 𝑬𝑩#8552
+[2026-08-13T23:15:40.988Z] [DEBUG] Cached 3 invites for guild: 𝑬𝑩 𝑺𝒕𝒐𝒓𝒆
+[2026-08-13T23:15:41.256Z] [DEBUG] Cached 2 invites for guild: 𝑬𝑩
+[2026-08-13T23:18:05.270Z] [INFO] Dashboard public URL changed: https://inf-jul-formal-patients.trycloudflare.com
+[2026-08-13T23:19:33.560Z] [DEBUG] Loaded command: afk
+[2026-08-13T23:19:33.561Z] [DEBUG] Loaded command: announce
+[2026-08-13T23:19:33.562Z] [DEBUG] Loaded command: automod
+[2026-08-13T23:19:33.563Z] [DEBUG] Loaded command: autoplay
+[2026-08-13T23:19:33.563Z] [DEBUG] Loaded command: avatar
+[2026-08-13T23:19:33.564Z] [DEBUG] Loaded command: badges
+[2026-08-13T23:19:33.565Z] [DEBUG] Loaded command: ban
+[2026-08-13T23:19:33.566Z] [DEBUG] Loaded command: banner
+[2026-08-13T23:19:33.567Z] [DEBUG] Loaded command: birthday
+[2026-08-13T23:19:33.568Z] [DEBUG] Loaded command: birthdaysettings
+[2026-08-13T23:19:33.568Z] [DEBUG] Loaded command: channelinfo
+[2026-08-13T23:19:33.568Z] [DEBUG] Loaded command: clear
+[2026-08-13T23:19:33.569Z] [DEBUG] Loaded command: coinflip
+[2026-08-13T23:19:33.569Z] [DEBUG] Loaded command: confess
+[2026-08-13T23:19:33.570Z] [DEBUG] Loaded command: credits
+[2026-08-13T23:19:33.570Z] [DEBUG] Loaded command: daily
+[2026-08-13T23:19:33.596Z] [DEBUG] Loaded command: define
+[2026-08-13T23:19:33.597Z] [DEBUG] Loaded command: editsnipe
+[2026-08-13T23:19:33.598Z] [DEBUG] Loaded command: filters
+[2026-08-13T23:19:33.599Z] [DEBUG] Loaded command: firstmessage
+[2026-08-13T23:19:33.600Z] [DEBUG] Loaded command: fun
+[2026-08-13T23:19:33.603Z] [DEBUG] Loaded command: games
+[2026-08-13T23:19:33.605Z] [DEBUG] Loaded command: giveaway
+[2026-08-13T23:19:33.605Z] [DEBUG] Loaded command: givexp
+[2026-08-13T23:19:33.606Z] [DEBUG] Loaded command: help
+[2026-08-13T23:19:33.606Z] [DEBUG] Loaded command: info
+[2026-08-13T23:19:33.606Z] [DEBUG] Loaded command: invites
+[2026-08-13T23:19:33.607Z] [DEBUG] Loaded command: jumbo
+[2026-08-13T23:19:33.607Z] [DEBUG] Loaded command: kick
+[2026-08-13T23:19:33.607Z] [DEBUG] Loaded command: leaderboard
+[2026-08-13T23:19:33.608Z] [DEBUG] Loaded command: leave
+[2026-08-13T23:19:33.609Z] [DEBUG] Loaded command: levelsettings
+[2026-08-13T23:19:33.609Z] [DEBUG] Loaded command: lock
+[2026-08-13T23:19:33.610Z] [DEBUG] Loaded command: lockdown
+[2026-08-13T23:19:33.611Z] [DEBUG] Loaded command: logging
+[2026-08-13T23:19:33.611Z] [DEBUG] Loaded command: loop
+[2026-08-13T23:19:33.612Z] [DEBUG] Loaded command: lyrics
+[2026-08-13T23:19:33.612Z] [DEBUG] Loaded command: math
+[2026-08-13T23:19:33.612Z] [DEBUG] Loaded command: membercount
+[2026-08-13T23:19:33.613Z] [DEBUG] Loaded command: move
+[2026-08-13T23:19:33.613Z] [DEBUG] Loaded command: note
+[2026-08-13T23:19:33.614Z] [DEBUG] Loaded command: nowplaying
+[2026-08-13T23:19:33.614Z] [DEBUG] Loaded command: pause
+[2026-08-13T23:19:33.615Z] [DEBUG] Loaded command: pay
+[2026-08-13T23:19:33.615Z] [DEBUG] Loaded command: ping
+[2026-08-13T23:19:33.615Z] [DEBUG] Loaded command: play
+[2026-08-13T23:19:33.616Z] [DEBUG] Loaded command: points
+[2026-08-13T23:19:33.617Z] [DEBUG] Loaded command: poll
+[2026-08-13T23:19:33.617Z] [DEBUG] Loaded command: qr
+[2026-08-13T23:19:33.617Z] [DEBUG] Loaded command: queue
+[2026-08-13T23:19:33.635Z] [DEBUG] Loaded command: rank
+[2026-08-13T23:19:33.636Z] [DEBUG] Loaded command: reactionrole
+[2026-08-13T23:19:33.637Z] [DEBUG] Loaded command: remind
+[2026-08-13T23:19:33.637Z] [DEBUG] Loaded command: reminders
+[2026-08-13T23:19:33.638Z] [DEBUG] Loaded command: remove
+[2026-08-13T23:19:33.638Z] [DEBUG] Loaded command: removewarn
+[2026-08-13T23:19:33.639Z] [DEBUG] Loaded command: rep
+[2026-08-13T23:19:33.639Z] [DEBUG] Loaded command: replay
+[2026-08-13T23:19:33.639Z] [DEBUG] Loaded command: resetxp
+[2026-08-13T23:19:33.640Z] [DEBUG] Loaded command: resume
+[2026-08-13T23:19:33.640Z] [DEBUG] Loaded command: role
+[2026-08-13T23:19:33.640Z] [DEBUG] Loaded command: roleinfo
+[2026-08-13T23:19:33.641Z] [DEBUG] Loaded command: roll
+[2026-08-13T23:19:33.641Z] [DEBUG] Loaded command: say
+[2026-08-13T23:19:33.641Z] [DEBUG] Loaded command: seek
+[2026-08-13T23:19:33.642Z] [DEBUG] Loaded command: serverinfo
+[2026-08-13T23:19:33.642Z] [DEBUG] Loaded command: serverstats
+[2026-08-13T23:19:33.642Z] [DEBUG] Loaded command: setlevel
+[2026-08-13T23:19:33.643Z] [DEBUG] Loaded command: setnick
+[2026-08-13T23:19:33.643Z] [DEBUG] Loaded command: setupverification
+[2026-08-13T23:19:33.643Z] [DEBUG] Loaded command: ship
+[2026-08-13T23:19:33.644Z] [DEBUG] Loaded command: shuffle
+[2026-08-13T23:19:33.644Z] [DEBUG] Loaded command: skip
+[2026-08-13T23:19:33.644Z] [DEBUG] Loaded command: slots
+[2026-08-13T23:19:33.645Z] [DEBUG] Loaded command: slowmode
+[2026-08-13T23:19:33.645Z] [DEBUG] Loaded command: snipe
+[2026-08-13T23:19:33.645Z] [DEBUG] Loaded command: softban
+[2026-08-13T23:19:33.645Z] [DEBUG] Loaded command: stats
+[2026-08-13T23:19:33.646Z] [DEBUG] Loaded command: steal
+[2026-08-13T23:19:33.646Z] [DEBUG] Loaded command: stop
+[2026-08-13T23:19:33.646Z] [DEBUG] Loaded command: streak
+[2026-08-13T23:19:33.648Z] [DEBUG] Loaded command: suggest
+[2026-08-13T23:19:33.649Z] [DEBUG] Loaded command: tag
+[2026-08-13T23:19:33.650Z] [DEBUG] Loaded command: ticket
+[2026-08-13T23:19:33.651Z] [DEBUG] Loaded command: timeout
+[2026-08-13T23:19:33.653Z] [DEBUG] Loaded command: tools
+[2026-08-13T23:19:33.653Z] [DEBUG] Loaded command: truthordare
+[2026-08-13T23:19:33.654Z] [DEBUG] Loaded command: unban
+[2026-08-13T23:19:33.654Z] [DEBUG] Loaded command: unlock
+[2026-08-13T23:19:33.655Z] [DEBUG] Loaded command: untimeout
+[2026-08-13T23:19:33.655Z] [DEBUG] Loaded command: unvmute
+[2026-08-13T23:19:33.655Z] [DEBUG] Loaded command: userinfo
+[2026-08-13T23:19:33.656Z] [DEBUG] Loaded command: vmute
+[2026-08-13T23:19:33.656Z] [DEBUG] Loaded command: volume
+[2026-08-13T23:19:33.656Z] [DEBUG] Loaded command: warn
+[2026-08-13T23:19:33.657Z] [DEBUG] Loaded command: warnings
+[2026-08-13T23:19:33.657Z] [DEBUG] Loaded command: welcome
+[2026-08-13T23:19:33.658Z] [DEBUG] Loaded command: whitelist
+[2026-08-13T23:19:33.658Z] [DEBUG] Loaded command: work
+[2026-08-13T23:19:33.659Z] [DEBUG] Loaded command: wouldyourather
+[2026-08-13T23:19:33.659Z] [INFO] Running startup diagnostics...
+[2026-08-13T23:19:33.659Z] [DEBUG] [PASS] Environment Variables
+[2026-08-13T23:19:33.659Z] [DEBUG] [PASS] Commands Directory
+[2026-08-13T23:19:33.659Z] [DEBUG] [PASS] Database Connection
+[2026-08-13T23:19:33.746Z] [INFO] Music extractors loaded
+[2026-08-13T23:19:33.748Z] [DEBUG] Loaded Client Event: guildMemberUpdate
+[2026-08-13T23:19:33.748Z] [DEBUG] Loaded Client Event: guildUpdate
+[2026-08-13T23:19:33.748Z] [DEBUG] Loaded Client Event: guildBanAdd
+[2026-08-13T23:19:33.748Z] [DEBUG] Loaded Client Event: guildBanRemove
+[2026-08-13T23:19:33.749Z] [DEBUG] Loaded Client Event: channelCreate
+[2026-08-13T23:19:33.749Z] [DEBUG] Loaded Client Event: channelDelete
+[2026-08-13T23:19:33.749Z] [DEBUG] Loaded Client Event: emojiCreate
+[2026-08-13T23:19:33.749Z] [DEBUG] Loaded Client Event: emojiDelete
+[2026-08-13T23:19:33.749Z] [DEBUG] Loaded Client Event: emojiUpdate
+[2026-08-13T23:19:33.749Z] [DEBUG] Loaded Client Event: stickerCreate
+[2026-08-13T23:19:33.749Z] [DEBUG] Loaded Client Event: stickerDelete
+[2026-08-13T23:19:33.750Z] [DEBUG] Loaded Client Event: interactionCreate
+[2026-08-13T23:19:33.751Z] [DEBUG] Loaded Client Event: guildMemberAdd
+[2026-08-13T23:19:33.751Z] [DEBUG] Loaded Client Event: guildMemberRemove
+[2026-08-13T23:19:33.751Z] [DEBUG] Loaded Client Event: inviteCreate
+[2026-08-13T23:19:33.751Z] [DEBUG] Loaded Client Event: inviteDelete
+[2026-08-13T23:19:33.752Z] [DEBUG] Loaded Client Event: messageCreate
+[2026-08-13T23:19:33.752Z] [DEBUG] Loaded Client Event: messageDelete
+[2026-08-13T23:19:33.752Z] [DEBUG] Loaded Client Event: messageUpdate
+[2026-08-13T23:19:33.752Z] [DEBUG] Loaded Client Event: messageReactionAdd
+[2026-08-13T23:19:33.752Z] [DEBUG] Loaded Client Event: messageReactionRemove
+[2026-08-13T23:19:33.753Z] [DEBUG] Loaded Client Event: clientReady
+[2026-08-13T23:19:33.753Z] [DEBUG] Loaded Client Event: roleCreate
+[2026-08-13T23:19:33.753Z] [DEBUG] Loaded Client Event: roleDelete
+[2026-08-13T23:19:33.753Z] [DEBUG] Loaded Client Event: roleUpdate
+[2026-08-13T23:19:33.753Z] [DEBUG] Loaded Client Event: threadCreate
+[2026-08-13T23:19:33.753Z] [DEBUG] Loaded Client Event: threadDelete
+[2026-08-13T23:19:33.753Z] [DEBUG] Loaded Client Event: voiceStateUpdate
+[2026-08-13T23:19:33.754Z] [DEBUG] Loaded Player Event: audioTrackAdd
+[2026-08-13T23:19:33.754Z] [DEBUG] Loaded Player Event: audioTracksAdd
+[2026-08-13T23:19:33.754Z] [DEBUG] Loaded Player Event: disconnect
+[2026-08-13T23:19:33.754Z] [DEBUG] Loaded Player Event: emptyChannel
+[2026-08-13T23:19:33.755Z] [DEBUG] Loaded Player Event: emptyQueue
+[2026-08-13T23:19:33.755Z] [DEBUG] Loaded Player Event: error
+[2026-08-13T23:19:33.755Z] [DEBUG] Loaded Player Event: playerError
+[2026-08-13T23:19:33.755Z] [DEBUG] Loaded Player Event: playerSkip
+[2026-08-13T23:19:33.756Z] [DEBUG] Loaded Player Event: playerStart
+[2026-08-13T23:19:33.756Z] [DEBUG] Scheduler job "timed-bans" started (interval: 60000ms)
+[2026-08-13T23:19:33.756Z] [DEBUG] Scheduler job "giveaways" started (interval: 10000ms)
+[2026-08-13T23:19:33.756Z] [DEBUG] Scheduler job "birthdays" started (interval: 3600000ms)
+[2026-08-13T23:19:33.756Z] [DEBUG] Scheduler job "birthday-roles" started (interval: 3600000ms)
+[2026-08-13T23:19:33.756Z] [DEBUG] Scheduler job "reminders" started (interval: 15000ms)
+[2026-08-13T23:19:33.756Z] [DEBUG] Scheduler job "map-cleanup" started (interval: 3600000ms)
+[2026-08-13T23:19:33.756Z] [DEBUG] Scheduler job "verification-kick" started (interval: 60000ms)
+[2026-08-13T23:19:33.756Z] [DEBUG] Scheduler job "polls-close" started (interval: 30000ms)
+[2026-08-13T23:19:33.756Z] [DEBUG] Scheduler job "public-url" started (interval: 15000ms)
+[2026-08-13T23:19:33.827Z] [INFO] ✨ Dashboard active at http://0.0.0.0:3000
+[2026-08-13T23:19:34.638Z] [INFO] Bot logged in as 𝑬𝑩#8552
+[2026-08-13T23:19:34.832Z] [DEBUG] Cached 3 invites for guild: 𝑬𝑩 𝑺𝒕𝒐𝒓𝒆
+[2026-08-13T23:19:35.031Z] [DEBUG] Cached 2 invites for guild: 𝑬𝑩
+[2026-08-13T23:23:40.553Z] [DEBUG] Loaded command: afk
+[2026-08-13T23:23:40.555Z] [DEBUG] Loaded command: announce
+[2026-08-13T23:23:40.556Z] [DEBUG] Loaded command: automod
+[2026-08-13T23:23:40.557Z] [DEBUG] Loaded command: autoplay
+[2026-08-13T23:23:40.557Z] [DEBUG] Loaded command: avatar
+[2026-08-13T23:23:40.558Z] [DEBUG] Loaded command: badges
+[2026-08-13T23:23:40.558Z] [DEBUG] Loaded command: ban
+[2026-08-13T23:23:40.559Z] [DEBUG] Loaded command: banner
+[2026-08-13T23:23:40.560Z] [DEBUG] Loaded command: birthday
+[2026-08-13T23:23:40.561Z] [DEBUG] Loaded command: birthdaysettings
+[2026-08-13T23:23:40.561Z] [DEBUG] Loaded command: channelinfo
+[2026-08-13T23:23:40.562Z] [DEBUG] Loaded command: clear
+[2026-08-13T23:23:40.562Z] [DEBUG] Loaded command: coinflip
+[2026-08-13T23:23:40.563Z] [DEBUG] Loaded command: confess
+[2026-08-13T23:23:40.563Z] [DEBUG] Loaded command: credits
+[2026-08-13T23:23:40.563Z] [DEBUG] Loaded command: daily
+[2026-08-13T23:23:40.588Z] [DEBUG] Loaded command: define
+[2026-08-13T23:23:40.588Z] [DEBUG] Loaded command: editsnipe
+[2026-08-13T23:23:40.589Z] [DEBUG] Loaded command: filters
+[2026-08-13T23:23:40.589Z] [DEBUG] Loaded command: firstmessage
+[2026-08-13T23:23:40.591Z] [DEBUG] Loaded command: fun
+[2026-08-13T23:23:40.594Z] [DEBUG] Loaded command: games
+[2026-08-13T23:23:40.595Z] [DEBUG] Loaded command: giveaway
+[2026-08-13T23:23:40.595Z] [DEBUG] Loaded command: givexp
+[2026-08-13T23:23:40.596Z] [DEBUG] Loaded command: help
+[2026-08-13T23:23:40.596Z] [DEBUG] Loaded command: info
+[2026-08-13T23:23:40.596Z] [DEBUG] Loaded command: invites
+[2026-08-13T23:23:40.597Z] [DEBUG] Loaded command: jumbo
+[2026-08-13T23:23:40.597Z] [DEBUG] Loaded command: kick
+[2026-08-13T23:23:40.598Z] [DEBUG] Loaded command: leaderboard
+[2026-08-13T23:23:40.598Z] [DEBUG] Loaded command: leave
+[2026-08-13T23:23:40.599Z] [DEBUG] Loaded command: levelsettings
+[2026-08-13T23:23:40.599Z] [DEBUG] Loaded command: lock
+[2026-08-13T23:23:40.600Z] [DEBUG] Loaded command: lockdown
+[2026-08-13T23:23:40.601Z] [DEBUG] Loaded command: logging
+[2026-08-13T23:23:40.601Z] [DEBUG] Loaded command: loop
+[2026-08-13T23:23:40.602Z] [DEBUG] Loaded command: lyrics
+[2026-08-13T23:23:40.602Z] [DEBUG] Loaded command: math
+[2026-08-13T23:23:40.602Z] [DEBUG] Loaded command: membercount
+[2026-08-13T23:23:40.603Z] [DEBUG] Loaded command: move
+[2026-08-13T23:23:40.604Z] [DEBUG] Loaded command: note
+[2026-08-13T23:23:40.604Z] [DEBUG] Loaded command: nowplaying
+[2026-08-13T23:23:40.604Z] [DEBUG] Loaded command: pause
+[2026-08-13T23:23:40.605Z] [DEBUG] Loaded command: pay
+[2026-08-13T23:23:40.605Z] [DEBUG] Loaded command: ping
+[2026-08-13T23:23:40.605Z] [DEBUG] Loaded command: play
+[2026-08-13T23:23:40.606Z] [DEBUG] Loaded command: points
+[2026-08-13T23:23:40.606Z] [DEBUG] Loaded command: poll
+[2026-08-13T23:23:40.607Z] [DEBUG] Loaded command: qr
+[2026-08-13T23:23:40.607Z] [DEBUG] Loaded command: queue
+[2026-08-13T23:23:40.624Z] [DEBUG] Loaded command: rank
+[2026-08-13T23:23:40.625Z] [DEBUG] Loaded command: reactionrole
+[2026-08-13T23:23:40.625Z] [DEBUG] Loaded command: remind
+[2026-08-13T23:23:40.626Z] [DEBUG] Loaded command: reminders
+[2026-08-13T23:23:40.626Z] [DEBUG] Loaded command: remove
+[2026-08-13T23:23:40.626Z] [DEBUG] Loaded command: removewarn
+[2026-08-13T23:23:40.627Z] [DEBUG] Loaded command: rep
+[2026-08-13T23:23:40.627Z] [DEBUG] Loaded command: replay
+[2026-08-13T23:23:40.627Z] [DEBUG] Loaded command: resetxp
+[2026-08-13T23:23:40.628Z] [DEBUG] Loaded command: resume
+[2026-08-13T23:23:40.628Z] [DEBUG] Loaded command: role
+[2026-08-13T23:23:40.628Z] [DEBUG] Loaded command: roleinfo
+[2026-08-13T23:23:40.629Z] [DEBUG] Loaded command: roll
+[2026-08-13T23:23:40.629Z] [DEBUG] Loaded command: say
+[2026-08-13T23:23:40.629Z] [DEBUG] Loaded command: seek
+[2026-08-13T23:23:40.630Z] [DEBUG] Loaded command: serverinfo
+[2026-08-13T23:23:40.630Z] [DEBUG] Loaded command: serverstats
+[2026-08-13T23:23:40.630Z] [DEBUG] Loaded command: setlevel
+[2026-08-13T23:23:40.631Z] [DEBUG] Loaded command: setnick
+[2026-08-13T23:23:40.631Z] [DEBUG] Loaded command: setupverification
+[2026-08-13T23:23:40.632Z] [DEBUG] Loaded command: ship
+[2026-08-13T23:23:40.632Z] [DEBUG] Loaded command: shuffle
+[2026-08-13T23:23:40.632Z] [DEBUG] Loaded command: skip
+[2026-08-13T23:23:40.632Z] [DEBUG] Loaded command: slots
+[2026-08-13T23:23:40.633Z] [DEBUG] Loaded command: slowmode
+[2026-08-13T23:23:40.633Z] [DEBUG] Loaded command: snipe
+[2026-08-13T23:23:40.633Z] [DEBUG] Loaded command: softban
+[2026-08-13T23:23:40.634Z] [DEBUG] Loaded command: stats
+[2026-08-13T23:23:40.634Z] [DEBUG] Loaded command: steal
+[2026-08-13T23:23:40.634Z] [DEBUG] Loaded command: stop
+[2026-08-13T23:23:40.635Z] [DEBUG] Loaded command: streak
+[2026-08-13T23:23:40.636Z] [DEBUG] Loaded command: suggest
+[2026-08-13T23:23:40.637Z] [DEBUG] Loaded command: tag
+[2026-08-13T23:23:40.637Z] [DEBUG] Loaded command: ticket
+[2026-08-13T23:23:40.638Z] [DEBUG] Loaded command: timeout
+[2026-08-13T23:23:40.640Z] [DEBUG] Loaded command: tools
+[2026-08-13T23:23:40.640Z] [DEBUG] Loaded command: truthordare
+[2026-08-13T23:23:40.641Z] [DEBUG] Loaded command: unban
+[2026-08-13T23:23:40.641Z] [DEBUG] Loaded command: unlock
+[2026-08-13T23:23:40.641Z] [DEBUG] Loaded command: untimeout
+[2026-08-13T23:23:40.642Z] [DEBUG] Loaded command: unvmute
+[2026-08-13T23:23:40.642Z] [DEBUG] Loaded command: userinfo
+[2026-08-13T23:23:40.642Z] [DEBUG] Loaded command: vmute
+[2026-08-13T23:23:40.643Z] [DEBUG] Loaded command: volume
+[2026-08-13T23:23:40.643Z] [DEBUG] Loaded command: warn
+[2026-08-13T23:23:40.644Z] [DEBUG] Loaded command: warnings
+[2026-08-13T23:23:40.644Z] [DEBUG] Loaded command: welcome
+[2026-08-13T23:23:40.645Z] [DEBUG] Loaded command: whitelist
+[2026-08-13T23:23:40.645Z] [DEBUG] Loaded command: work
+[2026-08-13T23:23:40.645Z] [DEBUG] Loaded command: wouldyourather
+[2026-08-13T23:23:40.645Z] [INFO] Running startup diagnostics...
+[2026-08-13T23:23:40.646Z] [DEBUG] [PASS] Environment Variables
+[2026-08-13T23:23:40.646Z] [DEBUG] [PASS] Commands Directory
+[2026-08-13T23:23:40.646Z] [DEBUG] [PASS] Database Connection
+[2026-08-13T23:23:40.739Z] [INFO] Music extractors loaded
+[2026-08-13T23:23:40.740Z] [DEBUG] Loaded Client Event: guildMemberUpdate
+[2026-08-13T23:23:40.740Z] [DEBUG] Loaded Client Event: guildUpdate
+[2026-08-13T23:23:40.740Z] [DEBUG] Loaded Client Event: guildBanAdd
+[2026-08-13T23:23:40.740Z] [DEBUG] Loaded Client Event: guildBanRemove
+[2026-08-13T23:23:40.741Z] [DEBUG] Loaded Client Event: channelCreate
+[2026-08-13T23:23:40.741Z] [DEBUG] Loaded Client Event: channelDelete
+[2026-08-13T23:23:40.741Z] [DEBUG] Loaded Client Event: emojiCreate
+[2026-08-13T23:23:40.741Z] [DEBUG] Loaded Client Event: emojiDelete
+[2026-08-13T23:23:40.741Z] [DEBUG] Loaded Client Event: emojiUpdate
+[2026-08-13T23:23:40.741Z] [DEBUG] Loaded Client Event: stickerCreate
+[2026-08-13T23:23:40.741Z] [DEBUG] Loaded Client Event: stickerDelete
+[2026-08-13T23:23:40.742Z] [DEBUG] Loaded Client Event: interactionCreate
+[2026-08-13T23:23:40.743Z] [DEBUG] Loaded Client Event: guildMemberAdd
+[2026-08-13T23:23:40.743Z] [DEBUG] Loaded Client Event: guildMemberRemove
+[2026-08-13T23:23:40.743Z] [DEBUG] Loaded Client Event: inviteCreate
+[2026-08-13T23:23:40.743Z] [DEBUG] Loaded Client Event: inviteDelete
+[2026-08-13T23:23:40.743Z] [DEBUG] Loaded Client Event: messageCreate
+[2026-08-13T23:23:40.744Z] [DEBUG] Loaded Client Event: messageDelete
+[2026-08-13T23:23:40.744Z] [DEBUG] Loaded Client Event: messageUpdate
+[2026-08-13T23:23:40.744Z] [DEBUG] Loaded Client Event: messageReactionAdd
+[2026-08-13T23:23:40.744Z] [DEBUG] Loaded Client Event: messageReactionRemove
+[2026-08-13T23:23:40.744Z] [DEBUG] Loaded Client Event: clientReady
+[2026-08-13T23:23:40.745Z] [DEBUG] Loaded Client Event: roleCreate
+[2026-08-13T23:23:40.745Z] [DEBUG] Loaded Client Event: roleDelete
+[2026-08-13T23:23:40.745Z] [DEBUG] Loaded Client Event: roleUpdate
+[2026-08-13T23:23:40.745Z] [DEBUG] Loaded Client Event: threadCreate
+[2026-08-13T23:23:40.745Z] [DEBUG] Loaded Client Event: threadDelete
+[2026-08-13T23:23:40.745Z] [DEBUG] Loaded Client Event: voiceStateUpdate
+[2026-08-13T23:23:40.746Z] [DEBUG] Loaded Player Event: audioTrackAdd
+[2026-08-13T23:23:40.746Z] [DEBUG] Loaded Player Event: audioTracksAdd
+[2026-08-13T23:23:40.746Z] [DEBUG] Loaded Player Event: disconnect
+[2026-08-13T23:23:40.746Z] [DEBUG] Loaded Player Event: emptyChannel
+[2026-08-13T23:23:40.747Z] [DEBUG] Loaded Player Event: emptyQueue
+[2026-08-13T23:23:40.747Z] [DEBUG] Loaded Player Event: error
+[2026-08-13T23:23:40.747Z] [DEBUG] Loaded Player Event: playerError
+[2026-08-13T23:23:40.747Z] [DEBUG] Loaded Player Event: playerSkip
+[2026-08-13T23:23:40.748Z] [DEBUG] Loaded Player Event: playerStart
+[2026-08-13T23:23:40.748Z] [DEBUG] Scheduler job "timed-bans" started (interval: 60000ms)
+[2026-08-13T23:23:40.748Z] [DEBUG] Scheduler job "giveaways" started (interval: 10000ms)
+[2026-08-13T23:23:40.748Z] [DEBUG] Scheduler job "birthdays" started (interval: 3600000ms)
+[2026-08-13T23:23:40.748Z] [DEBUG] Scheduler job "birthday-roles" started (interval: 3600000ms)
+[2026-08-13T23:23:40.748Z] [DEBUG] Scheduler job "reminders" started (interval: 15000ms)
+[2026-08-13T23:23:40.748Z] [DEBUG] Scheduler job "map-cleanup" started (interval: 3600000ms)
+[2026-08-13T23:23:40.748Z] [DEBUG] Scheduler job "verification-kick" started (interval: 60000ms)
+[2026-08-13T23:23:40.748Z] [DEBUG] Scheduler job "polls-close" started (interval: 30000ms)
+[2026-08-13T23:23:40.748Z] [DEBUG] Scheduler job "public-url" started (interval: 15000ms)
+[2026-08-13T23:23:40.817Z] [INFO] ✨ Dashboard active at http://0.0.0.0:3000
+[2026-08-13T23:23:41.710Z] [INFO] Bot logged in as 𝑬𝑩#8552
+[2026-08-13T23:23:41.862Z] [DEBUG] Cached 3 invites for guild: 𝑬𝑩 𝑺𝒕𝒐𝒓𝒆
+[2026-08-13T23:23:42.110Z] [DEBUG] Cached 2 invites for guild: 𝑬𝑩
+[2026-08-13T23:24:02.792Z] [DEBUG] Loaded command: afk
+[2026-08-13T23:24:02.794Z] [DEBUG] Loaded command: announce
+[2026-08-13T23:24:02.796Z] [DEBUG] Loaded command: automod
+[2026-08-13T23:24:02.796Z] [DEBUG] Loaded command: autoplay
+[2026-08-13T23:24:02.796Z] [DEBUG] Loaded command: avatar
+[2026-08-13T23:24:02.797Z] [DEBUG] Loaded command: badges
+[2026-08-13T23:24:02.798Z] [DEBUG] Loaded command: ban
+[2026-08-13T23:24:02.798Z] [DEBUG] Loaded command: banner
+[2026-08-13T23:24:02.799Z] [DEBUG] Loaded command: birthday
+[2026-08-13T23:24:02.800Z] [DEBUG] Loaded command: birthdaysettings
+[2026-08-13T23:24:02.800Z] [DEBUG] Loaded command: channelinfo
+[2026-08-13T23:24:02.801Z] [DEBUG] Loaded command: clear
+[2026-08-13T23:24:02.801Z] [DEBUG] Loaded command: coinflip
+[2026-08-13T23:24:02.802Z] [DEBUG] Loaded command: confess
+[2026-08-13T23:24:02.802Z] [DEBUG] Loaded command: credits
+[2026-08-13T23:24:02.803Z] [DEBUG] Loaded command: daily
+[2026-08-13T23:24:02.827Z] [DEBUG] Loaded command: define
+[2026-08-13T23:24:02.828Z] [DEBUG] Loaded command: editsnipe
+[2026-08-13T23:24:02.829Z] [DEBUG] Loaded command: filters
+[2026-08-13T23:24:02.829Z] [DEBUG] Loaded command: firstmessage
+[2026-08-13T23:24:02.830Z] [DEBUG] Loaded command: fun
+[2026-08-13T23:24:02.833Z] [DEBUG] Loaded command: games
+[2026-08-13T23:24:02.834Z] [DEBUG] Loaded command: giveaway
+[2026-08-13T23:24:02.835Z] [DEBUG] Loaded command: givexp
+[2026-08-13T23:24:02.835Z] [DEBUG] Loaded command: help
+[2026-08-13T23:24:02.835Z] [DEBUG] Loaded command: info
+[2026-08-13T23:24:02.836Z] [DEBUG] Loaded command: invites
+[2026-08-13T23:24:02.836Z] [DEBUG] Loaded command: jumbo
+[2026-08-13T23:24:02.836Z] [DEBUG] Loaded command: kick
+[2026-08-13T23:24:02.837Z] [DEBUG] Loaded command: leaderboard
+[2026-08-13T23:24:02.837Z] [DEBUG] Loaded command: leave
+[2026-08-13T23:24:02.838Z] [DEBUG] Loaded command: levelsettings
+[2026-08-13T23:24:02.839Z] [DEBUG] Loaded command: lock
+[2026-08-13T23:24:02.839Z] [DEBUG] Loaded command: lockdown
+[2026-08-13T23:24:02.840Z] [DEBUG] Loaded command: logging
+[2026-08-13T23:24:02.841Z] [DEBUG] Loaded command: loop
+[2026-08-13T23:24:02.841Z] [DEBUG] Loaded command: lyrics
+[2026-08-13T23:24:02.841Z] [DEBUG] Loaded command: math
+[2026-08-13T23:24:02.842Z] [DEBUG] Loaded command: membercount
+[2026-08-13T23:24:02.842Z] [DEBUG] Loaded command: move
+[2026-08-13T23:24:02.843Z] [DEBUG] Loaded command: note
+[2026-08-13T23:24:02.843Z] [DEBUG] Loaded command: nowplaying
+[2026-08-13T23:24:02.843Z] [DEBUG] Loaded command: pause
+[2026-08-13T23:24:02.844Z] [DEBUG] Loaded command: pay
+[2026-08-13T23:24:02.844Z] [DEBUG] Loaded command: ping
+[2026-08-13T23:24:02.844Z] [DEBUG] Loaded command: play
+[2026-08-13T23:24:02.845Z] [DEBUG] Loaded command: points
+[2026-08-13T23:24:02.845Z] [DEBUG] Loaded command: poll
+[2026-08-13T23:24:02.846Z] [DEBUG] Loaded command: qr
+[2026-08-13T23:24:02.846Z] [DEBUG] Loaded command: queue
+[2026-08-13T23:24:02.863Z] [DEBUG] Loaded command: rank
+[2026-08-13T23:24:02.864Z] [DEBUG] Loaded command: reactionrole
+[2026-08-13T23:24:02.864Z] [DEBUG] Loaded command: remind
+[2026-08-13T23:24:02.864Z] [DEBUG] Loaded command: reminders
+[2026-08-13T23:24:02.865Z] [DEBUG] Loaded command: remove
+[2026-08-13T23:24:02.865Z] [DEBUG] Loaded command: removewarn
+[2026-08-13T23:24:02.866Z] [DEBUG] Loaded command: rep
+[2026-08-13T23:24:02.866Z] [DEBUG] Loaded command: replay
+[2026-08-13T23:24:02.866Z] [DEBUG] Loaded command: resetxp
+[2026-08-13T23:24:02.867Z] [DEBUG] Loaded command: resume
+[2026-08-13T23:24:02.867Z] [DEBUG] Loaded command: role
+[2026-08-13T23:24:02.867Z] [DEBUG] Loaded command: roleinfo
+[2026-08-13T23:24:02.867Z] [DEBUG] Loaded command: roll
+[2026-08-13T23:24:02.868Z] [DEBUG] Loaded command: say
+[2026-08-13T23:24:02.868Z] [DEBUG] Loaded command: seek
+[2026-08-13T23:24:02.869Z] [DEBUG] Loaded command: serverinfo
+[2026-08-13T23:24:02.869Z] [DEBUG] Loaded command: serverstats
+[2026-08-13T23:24:02.869Z] [DEBUG] Loaded command: setlevel
+[2026-08-13T23:24:02.870Z] [DEBUG] Loaded command: setnick
+[2026-08-13T23:24:02.870Z] [DEBUG] Loaded command: setupverification
+[2026-08-13T23:24:02.870Z] [DEBUG] Loaded command: ship
+[2026-08-13T23:24:02.871Z] [DEBUG] Loaded command: shuffle
+[2026-08-13T23:24:02.871Z] [DEBUG] Loaded command: skip
+[2026-08-13T23:24:02.871Z] [DEBUG] Loaded command: slots
+[2026-08-13T23:24:02.872Z] [DEBUG] Loaded command: slowmode
+[2026-08-13T23:24:02.872Z] [DEBUG] Loaded command: snipe
+[2026-08-13T23:24:02.872Z] [DEBUG] Loaded command: softban
+[2026-08-13T23:24:02.873Z] [DEBUG] Loaded command: stats
+[2026-08-13T23:24:02.873Z] [DEBUG] Loaded command: steal
+[2026-08-13T23:24:02.873Z] [DEBUG] Loaded command: stop
+[2026-08-13T23:24:02.873Z] [DEBUG] Loaded command: streak
+[2026-08-13T23:24:02.874Z] [DEBUG] Loaded command: suggest
+[2026-08-13T23:24:02.875Z] [DEBUG] Loaded command: tag
+[2026-08-13T23:24:02.876Z] [DEBUG] Loaded command: ticket
+[2026-08-13T23:24:02.877Z] [DEBUG] Loaded command: timeout
+[2026-08-13T23:24:02.879Z] [DEBUG] Loaded command: tools
+[2026-08-13T23:24:02.879Z] [DEBUG] Loaded command: truthordare
+[2026-08-13T23:24:02.879Z] [DEBUG] Loaded command: unban
+[2026-08-13T23:24:02.880Z] [DEBUG] Loaded command: unlock
+[2026-08-13T23:24:02.880Z] [DEBUG] Loaded command: untimeout
+[2026-08-13T23:24:02.880Z] [DEBUG] Loaded command: unvmute
+[2026-08-13T23:24:02.881Z] [DEBUG] Loaded command: userinfo
+[2026-08-13T23:24:02.881Z] [DEBUG] Loaded command: vmute
+[2026-08-13T23:24:02.881Z] [DEBUG] Loaded command: volume
+[2026-08-13T23:24:02.882Z] [DEBUG] Loaded command: warn
+[2026-08-13T23:24:02.882Z] [DEBUG] Loaded command: warnings
+[2026-08-13T23:24:02.883Z] [DEBUG] Loaded command: welcome
+[2026-08-13T23:24:02.883Z] [DEBUG] Loaded command: whitelist
+[2026-08-13T23:24:02.884Z] [DEBUG] Loaded command: work
+[2026-08-13T23:24:02.884Z] [DEBUG] Loaded command: wouldyourather
+[2026-08-13T23:24:02.884Z] [INFO] Running startup diagnostics...
+[2026-08-13T23:24:02.884Z] [DEBUG] [PASS] Environment Variables
+[2026-08-13T23:24:02.884Z] [DEBUG] [PASS] Commands Directory
+[2026-08-13T23:24:02.884Z] [DEBUG] [PASS] Database Connection
+[2026-08-13T23:24:02.971Z] [INFO] Music extractors loaded
+[2026-08-13T23:24:02.972Z] [DEBUG] Loaded Client Event: guildMemberUpdate
+[2026-08-13T23:24:02.973Z] [DEBUG] Loaded Client Event: guildUpdate
+[2026-08-13T23:24:02.973Z] [DEBUG] Loaded Client Event: guildBanAdd
+[2026-08-13T23:24:02.973Z] [DEBUG] Loaded Client Event: guildBanRemove
+[2026-08-13T23:24:02.973Z] [DEBUG] Loaded Client Event: channelCreate
+[2026-08-13T23:24:02.973Z] [DEBUG] Loaded Client Event: channelDelete
+[2026-08-13T23:24:02.973Z] [DEBUG] Loaded Client Event: emojiCreate
+[2026-08-13T23:24:02.973Z] [DEBUG] Loaded Client Event: emojiDelete
+[2026-08-13T23:24:02.974Z] [DEBUG] Loaded Client Event: emojiUpdate
+[2026-08-13T23:24:02.974Z] [DEBUG] Loaded Client Event: stickerCreate
+[2026-08-13T23:24:02.974Z] [DEBUG] Loaded Client Event: stickerDelete
+[2026-08-13T23:24:02.975Z] [DEBUG] Loaded Client Event: interactionCreate
+[2026-08-13T23:24:02.975Z] [DEBUG] Loaded Client Event: guildMemberAdd
+[2026-08-13T23:24:02.975Z] [DEBUG] Loaded Client Event: guildMemberRemove
+[2026-08-13T23:24:02.975Z] [DEBUG] Loaded Client Event: inviteCreate
+[2026-08-13T23:24:02.975Z] [DEBUG] Loaded Client Event: inviteDelete
+[2026-08-13T23:24:02.976Z] [DEBUG] Loaded Client Event: messageCreate
+[2026-08-13T23:24:02.976Z] [DEBUG] Loaded Client Event: messageDelete
+[2026-08-13T23:24:02.976Z] [DEBUG] Loaded Client Event: messageUpdate
+[2026-08-13T23:24:02.977Z] [DEBUG] Loaded Client Event: messageReactionAdd
+[2026-08-13T23:24:02.977Z] [DEBUG] Loaded Client Event: messageReactionRemove
+[2026-08-13T23:24:02.977Z] [DEBUG] Loaded Client Event: clientReady
+[2026-08-13T23:24:02.977Z] [DEBUG] Loaded Client Event: roleCreate
+[2026-08-13T23:24:02.977Z] [DEBUG] Loaded Client Event: roleDelete
+[2026-08-13T23:24:02.977Z] [DEBUG] Loaded Client Event: roleUpdate
+[2026-08-13T23:24:02.977Z] [DEBUG] Loaded Client Event: threadCreate
+[2026-08-13T23:24:02.977Z] [DEBUG] Loaded Client Event: threadDelete
+[2026-08-13T23:24:02.978Z] [DEBUG] Loaded Client Event: voiceStateUpdate
+[2026-08-13T23:24:02.978Z] [DEBUG] Loaded Player Event: audioTrackAdd
+[2026-08-13T23:24:02.978Z] [DEBUG] Loaded Player Event: audioTracksAdd
+[2026-08-13T23:24:02.979Z] [DEBUG] Loaded Player Event: disconnect
+[2026-08-13T23:24:02.979Z] [DEBUG] Loaded Player Event: emptyChannel
+[2026-08-13T23:24:02.979Z] [DEBUG] Loaded Player Event: emptyQueue
+[2026-08-13T23:24:02.979Z] [DEBUG] Loaded Player Event: error
+[2026-08-13T23:24:02.979Z] [DEBUG] Loaded Player Event: playerError
+[2026-08-13T23:24:02.980Z] [DEBUG] Loaded Player Event: playerSkip
+[2026-08-13T23:24:02.980Z] [DEBUG] Loaded Player Event: playerStart
+[2026-08-13T23:24:02.980Z] [DEBUG] Scheduler job "timed-bans" started (interval: 60000ms)
+[2026-08-13T23:24:02.981Z] [DEBUG] Scheduler job "giveaways" started (interval: 10000ms)
+[2026-08-13T23:24:02.981Z] [DEBUG] Scheduler job "birthdays" started (interval: 3600000ms)
+[2026-08-13T23:24:02.981Z] [DEBUG] Scheduler job "birthday-roles" started (interval: 3600000ms)
+[2026-08-13T23:24:02.981Z] [DEBUG] Scheduler job "reminders" started (interval: 15000ms)
+[2026-08-13T23:24:02.981Z] [DEBUG] Scheduler job "map-cleanup" started (interval: 3600000ms)
+[2026-08-13T23:24:02.981Z] [DEBUG] Scheduler job "verification-kick" started (interval: 60000ms)
+[2026-08-13T23:24:02.981Z] [DEBUG] Scheduler job "polls-close" started (interval: 30000ms)
+[2026-08-13T23:24:02.981Z] [DEBUG] Scheduler job "public-url" started (interval: 15000ms)
+[2026-08-13T23:24:03.056Z] [INFO] ✨ Dashboard active at http://0.0.0.0:3000
+[2026-08-13T23:24:03.935Z] [INFO] Bot logged in as 𝑬𝑩#8552
+[2026-08-13T23:24:04.167Z] [DEBUG] Cached 3 invites for guild: 𝑬𝑩 𝑺𝒕𝒐𝒓𝒆
+[2026-08-13T23:24:04.361Z] [DEBUG] Cached 2 invites for guild: 𝑬𝑩
