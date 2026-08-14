@@ -1,0 +1,6 @@
+{
+  "note": "Lint debt budget. Lower it when you fix things; never raise it.",
+  "errors": 0,
+  "warnings": 0,
+  "byRule": {}
+}
