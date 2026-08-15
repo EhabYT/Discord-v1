@@ -1,40 +1,44 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { lazy, Suspense, useState, useEffect, useCallback } from 'react';
 import Sidebar from './components/Sidebar.jsx';
 import CommandPalette from './components/CommandPalette.jsx';
 import CopyButton from './components/CopyButton.jsx';
 import { ToastProvider } from './components/Toast.jsx';
-import Overview from './pages/Overview.jsx';
-import MusicController from './pages/MusicController.jsx';
-import WelcomeAutoResponse from './pages/WelcomeAutoResponse.jsx';
-import TicketSystem from './pages/TicketSystem.jsx';
-import Progression from './pages/Progression.jsx';
-import Logs from './pages/Logs.jsx';
-import Security from './pages/Security.jsx';
-import Giveaways from './pages/Giveaways.jsx';
-import Members from './pages/Members.jsx';
-import Analytics from './pages/Analytics.jsx';
-import ServerSettings from './pages/ServerSettings.jsx';
-import BotControls from './pages/BotControls.jsx';
-import Permissions from './pages/Permissions.jsx';
-import Leaderboard from './pages/Leaderboard.jsx';
-import LiveFeed from './pages/LiveFeed.jsx';
-import EmbedBuilder from './pages/EmbedBuilder.jsx';
-import AutoResponder from './pages/AutoResponder.jsx';
 import Home from './pages/Home.jsx';
-import Commands from './pages/Commands.jsx';
-import Developer from './pages/Developer.jsx';
-import Verification from './pages/Verification.jsx';
-import ReactionRoles from './pages/ReactionRoles.jsx';
-import Birthdays from './pages/Birthdays.jsx';
-import Suggestions from './pages/Suggestions.jsx';
-import Polls from './pages/Polls.jsx';
-import TagsPage from './pages/Tags.jsx';
-import Confessions from './pages/Confessions.jsx';
-import StaffBoard from './pages/StaffBoard.jsx';
+
+// Load dashboard tools only when they are opened. The previous eager imports
+// shipped every admin page in one 617 kB bundle, slowing down login and mobile
+// navigation even when a user only needed Overview.
+const Overview = lazy(() => import('./pages/Overview.jsx'));
+const MusicController = lazy(() => import('./pages/MusicController.jsx'));
+const WelcomeAutoResponse = lazy(() => import('./pages/WelcomeAutoResponse.jsx'));
+const TicketSystem = lazy(() => import('./pages/TicketSystem.jsx'));
+const Progression = lazy(() => import('./pages/Progression.jsx'));
+const Logs = lazy(() => import('./pages/Logs.jsx'));
+const Security = lazy(() => import('./pages/Security.jsx'));
+const Giveaways = lazy(() => import('./pages/Giveaways.jsx'));
+const Members = lazy(() => import('./pages/Members.jsx'));
+const Analytics = lazy(() => import('./pages/Analytics.jsx'));
+const ServerSettings = lazy(() => import('./pages/ServerSettings.jsx'));
+const BotControls = lazy(() => import('./pages/BotControls.jsx'));
+const Permissions = lazy(() => import('./pages/Permissions.jsx'));
+const Leaderboard = lazy(() => import('./pages/Leaderboard.jsx'));
+const LiveFeed = lazy(() => import('./pages/LiveFeed.jsx'));
+const EmbedBuilder = lazy(() => import('./pages/EmbedBuilder.jsx'));
+const AutoResponder = lazy(() => import('./pages/AutoResponder.jsx'));
+const Commands = lazy(() => import('./pages/Commands.jsx'));
+const Developer = lazy(() => import('./pages/Developer.jsx'));
+const Verification = lazy(() => import('./pages/Verification.jsx'));
+const ReactionRoles = lazy(() => import('./pages/ReactionRoles.jsx'));
+const Birthdays = lazy(() => import('./pages/Birthdays.jsx'));
+const Suggestions = lazy(() => import('./pages/Suggestions.jsx'));
+const Polls = lazy(() => import('./pages/Polls.jsx'));
+const TagsPage = lazy(() => import('./pages/Tags.jsx'));
+const Confessions = lazy(() => import('./pages/Confessions.jsx'));
+const StaffBoard = lazy(() => import('./pages/StaffBoard.jsx'));
 import api from './api.js';
 import { PAGE_TITLES, PAGE_HINTS, DOCK_PAGES, SEARCHABLE_PAGES } from './nav.js';
 import { rememberRecentPage } from './lib/clipboard.js';
-import { Activity, Search, Wifi, WifiOff } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle2, Search, Wifi, WifiOff, X } from 'lucide-react';
 
 const PAGES = {
   overview: Overview,
@@ -84,12 +88,77 @@ function rememberedCollapsed() {
   try { return localStorage.getItem('eb.sidebar') === '1'; } catch { return false; }
 }
 
-function formatUptime(ms) {
-  if (!ms) return '—';
-  const s = Math.floor(ms / 1000);
+function formatUptime(seconds) {
+  if (!seconds) return '—';
+  const s = Math.floor(seconds);
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+function PageLoading() {
+  return (
+    <div className="page-shell" aria-label="Loading page" aria-busy="true">
+      <div className="space-y-2 mb-7">
+        <div className="skeleton h-7 w-52" />
+        <div className="skeleton h-3 w-80 max-w-full" />
+      </div>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[0, 1, 2, 3, 4, 5].map((n) => (
+          <div key={n} className="cyber-card p-5 space-y-4">
+            <div className="skeleton h-10 w-10" />
+            <div className="skeleton h-4 w-2/3" />
+            <div className="skeleton h-3 w-full" />
+            <div className="skeleton h-3 w-4/5" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function OAuthNotice() {
+  const [result, setResult] = useState(() => {
+    try { return new window.URLSearchParams(window.location.search).get('oauth'); }
+    catch { return null; }
+  });
+
+  useEffect(() => {
+    if (!result) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete('oauth');
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    const timer = setTimeout(() => setResult(null), result === 'success' ? 4500 : 7000);
+    return () => clearTimeout(timer);
+  }, [result]);
+
+  if (!result) return null;
+  const success = result === 'success';
+  const message = success
+    ? 'Signed in with Discord. Your servers and permissions are ready.'
+    : result === 'session'
+      ? 'The login session could not be saved. Please try again.'
+      : 'Discord did not return a login code. Please start the login again.';
+  const Icon = success ? CheckCircle2 : AlertTriangle;
+
+  return (
+    <div className="fixed z-[100] top-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-xl animate-slide-up" role={success ? 'status' : 'alert'}>
+      <div className={`flex items-start gap-3 rounded-2xl border px-4 py-3 shadow-2xl backdrop-blur-xl ${
+        success
+          ? 'border-emerald-400/30 bg-emerald-950/90 text-emerald-100'
+          : 'border-amber-400/30 bg-amber-950/90 text-amber-100'
+      }`}>
+        <Icon size={18} className="mt-0.5 flex-shrink-0" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">{success ? 'Welcome back' : 'Login needs attention'}</p>
+          <p className="text-xs opacity-75 mt-0.5 leading-relaxed">{message}</p>
+        </div>
+        <button onClick={() => setResult(null)} className="p-1 rounded-lg hover:bg-white/10" aria-label="Dismiss notification">
+          <X size={14} />
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function MobileDock({ page, onNavigate, onSearch }) {
@@ -105,7 +174,9 @@ function MobileDock({ page, onNavigate, onSearch }) {
             <button
               key={id}
               onClick={() => onNavigate(id)}
-              className={`flex flex-col items-center justify-center gap-0.5 text-[10px] ${active ? 'text-cyan-200' : 'text-zinc-500'}`}
+              aria-current={active ? 'page' : undefined}
+              aria-label={item.label}
+              className={`flex flex-col items-center justify-center gap-0.5 text-[10px] transition-colors ${active ? 'text-cyan-200' : 'text-zinc-500 hover:text-zinc-300'}`}
             >
               <Icon size={16} />
               {item.label.split(' ')[0]}
@@ -237,6 +308,7 @@ export default function App() {
   return (
     <ToastProvider>
       <PermContext.Provider value={{ level: permLevel, levelName: permLevelName }}>
+        <OAuthNotice />
         <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:px-3 focus:py-2 focus:rounded-lg focus:bg-cyan-400 focus:text-black text-sm font-semibold">
           Skip to content
         </a>
@@ -318,11 +390,14 @@ export default function App() {
               </div>
             )}
             {health === null && (
-              <div className="px-4 sm:px-6 py-2 text-xs text-amber-200 bg-amber-500/10 border-b border-amber-500/20">
-                Dashboard API unreachable (tunnel may have rotated). Reload this page in a few seconds.
+              <div className="px-4 sm:px-6 py-2 text-xs text-amber-200 bg-amber-500/10 border-b border-amber-500/20 flex items-center justify-between gap-3">
+                <span>Dashboard API is unreachable. The service may be restarting.</span>
+                <button onClick={() => window.location.reload()} className="flex-shrink-0 px-2.5 py-1 rounded-lg border border-amber-400/25 hover:bg-amber-400/10 font-semibold">
+                  Retry
+                </button>
               </div>
             )}
-            {!health?.botOnline && (
+            {health !== null && !health.botOnline && (
               <div className="px-4 sm:px-6 py-2 text-xs text-amber-200 bg-amber-500/10 border-b border-amber-500/20">
                 Bot appears offline. Commands and live data may be delayed until it reconnects.
               </div>
@@ -337,7 +412,9 @@ export default function App() {
               )}
               {page === 'developer' ? (
                 <div className="h-full animate-fade-in">
-                  <Developer />
+                  <Suspense fallback={<PageLoading />}>
+                    <Developer />
+                  </Suspense>
                 </div>
               ) : !selectedGuild ? (
                 <div className="min-h-full flex items-center justify-center p-8">
@@ -356,15 +433,17 @@ export default function App() {
                 </div>
               ) : (
                 <div key={`${page}-${selectedGuild?.id}`} className="h-full animate-fade-in">
-                  <PageComponent
-                    guild={selectedGuild}
-                    guildData={guildData}
-                    setGuildData={setGuildData}
-                    permLevel={permLevel}
-                    onNavigate={navigate}
-                    pageHint={PAGE_HINTS[page]}
-                    publicUrl={publicUrl}
-                  />
+                  <Suspense fallback={<PageLoading />}>
+                    <PageComponent
+                      guild={selectedGuild}
+                      guildData={guildData}
+                      setGuildData={setGuildData}
+                      permLevel={permLevel}
+                      onNavigate={navigate}
+                      pageHint={PAGE_HINTS[page]}
+                      publicUrl={publicUrl}
+                    />
+                  </Suspense>
                 </div>
               )}
             </main>

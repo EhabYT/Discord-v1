@@ -43,7 +43,12 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={toast}>
       {children}
-      <div className="fixed bottom-20 md:bottom-5 right-5 z-[9999] flex flex-col gap-2 items-end pointer-events-none" style={{ maxWidth: 380 }}>
+      <div
+        className="fixed bottom-20 md:bottom-5 left-4 right-4 sm:left-auto sm:right-5 z-[9999] flex flex-col gap-2 items-end pointer-events-none"
+        style={{ maxWidth: 380 }}
+        aria-live="polite"
+        aria-atomic="false"
+      >
         {toasts.map(t => {
           const v = VARIANTS[t.type] || VARIANTS.info;
           const Icon = v.icon;

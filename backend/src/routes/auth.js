@@ -55,7 +55,10 @@ function dashboardHomeFor(req) {
 
 function loginResultUrl(req, result) {
     const origin = dashboardHomeFor(req);
-    return `${origin}/?oauth=${encodeURIComponent(result)}`;
+    const destination = `${origin}/?oauth=${encodeURIComponent(result)}`;
+    // A successful login should land inside the product, not back on the
+    // marketing homepage. Hash navigation also survives static/proxy routing.
+    return result === 'success' ? `${destination}#overview` : destination;
 }
 
 function attachAuthenticatedSession(session, user, userGuilds) {
