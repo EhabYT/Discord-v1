@@ -329,7 +329,19 @@ All bot state and OAuth sessions live in Supabase PostgreSQL through `DATABASE_U
 The application creates the `bot_kv` and `dashboard_sessions` tables automatically.
 Use Supabase backups for guild configuration, XP, warnings, tickets and sessions.
 For Render, use Supabase's **Session Pooler** connection URI so the service can
-connect over IPv4.
+connect over IPv4. Row Level Security is enabled with no browser policies, so
+Supabase anon/authenticated API keys cannot read bot data or OAuth sessions.
+
+To import an existing quick.db file, validate it first and then run the
+idempotent transaction-based migration:
+
+```bash
+npm run migrate:sqlite -- --source database/json.sqlite --dry-run
+DATABASE_URL='postgresql://...' npm run migrate:sqlite -- --source database/json.sqlite
+```
+
+The source SQLite file is opened read-only and retained as a backup. Existing
+PostgreSQL keys are updated, so the command is safe to rerun.
 
 ---
 

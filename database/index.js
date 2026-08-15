@@ -51,7 +51,8 @@ class PostgresDatabase {
                     key TEXT PRIMARY KEY,
                     value JSONB NOT NULL,
                     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-                )
+                );
+                ALTER TABLE bot_kv ENABLE ROW LEVEL SECURITY;
             `).then(() => true);
         }
         return this.initializing;

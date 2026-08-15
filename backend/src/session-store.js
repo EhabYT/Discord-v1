@@ -21,7 +21,8 @@ class PostgresSessionStore extends session.Store {
                 expires TIMESTAMPTZ NOT NULL
             );
             CREATE INDEX IF NOT EXISTS dashboard_sessions_expires
-                ON dashboard_sessions (expires)
+                ON dashboard_sessions (expires);
+            ALTER TABLE dashboard_sessions ENABLE ROW LEVEL SECURITY;
         `);
         this.pruneTimer = setInterval(() => {
             this.ready.then(() => this.pool.query(
