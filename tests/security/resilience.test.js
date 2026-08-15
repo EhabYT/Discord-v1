@@ -161,6 +161,12 @@ function makeClient() {
     check('commands deploy only when explicitly enabled',
         /process\.env\.DEPLOY_COMMANDS === 'true'/.test(idx)
         && !/DEPLOY_COMMANDS === 'true' \|\| !process\.env\.GUILD_ID/.test(idx));
+    check('dashboard starts before Discord diagnostics',
+        idx.indexOf('startDashboard(client)') < idx.indexOf('runDiagnostics(db)'));
+    check('configuration failure keeps the dashboard process alive',
+        /Startup diagnostics failed[\s\S]{0,200}return;/.test(idx));
+    check('Discord login rejection is handled locally',
+        /await client\.login[\s\S]{0,200}catch \(err\)/.test(idx));
 
     // Restore the real logger.
     for (const level of ['error', 'warn', 'info', 'debug']) {

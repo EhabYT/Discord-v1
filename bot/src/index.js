@@ -69,12 +69,21 @@ if (fs.existsSync(commandsPath)) {
   }
 }
 
+// Start the HTTP service before connecting to Discord. Render needs a listening
+// port to route OAuth callbacks; previously a missing/invalid bot credential
+// exited first and the public hostname returned `x-render-routing: no-server`.
+// Keeping the dashboard alive also makes /api/health report botOnline:false,
+// which is far more actionable than a platform-level 404.
+startDashboard(client);
+
 // Startup Logic
 (async () => {
-  // Run Diagnostics
+  // Run Diagnostics. Configuration failures keep the dashboard online so the
+  // operator can inspect health and fix environment variables without losing
+  // the OAuth callback endpoint.
   if (!(await runDiagnostics(db))) {
-    logger.error('Startup diagnostics failed. Shutting down...');
-    process.exit(1);
+    logger.error('Startup diagnostics failed. Dashboard remains online; bot connection is paused until configuration is fixed.');
+    return;
   }
 
   // Load Music Extractors
@@ -128,9 +137,12 @@ if (fs.existsSync(commandsPath)) {
     setTimeout(() => process.exit(1), 250).unref();
   });
 
-  // Login
-  client.login(process.env.DISCORD_TOKEN);
-
-  // Start Dashboard
-  startDashboard(client);
+  // Login failures must not take down the web dashboard or OAuth callback.
+  try {
+    await client.login(process.env.DISCORD_TOKEN);
+  } catch (err) {
+    logger.error('Discord login failed. Dashboard remains online.', {
+      error: err?.message || String(err),
+    });
+  }
 })();
