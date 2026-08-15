@@ -15,9 +15,47 @@ function publicOrigin(req) {
 }
 
 function redirectUriFor(req) {
+    // Prefer the explicitly configured URI. OAuth requires the value used for
+    // both authorisation and token exchange to match the Developer Portal
+    // byte-for-byte. Deriving it from proxy headers first made deployments
+    // vulnerable to host aliases and proxy configuration differences.
+    const configured = String(process.env.DISCORD_REDIRECT_URI || '').trim();
+    if (configured) {
+        try {
+            const uri = new URL(configured);
+            if (uri.protocol === 'https:' || uri.protocol === 'http:') {
+                return uri.toString().replace(/\/$/, '');
+            }
+        } catch {
+            // Fall through to the request-derived URL; startup logs identify
+            // malformed deployment configuration without breaking local use.
+            console.error('DISCORD_REDIRECT_URI is not a valid HTTP(S) URL');
+        }
+    }
+
     const origin = publicOrigin(req);
     if (origin) return `${origin}/api/auth/discord/callback`;
-    return process.env.DISCORD_REDIRECT_URI || 'http://localhost:3000/api/auth/discord/callback';
+    return 'http://localhost:3000/api/auth/discord/callback';
+}
+
+function dashboardHomeFor(req) {
+    const configured = String(process.env.DASHBOARD_URL || '').trim();
+    if (configured) {
+        try {
+            const url = new URL(configured);
+            if (url.protocol === 'https:' || url.protocol === 'http:') {
+                return url.origin;
+            }
+        } catch {
+            console.error('DASHBOARD_URL is not a valid HTTP(S) URL');
+        }
+    }
+    return publicOrigin(req) || '';
+}
+
+function loginResultUrl(req, result) {
+    const origin = dashboardHomeFor(req);
+    return `${origin}/?oauth=${encodeURIComponent(result)}`;
 }
 
 function attachAuthenticatedSession(session, user, userGuilds) {
@@ -61,7 +99,7 @@ module.exports = (botClient) => {
         const state = crypto.randomBytes(32).toString('hex');
         req.session.oauthState = state;
         req.session.save((err) => {
-            if (err) return res.redirect('/?oauth=session');
+            if (err) return res.redirect(303, loginResultUrl(req, 'session'));
             const url = `https://discord.com/api/oauth2/authorize?client_id=${process.env.CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=identify%20guilds&state=${state}`;
             res.redirect(url);
         });
@@ -77,7 +115,7 @@ module.exports = (botClient) => {
             );
         }
         const { code } = req.query;
-        if (!code) return res.redirect('/');
+        if (!code) return res.redirect(303, loginResultUrl(req, 'missing_code'));
 
         // Constant-time comparison of the state we issued against the one returned.
         const expectedState = req.session.oauthState;
@@ -133,7 +171,10 @@ module.exports = (botClient) => {
             // state — so it is deliberately not persisted into the session store.
             await new Promise((resolve) => req.session.save(() => resolve()));
 
-            res.redirect('/');
+            // Use the configured public dashboard origin rather than a relative
+            // redirect. This is deterministic behind Render's proxy and avoids
+            // landing on an internal/alias host after a successful login.
+            res.redirect(303, loginResultUrl(req, 'success'));
         } catch (err) {
             const data = err.response?.data;
             const desc = data?.error_description || data?.error || err.message;
@@ -141,9 +182,11 @@ module.exports = (botClient) => {
             oauthErrorPage(
                 res,
                 'Discord login failed',
-                desc === 'invalid_grant' || String(desc).includes('redirect')
-                    ? 'Redirect URI mismatch. Add the URI below in the Discord Developer Portal, then try again.'
-                    : String(desc),
+                desc === 'invalid_client'
+                    ? 'Discord rejected the OAuth client credentials. Verify that CLIENT_ID and DISCORD_CLIENT_SECRET come from the same application, then restart the service. The client secret is not the bot token.'
+                    : desc === 'invalid_grant' || String(desc).toLowerCase().includes('redirect')
+                        ? 'Redirect URI mismatch. Add the URI below in the Discord Developer Portal, then try again.'
+                        : String(desc),
                 redirectUri
             );
         }

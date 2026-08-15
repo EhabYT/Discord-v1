@@ -27,6 +27,7 @@ function loadEvents(client) {
 
     // Load Player Events
     if (client.player && fs.existsSync(playerEventsDir)) {
+        let registered = 0;
         fs.readdirSync(playerEventsDir)
             .filter(file => file.endsWith('.js'))
             .forEach(file => {
@@ -37,8 +38,12 @@ function loadEvents(client) {
                 }
                 client.player.events.on(event.name,
                     safeDispatch('Player', event.name, (...args) => event.execute(...args)));
-                logger.debug(`Loaded Player Event: ${event.name}`);
+                registered++;
             });
+        // A handler named "error" is normal; avoid logging
+        // "Loaded Player Event: error", which looks like a failure in hosting
+        // dashboards even though it only reports successful registration.
+        logger.debug(`Registered ${registered} player event handlers`);
     }
 }
 

@@ -13,8 +13,11 @@ const { errorHandler } = require('./middleware/errors');
 
 const app = express();
 const httpServer = http.createServer(app);
-// 3000 matches the README, scripts/keep-tunnel.sh and the local health probe.
-const PORT = process.env.DASHBOARD_PORT || 3000;
+// Render and similar hosts inject PORT and route public traffic to that exact
+// listener. Prefer it over the local DASHBOARD_PORT override; ignoring PORT can
+// leave the platform proxy pointing at a different service and returning a
+// plain "Not Found" after OAuth redirects.
+const PORT = process.env.PORT || process.env.DASHBOARD_PORT || 3000;
 
 const rateLimits = new Map();
 const RATE_LIMIT_WINDOW = 60 * 1000;
@@ -375,10 +378,18 @@ function startDashboard(botClient) {
         res.status(404).json({ error: `Unknown API route ${req.method} ${req.originalUrl}` });
     });
 
+    const dashboardIndex = path.join(__dirname, '..', '..', 'dashboard', 'public', 'index.html');
+    app.get('/', (req, res, next) => {
+        // Keep an explicit root route so a successful OAuth callback always has
+        // a concrete landing page, even when static middleware behaviour differs
+        // across Express/platform versions.
+        res.sendFile(dashboardIndex, (err) => err ? next(err) : undefined);
+    });
+
     app.get('/{*path}', (req, res, next) => {
         if (path.extname(req.path)) return next();
         if (req.path.startsWith('/api')) return res.status(404).json({ error: 'Not found' });
-        res.sendFile(path.join(__dirname, '..', '..', 'dashboard', 'public', 'index.html'));
+        res.sendFile(dashboardIndex);
     });
 
     // Terminal error middleware — must be registered after every route.

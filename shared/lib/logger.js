@@ -17,6 +17,15 @@ class Logger {
     this.levels = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
     this.timers = new Map();
 
+    // Hosted log collectors such as Render do not interpret terminal colour
+    // sequences and display them literally (for example "\u001b[90m"). Emit
+    // ANSI only to an interactive terminal. NO_COLOR/FORCE_COLOR follow the
+    // de-facto CLI conventions and make the behaviour explicitly overridable.
+    const noColor = Object.prototype.hasOwnProperty.call(process.env, 'NO_COLOR')
+      || process.env.TERM === 'dumb';
+    const forceColor = process.env.FORCE_COLOR && process.env.FORCE_COLOR !== '0';
+    this.useColor = Boolean(forceColor || (!noColor && process.stdout.isTTY));
+
     if (!fs.existsSync(this.logDir)) {
       fs.mkdirSync(this.logDir, { recursive: true });
     }
@@ -52,13 +61,16 @@ class Logger {
     const timestamp = this._getTimestamp();
     const cleanMsg = message.replace(/\x1b\[[0-9;]*m/g, '');
 
-    let consoleEntry = `\x1b[90m[${timestamp}]\x1b[0m ${theme.icon} ${theme.color}${message}${themes.RESET}`;
+    let consoleEntry = this.useColor
+      ? `\x1b[90m[${timestamp}]\x1b[0m ${theme.icon} ${theme.color}${message}${themes.RESET}`
+      : `[${timestamp}] ${theme.icon} ${cleanMsg}`;
     let fileEntry = `[${timestamp}] [${level}] ${cleanMsg}`;
 
     if (meta) {
-      // Better object inspection for console
+      // Better object inspection for console. Colour must follow the same rule
+      // as the surrounding entry or util.inspect will reintroduce raw escapes.
       const consoleMeta = typeof meta === 'object'
-        ? util.inspect(meta, { colors: true, depth: 2, compact: true })
+        ? util.inspect(meta, { colors: this.useColor, depth: 2, compact: true })
         : meta;
 
       // Plain JSON for files
@@ -66,7 +78,9 @@ class Logger {
         ? JSON.stringify(meta, (k, v) => typeof v === 'bigint' ? v.toString() : v)
         : meta;
 
-      consoleEntry += ` \x1b[90m| ${consoleMeta}\x1b[0m`;
+      consoleEntry += this.useColor
+        ? ` \x1b[90m| ${consoleMeta}\x1b[0m`
+        : ` | ${consoleMeta}`;
       fileEntry += ` | ${fileMeta}`;
     }
 

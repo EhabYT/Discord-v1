@@ -4,7 +4,7 @@ A Discord.js v14 bot with a React control panel — moderation, AutoMod, music,
 XP/levels, tickets, verification, giveaways and reaction roles, managed from a
 web dashboard with Discord OAuth login and role-based access control.
 
-**Version** 3.1.0 · **Node** ≥ 22.12 · **100 slash commands** (Discord's per-app limit) · **MIT**
+**Version** 3.1.0 · **Node** ≥ 20.19 (or ≥ 22.12) · **100 slash commands** (Discord's per-app limit) · **MIT**
 
 ---
 
@@ -24,7 +24,7 @@ web dashboard with Discord OAuth login and role-based access control.
 
 ## Quick start
 
-Requires **Node 22.12 or newer** — `@discordjs/voice@0.19` will not run on Node 20.
+Requires **Node 20.19 or newer**. Node 22.12+ is recommended for production. The unused direct `@discordjs/voice` dependency was removed; Discord Player provides the voice transport used by this project.
 
 ```bash
 git clone https://github.com/EhabYT/Discord-v1.git
@@ -383,7 +383,7 @@ The native binding must match your Node version: `npm rebuild better-sqlite3`.
 Re-run this after any Node upgrade.
 
 **`EBADENGINE` on install**
-You are on Node < 22.12. `@discordjs/voice` requires 22.12+.
+Use Node 20.19+ or Node 22.12+. The Render blueprint pins Node 22.12 for production.
 
 **Dashboard login does nothing / redirect mismatch**
 `DISCORD_CLIENT_SECRET` is unset, or `DISCORD_REDIRECT_URI` does not match the

@@ -80,8 +80,16 @@ if (fs.existsSync(commandsPath)) {
   // Load Music Extractors
   try {
     const { DefaultExtractors } = require('@discord-player/extractor');
-    await player.extractors.loadMulti(DefaultExtractors);
-    logger.info('Music extractors loaded');
+    // file-type <=21.3.0 can loop indefinitely on a malformed ASF file
+    // (GHSA-5v7r-6r5c-r473). The vulnerable parser is reachable only through
+    // AttachmentExtractor's local-file path, so keep that extractor disabled
+    // until discord-player adopts file-type >=21.3.1. URL-based music sources
+    // (SoundCloud, Spotify, Apple Music, Vimeo, etc.) remain available.
+    const safeExtractors = DefaultExtractors.filter(
+      (Extractor) => Extractor.name !== 'AttachmentExtractor'
+    );
+    await player.extractors.loadMulti(safeExtractors);
+    logger.info(`Music extractors loaded (${safeExtractors.length}; attachments disabled for security)`);
   } catch (err) {
     logger.error('Extractor error', { error: err.message });
   }
