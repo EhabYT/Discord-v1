@@ -1,7 +1,7 @@
 const express = require('express');
 const http = require('http');
 const session = require('express-session');
-const { SQLiteSessionStore } = require('./session-store');
+const { createSessionStore } = require('./session-store');
 const path = require('path');
 const compression = require('compression');
 const logger = require('../../shared/lib/logger');
@@ -71,7 +71,7 @@ if (!process.env.SESSION_SECRET) {
 const sessionMiddleware = session({
     name: 'eb.sid',
     secret: sessionSecret,
-    store: new SQLiteSessionStore(),
+    store: createSessionStore(),
     resave: false,
     saveUninitialized: false,
     cookie: {

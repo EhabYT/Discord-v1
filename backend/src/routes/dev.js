@@ -140,9 +140,9 @@ module.exports = (botClient) => {
                 flags: (await db.get('dev_flags')) || { maintenance: false, verbose: false },
                 files: {
                     env: safeStat(path.join(ROOT, '.env')),
-                    sqlite: safeStat(path.join(ROOT, 'database', 'json.sqlite')),
                     dashboardUrl: safeStat(path.join(ROOT, '.dashboard-url')),
                 },
+                database: { provider: 'supabase-postgresql', configured: !!process.env.DATABASE_URL },
                 ts: Date.now(),
             });
         } catch (err) {
@@ -200,7 +200,7 @@ module.exports = (botClient) => {
                 .map(([prefix, count]) => ({ prefix, count }));
             res.json({
                 keys: all.length,
-                sqlite: safeStat(path.join(ROOT, 'database', 'json.sqlite')),
+                provider: 'supabase-postgresql',
                 prefixes: top,
             });
         } catch (err) {

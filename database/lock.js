@@ -1,7 +1,7 @@
 /**
  * Per-key serialisation for read-modify-write sequences.
  *
- * quick.db offers no atomic read-modify-write. Node is single-threaded, but
+ * The key/value adapter uses separate read and write queries. Node is single-threaded, but
  * every `await` is a yield point, so the common pattern
  *
  *     const v = await db.get(key);   // ← other handlers run here

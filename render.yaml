@@ -21,6 +21,12 @@ services:
         value: https://discord-v1-alkh.onrender.com/api/auth/discord/callback
       - key: SESSION_SECRET
         generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_SSL
+        value: "true"
+      - key: DATABASE_SSL_REJECT_UNAUTHORIZED
+        value: "false"
       - key: DISCORD_TOKEN
         sync: false
       - key: CLIENT_ID

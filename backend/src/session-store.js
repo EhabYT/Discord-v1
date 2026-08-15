@@ -1,17 +1,5 @@
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
 const session = require('express-session');
-const Database = require('better-sqlite3');
-
-function defaultSessionPath() {
-    const isTest = process.env.NODE_ENV === 'test'
-        || process.argv.some((arg) => /(?:^|[\\/])tests[\\/]/.test(arg));
-    if (isTest) return path.join(os.tmpdir(), `eb-bot-sessions-${process.pid}.sqlite`);
-    if (process.env.SESSION_DATABASE_PATH) return path.resolve(process.env.SESSION_DATABASE_PATH);
-    if (process.env.DATABASE_PATH) return path.join(path.dirname(path.resolve(process.env.DATABASE_PATH)), 'sessions.sqlite');
-    return path.join(__dirname, '..', '..', 'database', 'sessions.sqlite');
-}
+const { getPool } = require('../../database/index');
 
 function expiresAt(sess) {
     const explicit = sess?.cookie?.expires ? new Date(sess.cookie.expires).getTime() : NaN;
@@ -20,88 +8,103 @@ function expiresAt(sess) {
     return Date.now() + (Number.isFinite(maxAge) && maxAge > 0 ? maxAge : 86_400_000);
 }
 
-/**
- * Minimal persistent express-session store backed by better-sqlite3.
- *
- * Express's default MemoryStore leaks memory, loses every OAuth state on a
- * restart and explicitly warns against production use. This store uses the
- * native SQLite dependency already required by the bot, so no second database
- * driver or external service is needed.
- */
-class SQLiteSessionStore extends session.Store {
-    constructor(filePath = defaultSessionPath()) {
+/** PostgreSQL session store shared with the Supabase bot database. */
+class PostgresSessionStore extends session.Store {
+    constructor(pool = getPool()) {
         super();
-        fs.mkdirSync(path.dirname(filePath), { recursive: true });
-        this.db = new Database(filePath);
-        this.db.pragma('journal_mode = WAL');
-        this.db.exec(`
+        if (!pool) throw new Error('DATABASE_URL is not configured');
+        this.pool = pool;
+        this.ready = pool.query(`
             CREATE TABLE IF NOT EXISTS dashboard_sessions (
                 sid TEXT PRIMARY KEY,
-                sess TEXT NOT NULL,
-                expires INTEGER NOT NULL
+                sess JSONB NOT NULL,
+                expires TIMESTAMPTZ NOT NULL
             );
             CREATE INDEX IF NOT EXISTS dashboard_sessions_expires
-                ON dashboard_sessions (expires);
+                ON dashboard_sessions (expires)
         `);
-        this.read = this.db.prepare('SELECT sess, expires FROM dashboard_sessions WHERE sid = ?');
-        this.write = this.db.prepare(`
-            INSERT INTO dashboard_sessions (sid, sess, expires) VALUES (?, ?, ?)
-            ON CONFLICT(sid) DO UPDATE SET sess = excluded.sess, expires = excluded.expires
-        `);
-        this.remove = this.db.prepare('DELETE FROM dashboard_sessions WHERE sid = ?');
-        this.refresh = this.db.prepare('UPDATE dashboard_sessions SET expires = ? WHERE sid = ?');
-        this.prune = this.db.prepare('DELETE FROM dashboard_sessions WHERE expires <= ?');
         this.pruneTimer = setInterval(() => {
-            try { this.prune.run(Date.now()); } catch { /* next store operation reports persistent failures */ }
+            this.ready.then(() => this.pool.query(
+                'DELETE FROM dashboard_sessions WHERE expires <= NOW()'
+            )).catch(() => {});
         }, 15 * 60 * 1000);
         this.pruneTimer.unref();
     }
 
-    get(sid, callback) {
-        try {
-            const row = this.read.get(sid);
-            if (!row) return callback(null, null);
-            if (row.expires <= Date.now()) {
-                this.remove.run(sid);
-                return callback(null, null);
-            }
-            return callback(null, JSON.parse(row.sess));
-        } catch (err) {
-            return callback(err);
-        }
+    async _get(sid) {
+        await this.ready;
+        const result = await this.pool.query(
+            'SELECT sess FROM dashboard_sessions WHERE sid = $1 AND expires > NOW()', [sid]
+        );
+        return result.rows.length ? result.rows[0].sess : null;
     }
 
+    get(sid, callback) { this._get(sid).then((v) => callback(null, v), callback); }
+
     set(sid, sess, callback = () => {}) {
-        try {
-            this.write.run(sid, JSON.stringify(sess), expiresAt(sess));
-            callback(null);
-        } catch (err) {
-            callback(err);
-        }
+        this.ready.then(() => this.pool.query(`
+            INSERT INTO dashboard_sessions (sid, sess, expires) VALUES ($1, $2::jsonb, $3)
+            ON CONFLICT (sid) DO UPDATE SET sess = EXCLUDED.sess, expires = EXCLUDED.expires
+        `, [sid, JSON.stringify(sess), new Date(expiresAt(sess))]))
+            .then(() => callback(null), callback);
     }
 
     destroy(sid, callback = () => {}) {
-        try {
-            this.remove.run(sid);
-            callback(null);
-        } catch (err) {
-            callback(err);
-        }
+        this.ready.then(() => this.pool.query('DELETE FROM dashboard_sessions WHERE sid = $1', [sid]))
+            .then(() => callback(null), callback);
     }
 
     touch(sid, sess, callback = () => {}) {
-        try {
-            this.refresh.run(expiresAt(sess), sid);
-            callback(null);
-        } catch (err) {
-            callback(err);
-        }
-    }
-
-    close() {
-        clearInterval(this.pruneTimer);
-        this.db.close();
+        this.ready.then(() => this.pool.query(
+            'UPDATE dashboard_sessions SET expires = $1 WHERE sid = $2',
+            [new Date(expiresAt(sess)), sid]
+        )).then(() => callback(null), callback);
     }
 }
 
-module.exports = { SQLiteSessionStore, defaultSessionPath, expiresAt };
+/**
+ * Bounded emergency store used only when DATABASE_URL is absent. It keeps the
+ * diagnostics page reachable without triggering express-session's unbounded
+ * production MemoryStore warning. OAuth status is disabled in this state.
+ */
+class BoundedMemorySessionStore extends session.Store {
+    constructor(limit = 1000) {
+        super();
+        this.limit = limit;
+        this.sessions = new Map();
+    }
+
+    _prune() {
+        const now = Date.now();
+        for (const [sid, row] of this.sessions) if (row.expires <= now) this.sessions.delete(sid);
+        while (this.sessions.size > this.limit) this.sessions.delete(this.sessions.keys().next().value);
+    }
+
+    get(sid, callback) {
+        this._prune();
+        const row = this.sessions.get(sid);
+        callback(null, row ? structuredClone(row.sess) : null);
+    }
+
+    set(sid, sess, callback = () => {}) {
+        this.sessions.set(sid, { sess: structuredClone(sess), expires: expiresAt(sess) });
+        this._prune();
+        callback(null);
+    }
+
+    destroy(sid, callback = () => {}) { this.sessions.delete(sid); callback(null); }
+    touch(sid, sess, callback = () => {}) {
+        const row = this.sessions.get(sid);
+        if (row) row.expires = expiresAt(sess);
+        callback(null);
+    }
+}
+
+function createSessionStore() {
+    const pool = getPool();
+    return pool ? new PostgresSessionStore(pool) : new BoundedMemorySessionStore();
+}
+
+module.exports = {
+    PostgresSessionStore, BoundedMemorySessionStore, createSessionStore, expiresAt,
+};

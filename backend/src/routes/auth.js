@@ -67,6 +67,9 @@ function oauthConfigurationIssue() {
     if (!clientId) return 'CLIENT_ID is missing.';
     if (!/^\d{17,20}$/.test(clientId)) return 'CLIENT_ID must be a valid Discord Application ID.';
     if (!clientSecret) return 'DISCORD_CLIENT_SECRET is missing.';
+    if (process.env.NODE_ENV === 'production' && !String(process.env.DATABASE_URL || '').trim()) {
+        return 'DATABASE_URL is missing. Add the Supabase Session Pooler URI in Render.';
+    }
     return null;
 }
 

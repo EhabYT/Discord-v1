@@ -49,12 +49,18 @@ async function deployCommands(token, clientId, guildId = null, extraGuildIds = [
     }
 }
 
-function runDiagnostics(db) {
+async function runDiagnostics(db) {
     logger.info('Running startup diagnostics...');
+    let databaseReady = false;
+    try {
+        databaseReady = !!db && await db.ready();
+    } catch (err) {
+        logger.error('Database connection failed', { error: err.message });
+    }
     const checks = {
         'Environment Variables': !!(process.env.DISCORD_TOKEN && process.env.CLIENT_ID),
         'Commands Directory': fs.existsSync(path.join(__dirname, '../../bot/src/commands')),
-        'Database Connection': !!db
+        'Supabase PostgreSQL': databaseReady
     };
 
     for (const [name, passed] of Object.entries(checks)) {

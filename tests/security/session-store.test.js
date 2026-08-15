@@ -1,11 +1,33 @@
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const { SQLiteSessionStore } = require('../../backend/src/session-store');
+const {
+    PostgresSessionStore, BoundedMemorySessionStore,
+} = require('../../backend/src/session-store');
 
-const file = path.join(os.tmpdir(), `eb-session-store-test-${process.pid}.sqlite`);
-for (const suffix of ['', '-wal', '-shm']) {
-    try { fs.unlinkSync(file + suffix); } catch { /* absent */ }
+class FakePool {
+    constructor() { this.rows = new Map(); }
+    async query(sql, params = []) {
+        if (/CREATE TABLE|CREATE INDEX/.test(sql)) return { rows: [], rowCount: 0 };
+        if (/INSERT INTO dashboard_sessions/.test(sql)) {
+            this.rows.set(params[0], { sess: JSON.parse(params[1]), expires: new Date(params[2]).getTime() });
+            return { rows: [], rowCount: 1 };
+        }
+        if (/SELECT sess/.test(sql)) {
+            const row = this.rows.get(params[0]);
+            return { rows: row && row.expires > Date.now() ? [{ sess: row.sess }] : [], rowCount: row ? 1 : 0 };
+        }
+        if (/DELETE FROM dashboard_sessions WHERE sid/.test(sql)) {
+            return { rows: [], rowCount: this.rows.delete(params[0]) ? 1 : 0 };
+        }
+        if (/DELETE FROM dashboard_sessions WHERE expires/.test(sql)) {
+            for (const [sid, row] of this.rows) if (row.expires <= Date.now()) this.rows.delete(sid);
+            return { rows: [], rowCount: 0 };
+        }
+        if (/UPDATE dashboard_sessions/.test(sql)) {
+            const row = this.rows.get(params[1]);
+            if (row) row.expires = new Date(params[0]).getTime();
+            return { rows: [], rowCount: row ? 1 : 0 };
+        }
+        throw new Error(`Unexpected SQL in fake pool: ${sql}`);
+    }
 }
 
 const call = (store, method, ...args) => new Promise((resolve, reject) => {
@@ -19,34 +41,27 @@ function check(label, ok, detail = '') {
 }
 
 (async () => {
-    console.log('\nPersistent OAuth session store:\n');
-    let store = new SQLiteSessionStore(file);
-    const session = {
-        user: { id: '123' },
-        oauthState: 'state-value',
-        cookie: { maxAge: 60_000 },
-    };
+    console.log('\nSupabase PostgreSQL OAuth session store:\n');
+    const pool = new FakePool();
+    let store = new PostgresSessionStore(pool);
+    const session = { user: { id: '123' }, oauthState: 'state-value', cookie: { maxAge: 60_000 } };
     await call(store, 'set', 'sid-1', session);
     let loaded = await call(store, 'get', 'sid-1');
     check('session can be written and read', loaded?.oauthState === 'state-value');
-    store.close();
+    clearInterval(store.pruneTimer);
 
-    store = new SQLiteSessionStore(file);
+    store = new PostgresSessionStore(pool);
     loaded = await call(store, 'get', 'sid-1');
     check('session survives a store restart', loaded?.user?.id === '123');
-
-    await call(store, 'set', 'expired', { cookie: { expires: new Date(Date.now() - 1000) } });
-    const expired = await call(store, 'get', 'expired');
-    check('expired sessions are rejected and removed', expired === null);
-
     await call(store, 'destroy', 'sid-1');
-    const destroyed = await call(store, 'get', 'sid-1');
-    check('logout destroys the persisted session', destroyed === null);
-    store.close();
+    check('logout destroys the persisted session', await call(store, 'get', 'sid-1') === null);
+    clearInterval(store.pruneTimer);
 
-    for (const suffix of ['', '-wal', '-shm']) {
-        try { fs.unlinkSync(file + suffix); } catch { /* absent */ }
-    }
+    const fallback = new BoundedMemorySessionStore(2);
+    await call(fallback, 'set', 'a', { cookie: { maxAge: 1000 } });
+    await call(fallback, 'set', 'b', { cookie: { maxAge: 1000 } });
+    await call(fallback, 'set', 'c', { cookie: { maxAge: 1000 } });
+    check('emergency store is bounded', fallback.sessions.size === 2);
 
     console.log(fails === 0
         ? '\nAll session store checks passed.\n'

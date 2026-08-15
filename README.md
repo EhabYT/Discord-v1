@@ -30,9 +30,8 @@ Requires **Node 20.19 or newer**. Node 22.12+ is recommended for production. The
 git clone https://github.com/EhabYT/Discord-v1.git
 cd Discord-v1
 
-cp .env.example .env          # then fill in the required values below
+cp .env.example .env          # add Discord credentials + Supabase DATABASE_URL
 npm install --omit=dev --ignore-scripts
-npm rebuild better-sqlite3    # native module, must match your Node version
 npm start
 ```
 
@@ -152,6 +151,7 @@ Copy `.env.example` to `.env`. Never commit `.env` — it is gitignored.
 | :--- | :--- |
 | `DISCORD_TOKEN` | Bot token from the Developer Portal |
 | `CLIENT_ID` | Application ID |
+| `DATABASE_URL` | Supabase PostgreSQL Session Pooler connection URI |
 
 ### Required for dashboard login
 
@@ -325,9 +325,11 @@ If `OWNER_ID` is set you receive a DM when the public URL changes. With no
 
 ### Data
 
-Runtime state lives in `database/json.sqlite` (quick.db / better-sqlite3) and logs in
-`logs/`. Both paths are gitignored for new runtime files. Back up `database/json.sqlite` — it holds all guild
-configuration, XP, warnings and tickets.
+All bot state and OAuth sessions live in Supabase PostgreSQL through `DATABASE_URL`.
+The application creates the `bot_kv` and `dashboard_sessions` tables automatically.
+Use Supabase backups for guild configuration, XP, warnings, tickets and sessions.
+For Render, use Supabase's **Session Pooler** connection URI so the service can
+connect over IPv4.
 
 ---
 
@@ -353,9 +355,8 @@ EB-Bot/
 │   ├── static/                   # source assets copied by Vite
 │   └── public/                   # generated production bundle
 ├── database/
-│   ├── index.js                  # QuickDB adapter and explicit data path
-│   ├── lock.js                   # per-key serialisation
-│   └── json.sqlite               # preserved runtime database
+│   ├── index.js                  # Supabase PostgreSQL JSONB adapter
+│   └── lock.js                   # per-key serialisation
 ├── shared/
 │   ├── services/                 # bot/API domain services
 │   ├── utils/                    # Discord and rendering helpers
@@ -367,7 +368,7 @@ EB-Bot/
 └── package.json                  # one runtime process; no duplicate frontend
 ```
 
-**Stack:** discord.js 14 · discord-player 7 · quick.db + better-sqlite3 ·
+**Stack:** discord.js 14 · discord-player 7 · Supabase PostgreSQL (`pg`) ·
 Express 5 · Socket.IO 4 · React 19 · Vite 8 · Tailwind
 
 ---
@@ -378,9 +379,10 @@ Express 5 · Socket.IO 4 · React 19 · Vite 8 · Tailwind
 Set `DEPLOY_COMMANDS=true` once, or run `npm run deploy`. Global commands take
 up to an hour to propagate; set `GUILD_ID` for instant registration while testing.
 
-**`better-sqlite3` fails to load**
-The native binding must match your Node version: `npm rebuild better-sqlite3`.
-Re-run this after any Node upgrade.
+**Database connection failed**
+Set `DATABASE_URL` to the Supabase **Session Pooler** URI, including the database
+password. Render may not reach Supabase's direct IPv6-only connection. The app
+creates its tables automatically after connecting.
 
 **`EBADENGINE` on install**
 Use Node 20.19+ or Node 22.12+. The Render blueprint pins Node 22.12 for production.
