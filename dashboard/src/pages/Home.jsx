@@ -1,11 +1,9 @@
 import React from 'react';
 import {
-  ArrowRight, BarChart3, Gift, LayoutDashboard, Music, Shield, Ticket,
+  AlertTriangle, ArrowRight, BarChart3, Gift, LayoutDashboard, Music, Shield, Ticket,
   Trophy, Users, Wifi, WifiOff, Zap, Command, Radio, Terminal, Sparkles,
   MessageSquare, SlidersHorizontal, Play, Hash, Lock, Lightbulb, Vote, Ghost, Megaphone,
 } from 'lucide-react';
-
-const INVITE = 'https://discord.com/oauth2/authorize?client_id=1515782305338359899&permissions=8&scope=bot%20applications.commands';
 
 const FEATURES = [
   { id: 'members', icon: Shield, title: 'Moderation', text: 'Warns, Notizen, Timeouts, Bans — komplettes Staff-Desk.' },
@@ -62,6 +60,9 @@ function formatUptime(ms) {
 export default function Home({ health, auth, onEnter }) {
   const online = !!health?.botOnline;
   const go = (id) => onEnter(id || 'overview');
+  const inviteUrl = auth?.clientId
+    ? `https://discord.com/oauth2/authorize?client_id=${window.encodeURIComponent(auth.clientId)}&permissions=8&scope=bot%20applications.commands`
+    : null;
 
   return (
     <div className="min-h-screen overflow-auto">
@@ -82,15 +83,29 @@ export default function Home({ health, auth, onEnter }) {
               {online ? 'Online' : 'Offline'}
               {health?.uptime ? <span className="hidden md:inline text-zinc-500">· {formatUptime(health.uptime * 1000)}</span> : null}
             </span>
-            <a href={INVITE} target="_blank" rel="noreferrer" className="hidden sm:inline-flex cyber-button text-xs px-3 py-2">
-              Einladen
-            </a>
+            {inviteUrl && (
+              <a href={inviteUrl} target="_blank" rel="noreferrer" className="hidden sm:inline-flex cyber-button text-xs px-3 py-2">
+                Einladen
+              </a>
+            )}
             <button onClick={() => go('overview')} className="cyber-button-solid text-xs px-3 py-2 inline-flex items-center gap-1.5">
               Dashboard <ArrowRight size={13} />
             </button>
           </div>
         </div>
       </header>
+
+      {auth?.authRequired && auth?.oauthError && (
+        <div className="max-w-6xl mx-auto px-5 pt-5" role="alert">
+          <div className="cyber-warning text-sm">
+            <AlertTriangle size={17} className="text-amber-300 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold text-amber-100">Discord login is not configured</p>
+              <p className="text-xs text-amber-200/70 mt-0.5">{auth.oauthError} Update the Render environment and redeploy.</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <section className="max-w-6xl mx-auto px-5 pt-12 sm:pt-16 pb-8">
         <div className="grid lg:grid-cols-[1.15fr_0.85fr] gap-10 items-center">
@@ -110,9 +125,11 @@ export default function Home({ health, auth, onEnter }) {
               <button onClick={() => go('overview')} className="cyber-button-solid px-5 py-2.5 inline-flex items-center gap-2">
                 Homepage verlassen · Desk <ArrowRight size={16} />
               </button>
-              <a href={INVITE} target="_blank" rel="noreferrer" className="cyber-button px-5 py-2.5 inline-flex items-center">
-                Zu Discord einladen
-              </a>
+              {inviteUrl && (
+                <a href={inviteUrl} target="_blank" rel="noreferrer" className="cyber-button px-5 py-2.5 inline-flex items-center">
+                  Zu Discord einladen
+                </a>
+              )}
               {auth?.oauthEnabled && !auth?.loggedIn && (
                 <a href="/api/auth/discord" className="cyber-button px-5 py-2.5">Mit Discord einloggen</a>
               )}
@@ -244,7 +261,7 @@ export default function Home({ health, auth, onEnter }) {
             <button onClick={() => go('overview')} className="cyber-button-solid px-5 py-2.5 inline-flex items-center gap-2">
               Dashboard öffnen <ArrowRight size={16} />
             </button>
-            <a href={INVITE} target="_blank" rel="noreferrer" className="cyber-button px-5 py-2.5">Einladen</a>
+            {inviteUrl && <a href={inviteUrl} target="_blank" rel="noreferrer" className="cyber-button px-5 py-2.5">Einladen</a>}
             <button onClick={() => go('developer')} className="cyber-button px-5 py-2.5 inline-flex items-center gap-1.5">
               <Terminal size={13} /> Developer
             </button>

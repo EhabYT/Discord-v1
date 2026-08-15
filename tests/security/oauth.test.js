@@ -108,7 +108,20 @@ const cookieOf = (res) => (res.headers['set-cookie'] || []).map((c) => c.split('
 
     const status = await req('/api/auth/status');
     check('auth status reports authRequired', /"authRequired":true/.test(status.body));
+    check('auth status reports the public client id', /"clientId":"123456789012345678"/.test(status.body));
     check('auth status leaks no client secret', !/test-secret/.test(status.body));
+
+    const originalClientId = process.env.CLIENT_ID;
+    process.env.CLIENT_ID = 'not-an-application-id';
+    const badStatus = await req('/api/auth/status');
+    check('invalid client id disables OAuth before redirecting to Discord',
+        /"oauthEnabled":false/.test(badStatus.body) && /valid Discord Application ID/.test(badStatus.body));
+    const badStart = await req('/api/auth/discord');
+    check('invalid OAuth configuration gets an actionable local error', badStart.status === 400
+        && /valid Discord Application ID/.test(badStart.body));
+    // Test is strictly sequential; restore the process-global fixture after the awaited probes.
+    // eslint-disable-next-line require-atomic-updates
+    process.env.CLIENT_ID = originalClientId;
 
     const anon = await req('/api/guilds');
     check('unauthenticated API access still refused', anon.status === 401, `${anon.status}`);

@@ -61,6 +61,15 @@ function loginResultUrl(req, result) {
     return result === 'success' ? `${destination}#overview` : destination;
 }
 
+function oauthConfigurationIssue() {
+    const clientId = String(process.env.CLIENT_ID || '').trim();
+    const clientSecret = String(process.env.DISCORD_CLIENT_SECRET || '').trim();
+    if (!clientId) return 'CLIENT_ID is missing.';
+    if (!/^\d{17,20}$/.test(clientId)) return 'CLIENT_ID must be a valid Discord Application ID.';
+    if (!clientSecret) return 'DISCORD_CLIENT_SECRET is missing.';
+    return null;
+}
+
 function attachAuthenticatedSession(session, user, userGuilds) {
     session.user = user;
     session.userGuilds = userGuilds;
@@ -102,8 +111,9 @@ ${safeUri ? `<p>Add this exact Redirect URI in the Discord Developer Portal → 
 
 module.exports = (botClient) => {
     router.get('/discord', (req, res) => {
-        if (!process.env.CLIENT_ID || !process.env.DISCORD_CLIENT_SECRET) {
-            return oauthErrorPage(res, 'OAuth not configured', 'CLIENT_ID or DISCORD_CLIENT_SECRET is missing.');
+        const configIssue = oauthConfigurationIssue();
+        if (configIssue) {
+            return oauthErrorPage(res, 'OAuth not configured', configIssue, redirectUriFor(req));
         }
         const redirectUri = redirectUriFor(req);
         req.session.oauthRedirect = redirectUri;
@@ -213,9 +223,17 @@ module.exports = (botClient) => {
 
     router.get('/status', (req, res) => {
         const redirectUri = redirectUriFor(req);
+        const oauthError = oauthConfigurationIssue();
         res.json({
             loggedIn: !!req.session.user,
-            oauthEnabled: !!(process.env.CLIENT_ID && process.env.DISCORD_CLIENT_SECRET),
+            oauthEnabled: !oauthError,
+            oauthError,
+            // The Discord Application ID is public (it is already present in
+            // every authorize URL) and lets the client build the correct invite
+            // instead of hard-coding a different bot application.
+            clientId: /^\d{17,20}$/.test(String(process.env.CLIENT_ID || ''))
+                ? String(process.env.CLIENT_ID)
+                : null,
             // Auth is now enforced unless explicitly disabled (fails closed).
             authRequired: String(process.env.DASHBOARD_AUTH).toLowerCase() !== 'false',
             redirectUri,
