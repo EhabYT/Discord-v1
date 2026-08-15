@@ -161,6 +161,47 @@ function OAuthNotice() {
   );
 }
 
+class PageErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+
+  componentDidCatch(error, info) {
+    console.error('Dashboard page failed to render', error, info);
+  }
+
+  render() {
+    if (!this.state.error) return this.props.children;
+    return (
+      <div className="min-h-full flex items-center justify-center p-6">
+        <div className="cyber-card max-w-md w-full p-7 text-center animate-slide-up" role="alert">
+          <div className="w-12 h-12 mx-auto mb-4 rounded-2xl flex items-center justify-center bg-red-500/10 border border-red-500/20 text-red-300">
+            <AlertTriangle size={22} />
+          </div>
+          <h2 className="text-lg font-semibold text-white">This page could not load</h2>
+          <p className="text-sm text-zinc-500 mt-2 leading-relaxed">
+            The dashboard may have been updated while it was open. Retry the page or return to Overview.
+          </p>
+          <div className="flex justify-center gap-2 mt-5">
+            <button onClick={() => window.location.reload()} className="cyber-button-solid">Retry</button>
+            <button
+              onClick={() => { this.setState({ error: null }); window.location.hash = 'overview'; }}
+              className="cyber-button"
+            >
+              Overview
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+}
+
 function MobileDock({ page, onNavigate, onSearch }) {
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 glass-header border-t border-white/[0.06] pb-[env(safe-area-inset-bottom)]">
@@ -203,6 +244,8 @@ export default function App() {
   const [permLevelName, setPermLevelName] = useState('Viewer');
   const [auth, setAuth] = useState({ oauthEnabled: false, loggedIn: false, authRequired: false });
   const [health, setHealth] = useState(null);
+  const [apiReachable, setApiReachable] = useState(null);
+  const [browserOnline, setBrowserOnline] = useState(() => window.navigator.onLine);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(rememberedCollapsed);
@@ -229,7 +272,24 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const title = PAGE_TITLES[page] || (page === 'home' ? 'Home' : 'Dashboard');
+    const guild = selectedGuild?.name ? ` · ${selectedGuild.name}` : '';
+    document.title = `${title}${guild} — EB BOT`;
+  }, [page, selectedGuild]);
+
+  useEffect(() => {
+    const update = () => setBrowserOnline(window.navigator.onLine);
+    window.addEventListener('online', update);
+    window.addEventListener('offline', update);
+    return () => {
+      window.removeEventListener('online', update);
+      window.removeEventListener('offline', update);
+    };
+  }, []);
+
+  useEffect(() => {
     const onKey = (e) => {
+      if (e.key === 'Escape') setMobileOpen(false);
       const tag = (e.target?.tagName || '').toLowerCase();
       const typing = tag === 'input' || tag === 'textarea' || e.target?.isContentEditable;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
@@ -258,6 +318,7 @@ export default function App() {
       setMe(m);
       setAuth(a || { oauthEnabled: false, loggedIn: false, authRequired: false });
       setHealth(h);
+      setApiReachable(Boolean(h));
       const remembered = rememberedGuild();
       setSelectedGuild(list.find((x) => x.id === remembered) || list[0] || null);
     }).finally(() => setLoading(false));
@@ -265,23 +326,44 @@ export default function App() {
 
   useEffect(() => {
     const t = setInterval(() => {
-      api.get('/api/health').then(setHealth).catch(() => setHealth(null));
+      api.get('/api/health')
+        .then((nextHealth) => {
+          setHealth(nextHealth);
+          setApiReachable(true);
+        })
+        // Preserve the last known status instead of making the whole header
+        // flicker offline during one transient failed poll.
+        .catch(() => setApiReachable(false));
     }, 15000);
     return () => clearInterval(t);
   }, []);
 
   useEffect(() => {
-    if (!selectedGuild) return;
+    if (!selectedGuild) return undefined;
+    let current = true;
     rememberGuild(selectedGuild.id);
     setGuildData(null);
-    api.get(`/api/guild/${selectedGuild.id}`).then(setGuildData).catch(() => {});
+    api.get(`/api/guild/${selectedGuild.id}`)
+      .then((data) => { if (current) setGuildData(data); })
+      .catch(() => {});
+    return () => { current = false; };
   }, [selectedGuild]);
 
   useEffect(() => {
-    if (!selectedGuild) return;
+    if (!selectedGuild) return undefined;
+    let current = true;
     api.get(`/api/guild/${selectedGuild.id}/permissions/my-level`)
-      .then((d) => { setPermLevel(d.level ?? 0); setPermLevelName(d.levelName ?? 'Viewer'); })
-      .catch(() => { setPermLevel(0); setPermLevelName('Viewer'); });
+      .then((d) => {
+        if (!current) return;
+        setPermLevel(d.level ?? 0);
+        setPermLevelName(d.levelName ?? 'Viewer');
+      })
+      .catch(() => {
+        if (!current) return;
+        setPermLevel(0);
+        setPermLevelName('Viewer');
+      });
+    return () => { current = false; };
   }, [selectedGuild]);
 
   const PageComponent = PAGES[page] || Overview;
@@ -389,7 +471,13 @@ export default function App() {
                 Maintenance mode is on — slash commands are blocked for everyone except the owner.
               </div>
             )}
-            {health === null && (
+            {!browserOnline && (
+              <div className="px-4 sm:px-6 py-2 text-xs text-red-200 bg-red-500/10 border-b border-red-500/20 flex items-center justify-between gap-3" role="alert">
+                <span>You are offline. Changes will not be saved until your connection returns.</span>
+                <span className="flex-shrink-0 font-semibold">No connection</span>
+              </div>
+            )}
+            {browserOnline && apiReachable === false && (
               <div className="px-4 sm:px-6 py-2 text-xs text-amber-200 bg-amber-500/10 border-b border-amber-500/20 flex items-center justify-between gap-3">
                 <span>Dashboard API is unreachable. The service may be restarting.</span>
                 <button onClick={() => window.location.reload()} className="flex-shrink-0 px-2.5 py-1 rounded-lg border border-amber-400/25 hover:bg-amber-400/10 font-semibold">
@@ -397,7 +485,7 @@ export default function App() {
                 </button>
               </div>
             )}
-            {health !== null && !health.botOnline && (
+            {apiReachable === true && health !== null && !health.botOnline && (
               <div className="px-4 sm:px-6 py-2 text-xs text-amber-200 bg-amber-500/10 border-b border-amber-500/20">
                 Bot appears offline. Commands and live data may be delayed until it reconnects.
               </div>
@@ -412,9 +500,11 @@ export default function App() {
               )}
               {page === 'developer' ? (
                 <div className="h-full animate-fade-in">
-                  <Suspense fallback={<PageLoading />}>
-                    <Developer />
-                  </Suspense>
+                  <PageErrorBoundary key="developer">
+                    <Suspense fallback={<PageLoading />}>
+                      <Developer />
+                    </Suspense>
+                  </PageErrorBoundary>
                 </div>
               ) : !selectedGuild ? (
                 <div className="min-h-full flex items-center justify-center p-8">
@@ -433,17 +523,19 @@ export default function App() {
                 </div>
               ) : (
                 <div key={`${page}-${selectedGuild?.id}`} className="h-full animate-fade-in">
-                  <Suspense fallback={<PageLoading />}>
-                    <PageComponent
-                      guild={selectedGuild}
-                      guildData={guildData}
-                      setGuildData={setGuildData}
-                      permLevel={permLevel}
-                      onNavigate={navigate}
-                      pageHint={PAGE_HINTS[page]}
-                      publicUrl={publicUrl}
-                    />
-                  </Suspense>
+                  <PageErrorBoundary key={page}>
+                    <Suspense fallback={<PageLoading />}>
+                      <PageComponent
+                        guild={selectedGuild}
+                        guildData={guildData}
+                        setGuildData={setGuildData}
+                        permLevel={permLevel}
+                        onNavigate={navigate}
+                        pageHint={PAGE_HINTS[page]}
+                        publicUrl={publicUrl}
+                      />
+                    </Suspense>
+                  </PageErrorBoundary>
                 </div>
               )}
             </main>
