@@ -182,24 +182,33 @@ function startDashboard(botClient) {
         });
     });
 
-    app.post('/api/bot/presence', requireAuth, async (req, res) => {
+    app.post('/api/bot/presence', requireAuth, async (req, res, next) => {
         if (!botClient || !botClient.user) return res.status(503).json({ error: 'Bot is initializing' });
-        const { status, activityType, activityText } = req.body;
+        const status = typeof req.body.status === 'string' ? req.body.status : 'online';
+        const activityText = typeof req.body.activityText === 'string' ? req.body.activityText.trim() : '';
+        const activityType = Number(req.body.activityType ?? 0);
+        if (!['online', 'idle', 'dnd', 'invisible'].includes(status)) {
+            return res.status(400).json({ error: 'Invalid presence status' });
+        }
+        if (!Number.isInteger(activityType) || activityType < 0 || activityType > 5) {
+            return res.status(400).json({ error: 'Invalid activity type' });
+        }
+        if (activityText.length > 128) return res.status(400).json({ error: 'Activity text is too long' });
         try {
             botClient.user.setPresence({
-                status: status || 'online',
-                activities: activityText ? [{ name: activityText, type: parseInt(activityType) || 0 }] : []
+                status,
+                activities: activityText ? [{ name: activityText, type: activityType }] : []
             });
             try {
                 const { db } = require('../../database/index');
                 await db.set('bot_presence', {
-                    status: status || 'online',
-                    activityType: parseInt(activityType) || 0,
-                    activityText: activityText || '',
+                    status,
+                    activityType,
+                    activityText,
                 });
             } catch { /* ignore persist errors */ }
             res.json({ success: true });
-        } catch (err) { res.status(500).json({ error: err.message }); }
+        } catch (err) { next(err); }
     });
 
     app.get('/api/events/stream', requireAuth, (req, res) => {
@@ -341,11 +350,11 @@ function startDashboard(botClient) {
         });
     }
 
-    app.get('/api/analytics/global', requireAuth, (req, res) => {
+    app.get('/api/analytics/global', requireAuth, (req, res, next) => {
         try {
             const a = (() => { try { return require('../../shared/services/analytics'); } catch(e) { return null; } })();
             res.json({ totalCommands: a ? a.getGlobalTotal() : 0 });
-        } catch(err) { res.status(500).json({ error: err.message }); }
+        } catch(err) { next(err); }
     });
 
     app.get('/api/performance', requireAuth, (req, res) => {

@@ -83,6 +83,10 @@ const cookieOf = (res) => (res.headers['set-cookie'] || []).map((c) => c.split('
 
     console.log('\nCallback must reject a missing or forged state:\n');
 
+    const injected = await req('/api/auth/discord/callback?error=access_denied&error_description=%3Cscript%3Ealert(1)%3C%2Fscript%3E');
+    check('OAuth error text is HTML-escaped',
+        injected.status === 400 && !injected.body.includes('<script>') && injected.body.includes('&lt;script&gt;'));
+
     const sess = cookieOf(start);
 
     let r = await req('/api/auth/discord/callback?code=abc', { cookie: sess });

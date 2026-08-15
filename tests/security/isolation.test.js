@@ -73,6 +73,7 @@ const botClient = Object.assign(new EventEmitter(), {
     ws: { ping: 1 }, uptime: 1, commands: new Collection(),
     guilds: { cache: new Collection([[GUILD_A, guildA], [GUILD_B, guildB]]) },
     application: { owner: null, fetch: async () => {} },
+    player: { nodes: { get: () => null } },
 });
 
 function req(path, { method = 'GET', body, cookie, headers = {} } = {}) {
@@ -150,6 +151,14 @@ async function loginAs(id) {
     r = await req(`/api/guild/${GUILD_A}/permissions`, {
         method: 'POST', cookie: adminCookie, body: { roleId: 'not-a-snowflake', level: 2 } });
     check('malformed role id is rejected', r.status === 400, `${r.status}`);
+
+    console.log('\nMusic router must enforce guild isolation:\n');
+
+    r = await req(`/api/music/${GUILD_B}`, { cookie: viewerCookie });
+    check('cross-guild queue read is refused', r.status === 403, `${r.status}`);
+
+    r = await req(`/api/music/${GUILD_A}`, { cookie: viewerCookie });
+    check('own-guild queue read still works', r.status === 200, `${r.status}`);
 
     console.log('\nBackup is an Admin-only export:\n');
 

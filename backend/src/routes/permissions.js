@@ -14,16 +14,16 @@ module.exports = (botClient) => {
     // use the same implementation, so the rule cannot drift between them.
     router.use(guildAccess.guildAccessStack(botClient, 0));
 
-    router.get('/my-level', async (req, res) => {
+    router.get('/my-level', async (req, res, next) => {
         try {
             const userId = req.session?.user?.id;
             const { guildId } = req.params;
             const level = await getUserPermLevel(botClient, guildId, userId);
             res.json({ level, levelName: LEVEL_NAMES[level], levelAccess: LEVEL_ACCESS });
-        } catch (err) { res.status(500).json({ error: err.message }); }
+        } catch (err) { next(err); }
     });
 
-    router.get('/', async (req, res) => {
+    router.get('/', async (req, res, next) => {
         try {
             const { guildId } = req.params;
             const perms = await db.get(`dashboard_perms_${guildId}`) || [];
@@ -35,10 +35,10 @@ module.exports = (botClient) => {
             });
 
             res.json({ perms: enriched, levelAccess: LEVEL_ACCESS });
-        } catch (err) { res.status(500).json({ error: err.message }); }
+        } catch (err) { next(err); }
     });
 
-    router.post('/', async (req, res) => {
+    router.post('/', async (req, res, next) => {
         try {
             const { guildId } = req.params;
             const userId = req.session?.user?.id;
@@ -66,10 +66,10 @@ module.exports = (botClient) => {
                 return { ...p, roleName: role?.name || 'Unknown Role', roleColor: role?.hexColor || '#888888' };
             });
             res.json({ perms: enriched });
-        } catch (err) { res.status(500).json({ error: err.message }); }
+        } catch (err) { next(err); }
     });
 
-    router.delete('/:roleId', async (req, res) => {
+    router.delete('/:roleId', async (req, res, next) => {
         try {
             const { guildId, roleId } = req.params;
             const userId = req.session?.user?.id;
@@ -88,7 +88,7 @@ module.exports = (botClient) => {
                 return { ...p, roleName: role?.name || 'Unknown Role', roleColor: role?.hexColor || '#888888' };
             });
             res.json({ perms: enriched });
-        } catch (err) { res.status(500).json({ error: err.message }); }
+        } catch (err) { next(err); }
     });
 
     return router;

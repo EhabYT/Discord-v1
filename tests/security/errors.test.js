@@ -169,9 +169,17 @@ function req(path, { method = 'GET', body, cookie } = {}) {
 
     console.log('\nSource-level guarantee:\n');
     const fs = require('fs');
-    const src = fs.readFileSync(require('path').join(__dirname, '..', '..', 'backend', 'src', 'routes', 'guilds.js'), 'utf8');
-    check('no raw err.message is returned from guilds.js',
-        !/res\.status\(500\)\.json\(\{ error: err\.message \}\)/.test(src));
+    const path = require('path');
+    const backend = path.join(__dirname, '..', '..', 'backend', 'src');
+    const routeFiles = fs.readdirSync(path.join(backend, 'routes'))
+        .filter((name) => name.endsWith('.js'))
+        .map((name) => path.join(backend, 'routes', name));
+    routeFiles.push(path.join(backend, 'server.js'));
+    const leaking = routeFiles.filter((file) =>
+        /res\.status\(500\)\.json\(\{ error: err\.message \}\)/.test(fs.readFileSync(file, 'utf8'))
+    );
+    check('no backend route returns a raw err.message', leaking.length === 0,
+        leaking.map((file) => path.basename(file)).join(', '));
 
     console.log(fails === 0
         ? '\nAll error-handling checks passed.\n'

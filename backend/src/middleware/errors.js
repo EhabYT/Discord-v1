@@ -95,8 +95,11 @@ function asyncRoute(fn) {
 }
 
 /** Terminal Express error middleware. Must be registered last. */
-function errorHandler(err, req, res, _next) {
-    if (res.headersSent) return;
+function errorHandler(err, req, res, next) {
+    // Once a streaming response has started, Express's default handler must
+    // close/finish the connection. Silently returning here can leave SSE or a
+    // partial download hanging forever.
+    if (res.headersSent) return next(err);
 
     const { status, message, code, expose } = classify(err);
     const requestId = crypto.randomBytes(6).toString('hex');

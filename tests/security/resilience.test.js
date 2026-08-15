@@ -158,6 +158,9 @@ function makeClient() {
     check('index.js no longer reads .message off a raw rejection',
         !/reason\.message/.test(idx));
     check('index.js exits on uncaughtException', /process\.exit\(1\)/.test(idx));
+    check('commands deploy only when explicitly enabled',
+        /process\.env\.DEPLOY_COMMANDS === 'true'/.test(idx)
+        && !/DEPLOY_COMMANDS === 'true' \|\| !process\.env\.GUILD_ID/.test(idx));
 
     // Restore the real logger.
     for (const level of ['error', 'warn', 'info', 'debug']) {

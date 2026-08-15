@@ -8,7 +8,7 @@ module.exports = (botClient) => {
     // and the bot client id to anonymous callers.
     router.use(requireAuth);
 
-    router.get('/', (req, res) => {
+    router.get('/', (req, res, next) => {
         try {
             const guilds = botClient ? botClient.guilds.cache.size : 0;
             const users = botClient ? botClient.guilds.cache.reduce((a, g) => a + g.memberCount, 0) : 0;
@@ -27,7 +27,7 @@ module.exports = (botClient) => {
                 clientId: botClient?.user ? botClient.user.id : null
             });
         } catch (err) {
-            res.status(500).json({ error: err.message });
+            next(err);
         }
     });
 

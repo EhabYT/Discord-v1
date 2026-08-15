@@ -67,10 +67,21 @@ function attachAuthenticatedSession(session, user, userGuilds) {
     delete session.oauthRedirect;
 }
 
+function escapeHtml(value, maxLength) {
+    return String(value || '').slice(0, maxLength)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
+
 function oauthErrorPage(res, title, detail, redirectUri) {
-    const safeTitle = String(title || 'Login failed').slice(0, 120);
-    const safeDetail = String(detail || '').slice(0, 500);
-    const safeUri = String(redirectUri || '').slice(0, 300);
+    // Query parameters such as error_description are attacker-controlled. They
+    // must never be interpolated into HTML without escaping (reflected XSS).
+    const safeTitle = escapeHtml(title || 'Login failed', 120);
+    const safeDetail = escapeHtml(detail, 500);
+    const safeUri = escapeHtml(redirectUri, 300);
     res.status(400).type('html').send(`<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>EB Dashboard — ${safeTitle}</title>
@@ -167,12 +178,16 @@ module.exports = (botClient) => {
             // victim's browser before login would otherwise still hold a valid
             // authenticated session afterwards. Issue a fresh id at the moment
             // privileges change.
-            await new Promise((resolve) => req.session.regenerate(() => resolve()));
+            await new Promise((resolve, reject) => {
+                req.session.regenerate((sessionErr) => sessionErr ? reject(sessionErr) : resolve());
+            });
             attachAuthenticatedSession(req.session, user, guildsResponse.data);
             // The Discord access token is not needed after this point — the
             // dashboard authorises from session identity + the bot's own gateway
             // state — so it is deliberately not persisted into the session store.
-            await new Promise((resolve) => req.session.save(() => resolve()));
+            await new Promise((resolve, reject) => {
+                req.session.save((sessionErr) => sessionErr ? reject(sessionErr) : resolve());
+            });
 
             // Use the configured public dashboard origin rather than a relative
             // redirect. This is deterministic behind Render's proxy and avoids
@@ -180,18 +195,16 @@ module.exports = (botClient) => {
             res.redirect(303, loginResultUrl(req, 'success'));
         } catch (err) {
             const data = err.response?.data;
-            const desc = data?.error_description || data?.error || err.message;
+            const desc = data?.error_description || data?.error || '';
             console.error('OAuth2 Error:', data || err.message);
-            oauthErrorPage(
-                res,
-                'Discord login failed',
-                desc === 'invalid_client'
-                    ? 'Discord rejected the OAuth client credentials. Verify that CLIENT_ID and DISCORD_CLIENT_SECRET come from the same application, then restart the service. The client secret is not the bot token.'
-                    : desc === 'invalid_grant' || String(desc).toLowerCase().includes('redirect')
-                        ? 'Redirect URI mismatch. Add the URI below in the Discord Developer Portal, then try again.'
-                        : String(desc),
-                redirectUri
-            );
+            const detail = desc === 'invalid_client'
+                ? 'Discord rejected the OAuth client credentials. Verify that CLIENT_ID and DISCORD_CLIENT_SECRET come from the same application, then restart the service. The client secret is not the bot token.'
+                : desc === 'invalid_grant' || String(desc).toLowerCase().includes('redirect')
+                    ? 'Redirect URI mismatch. Add the URI below in the Discord Developer Portal, then try again.'
+                    : data
+                        ? String(desc || 'Discord rejected the login request.')
+                        : 'The login session could not be completed. Please start the login again.';
+            oauthErrorPage(res, 'Discord login failed', detail, redirectUri);
         }
     }
 

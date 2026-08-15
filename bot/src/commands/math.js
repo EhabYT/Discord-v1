@@ -1,8 +1,9 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 
 function safeEval(expr) {
+    if (typeof expr !== 'string' || expr.length > 100) return null;
     const cleaned = expr.replace(/\s+/g, '');
-    if (!/^[0-9+\-*/().%^]+$/.test(cleaned)) return null;
+    if (!cleaned || !/^[0-9+\-*/().%^]+$/.test(cleaned)) return null;
     const js = cleaned.replace(/\^/g, '**');
     try {
         const fn = new Function(`"use strict"; return (${js});`);

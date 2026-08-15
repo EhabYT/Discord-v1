@@ -94,7 +94,7 @@ module.exports = (botClient) => {
 
     router.use(requireDev(botClient));
 
-    router.get('/overview', async (req, res) => {
+    router.get('/overview', async (req, res, next) => {
         try {
             const mem = process.memoryUsage();
             const publicUrl = readPublicUrl();
@@ -146,11 +146,11 @@ module.exports = (botClient) => {
                 ts: Date.now(),
             });
         } catch (err) {
-            res.status(500).json({ error: err.message });
+            next(err);
         }
     });
 
-    router.get('/logs', (req, res) => {
+    router.get('/logs', (req, res, next) => {
         const name = String(req.query.file || 'general.log');
         if (!ALLOWED_LOGS.has(name)) return res.status(400).json({ error: 'Unknown log file' });
         const file = path.join(LOG_DIR, name);
@@ -159,7 +159,7 @@ module.exports = (botClient) => {
         try {
             res.json({ file: name, ...safeStat(file), text: tailFile(file, lines) });
         } catch (err) {
-            res.status(500).json({ error: err.message });
+            next(err);
         }
     });
 
@@ -187,7 +187,7 @@ module.exports = (botClient) => {
         res.json({ total: list.length, overLimit: list.length > 100, commands: list });
     });
 
-    router.get('/db', async (req, res) => {
+    router.get('/db', async (req, res, next) => {
         try {
             const all = await db.all();
             const prefixes = {};
@@ -204,7 +204,7 @@ module.exports = (botClient) => {
                 prefixes: top,
             });
         } catch (err) {
-            res.status(500).json({ error: err.message });
+            next(err);
         }
     });
 
@@ -235,7 +235,7 @@ module.exports = (botClient) => {
         res.json(cur);
     });
 
-    router.post('/deploy-commands', async (req, res) => {
+    router.post('/deploy-commands', async (req, res, next) => {
         try {
             const { deployCommands } = require('../../../shared/services/startup');
             const guildIds = [...(botClient?.guilds?.cache?.keys() || [])];
@@ -248,7 +248,7 @@ module.exports = (botClient) => {
             );
             res.json({ ok: true, guilds: guildIds.length });
         } catch (err) {
-            res.status(500).json({ error: err.message });
+            next(err);
         }
     });
 

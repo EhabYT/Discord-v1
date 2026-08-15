@@ -100,8 +100,10 @@ if (fs.existsSync(commandsPath)) {
   // Register Scheduler Jobs
   registerJobs(client, scheduler);
 
-  // Deploy Commands (Optimization: only on demand or env flag)
-  if (process.env.DEPLOY_COMMANDS === 'true' || !process.env.GUILD_ID) {
+  // Command registration is an explicit deployment action. The previous
+  // `|| !GUILD_ID` condition re-registered all global commands on every boot
+  // whenever GUILD_ID was empty, despite DEPLOY_COMMANDS=false.
+  if (process.env.DEPLOY_COMMANDS === 'true') {
     await deployCommands(process.env.DISCORD_TOKEN, process.env.CLIENT_ID, process.env.GUILD_ID || null);
   }
 
