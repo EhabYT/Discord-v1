@@ -14,26 +14,37 @@ class PostgresSessionStore extends session.Store {
         super();
         if (!pool) throw new Error('DATABASE_URL is not configured');
         this.pool = pool;
-        this.ready = pool.query(`
-            CREATE TABLE IF NOT EXISTS dashboard_sessions (
-                sid TEXT PRIMARY KEY,
-                sess JSONB NOT NULL,
-                expires TIMESTAMPTZ NOT NULL
-            );
-            CREATE INDEX IF NOT EXISTS dashboard_sessions_expires
-                ON dashboard_sessions (expires);
-            ALTER TABLE dashboard_sessions ENABLE ROW LEVEL SECURITY;
-        `);
+        this.initializing = null;
         this.pruneTimer = setInterval(() => {
-            this.ready.then(() => this.pool.query(
+            this.ensureReady().then(() => this.pool.query(
                 'DELETE FROM dashboard_sessions WHERE expires <= NOW()'
             )).catch(() => {});
         }, 15 * 60 * 1000);
         this.pruneTimer.unref();
     }
 
+    ensureReady() {
+        if (!this.initializing) {
+            const attempt = this.pool.query(`
+                CREATE TABLE IF NOT EXISTS dashboard_sessions (
+                    sid TEXT PRIMARY KEY,
+                    sess JSONB NOT NULL,
+                    expires TIMESTAMPTZ NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS dashboard_sessions_expires
+                    ON dashboard_sessions (expires);
+                ALTER TABLE dashboard_sessions ENABLE ROW LEVEL SECURITY;
+            `);
+            this.initializing = attempt.catch((err) => {
+                this.initializing = null;
+                throw err;
+            });
+        }
+        return this.initializing;
+    }
+
     async _get(sid) {
-        await this.ready;
+        await this.ensureReady();
         const result = await this.pool.query(
             'SELECT sess FROM dashboard_sessions WHERE sid = $1 AND expires > NOW()', [sid]
         );
@@ -43,7 +54,7 @@ class PostgresSessionStore extends session.Store {
     get(sid, callback) { this._get(sid).then((v) => callback(null, v), callback); }
 
     set(sid, sess, callback = () => {}) {
-        this.ready.then(() => this.pool.query(`
+        this.ensureReady().then(() => this.pool.query(`
             INSERT INTO dashboard_sessions (sid, sess, expires) VALUES ($1, $2::jsonb, $3)
             ON CONFLICT (sid) DO UPDATE SET sess = EXCLUDED.sess, expires = EXCLUDED.expires
         `, [sid, JSON.stringify(sess), new Date(expiresAt(sess))]))
@@ -51,12 +62,12 @@ class PostgresSessionStore extends session.Store {
     }
 
     destroy(sid, callback = () => {}) {
-        this.ready.then(() => this.pool.query('DELETE FROM dashboard_sessions WHERE sid = $1', [sid]))
+        this.ensureReady().then(() => this.pool.query('DELETE FROM dashboard_sessions WHERE sid = $1', [sid]))
             .then(() => callback(null), callback);
     }
 
     touch(sid, sess, callback = () => {}) {
-        this.ready.then(() => this.pool.query(
+        this.ensureReady().then(() => this.pool.query(
             'UPDATE dashboard_sessions SET expires = $1 WHERE sid = $2',
             [new Date(expiresAt(sess)), sid]
         )).then(() => callback(null), callback);

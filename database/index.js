@@ -46,7 +46,7 @@ class PostgresDatabase {
     ready() {
         if (!this.pool) return Promise.reject(new Error('DATABASE_URL is not configured'));
         if (!this.initializing) {
-            this.initializing = this.pool.query(`
+            const attempt = this.pool.query(`
                 CREATE TABLE IF NOT EXISTS bot_kv (
                     key TEXT PRIMARY KEY,
                     value JSONB NOT NULL,
@@ -54,6 +54,12 @@ class PostgresDatabase {
                 );
                 ALTER TABLE bot_kv ENABLE ROW LEVEL SECURITY;
             `).then(() => true);
+            this.initializing = attempt.catch((err) => {
+                // A transient Supabase/pooler outage must not poison this
+                // process forever; the next health/login request may retry.
+                this.initializing = null;
+                throw err;
+            });
         }
         return this.initializing;
     }

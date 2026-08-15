@@ -3,6 +3,7 @@ const router = express.Router();
 const axios = require('axios');
 const crypto = require('crypto');
 const { requireAuth } = require('../middleware/auth');
+const { db } = require('../../../database/index');
 
 function publicOrigin(req) {
     const xfHost = req.headers['x-forwarded-host'];
@@ -73,6 +74,17 @@ function oauthConfigurationIssue() {
     return null;
 }
 
+async function oauthRuntimeIssue() {
+    const configIssue = oauthConfigurationIssue();
+    if (configIssue) return configIssue;
+    try {
+        await db.ready();
+        return null;
+    } catch {
+        return 'Supabase PostgreSQL is unreachable. Verify DATABASE_URL and the Session Pooler settings.';
+    }
+}
+
 function attachAuthenticatedSession(session, user, userGuilds) {
     session.user = user;
     session.userGuilds = userGuilds;
@@ -113,8 +125,8 @@ ${safeUri ? `<p>Add this exact Redirect URI in the Discord Developer Portal → 
 }
 
 module.exports = (botClient) => {
-    router.get('/discord', (req, res) => {
-        const configIssue = oauthConfigurationIssue();
+    router.get('/discord', async (req, res) => {
+        const configIssue = await oauthRuntimeIssue();
         if (configIssue) {
             return oauthErrorPage(res, 'OAuth not configured', configIssue, redirectUriFor(req));
         }
@@ -224,13 +236,19 @@ module.exports = (botClient) => {
     router.get('/callback', oauthCallback);
     router.get('/discord/callback', oauthCallback);
 
-    router.get('/status', (req, res) => {
+    router.get('/status', async (req, res) => {
         const redirectUri = redirectUriFor(req);
-        const oauthError = oauthConfigurationIssue();
+        let databaseOnline = false;
+        try { databaseOnline = !!(await db.ready()); } catch { /* reported below */ }
+        const oauthError = oauthConfigurationIssue()
+            || (!databaseOnline
+                ? 'Supabase PostgreSQL is unreachable. Verify DATABASE_URL and the Session Pooler settings.'
+                : null);
         res.json({
             loggedIn: !!req.session.user,
             oauthEnabled: !oauthError,
             oauthError,
+            databaseOnline,
             // The Discord Application ID is public (it is already present in
             // every authorize URL) and lets the client build the correct invite
             // instead of hard-coding a different bot application.
