@@ -9,6 +9,9 @@ json.sqlite-journal
 json.sqlite-wal
 json.sqlite-shm
 *.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
 
 # Runtime logs & tunnel state
 logs/*
