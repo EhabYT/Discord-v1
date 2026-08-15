@@ -19,7 +19,7 @@
     "lint:fix": "eslint . --fix",
     "lint:gate": "node scripts/lint-gate.js",
     "test:unit": "node tests/unit/command-loader.test.js",
-    "test:security": "node tests/security/auth.test.js && node tests/security/hierarchy.test.js && node tests/security/isolation.test.js && node tests/security/oauth.test.js && node tests/security/abuse.test.js && node tests/security/concurrency.test.js && node tests/security/resilience.test.js && node tests/security/errors.test.js && node tests/security/audit-sweep.test.js",
+    "test:security": "node tests/security/auth.test.js && node tests/security/hierarchy.test.js && node tests/security/isolation.test.js && node tests/security/oauth.test.js && node tests/security/abuse.test.js && node tests/security/concurrency.test.js && node tests/security/resilience.test.js && node tests/security/errors.test.js && node tests/security/audit-sweep.test.js && node tests/security/dependency-patches.test.js",
     "test": "npm run test:unit && npm run test:security",
     "verify": "npm run lint:gate && npm test && npm run audit:prod && npm run build:dashboard",
     "rebuild": "npm rebuild better-sqlite3",
@@ -39,6 +39,7 @@
     "express": "^5.2.1",
     "express-session": "^1.19.0",
     "ffmpeg-static": "^5.3.0",
+    "file-type": "file:vendor/file-type",
     "genius-lyrics": "^4.4.7",
     "mediaplex": "^1.0.0",
     "quick.db": "^9.1.7",
@@ -49,6 +50,7 @@
     "nodemon": "^3.1.14"
   },
   "overrides": {
-    "esbuild": "^0.28.1"
+    "esbuild": "^0.28.1",
+    "file-type": "$file-type"
   }
 }
