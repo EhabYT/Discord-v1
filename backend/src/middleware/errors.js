@@ -74,6 +74,31 @@ function classify(err) {
         return { status: 502, message: 'Discord API request failed', code: 'DISCORD_ERROR', expose: true };
     }
 
+    // node-postgres/network errors are operational, not application crashes.
+    // Return a stable actionable code without exposing hosts, usernames or the
+    // connection string that may be embedded in the original message.
+    const pgCode = String(err?.code || '');
+    const pgMessage = String(err?.message || '').toLowerCase();
+    if (pgCode === '28P01' || pgMessage.includes('password authentication failed')) {
+        return {
+            status: 503,
+            message: 'Database credentials were rejected. Verify the Supabase Session Pooler URI.',
+            code: 'DATABASE_AUTH_FAILED',
+            expose: true,
+        };
+    }
+    if (['ENOTFOUND', 'ECONNREFUSED', 'ETIMEDOUT', 'ECONNRESET'].includes(pgCode)
+        || pgMessage.includes('connection timeout')
+        || pgMessage.includes('connection terminated')
+        || pgMessage.includes('database is unreachable')) {
+        return {
+            status: 503,
+            message: 'Database is temporarily unavailable. Verify DATABASE_URL and Supabase Session Pooler settings.',
+            code: 'DATABASE_UNAVAILABLE',
+            expose: true,
+        };
+    }
+
     // Anything else is unexpected: do not echo it back.
     return { status: 500, message: 'Internal server error', code: 'INTERNAL', expose: false };
 }

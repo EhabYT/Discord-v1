@@ -117,6 +117,18 @@ function req(path, { method = 'GET', body, cookie } = {}) {
     check('deliberate ApiError keeps its status and message',
         c.status === 400 && c.message === 'Invalid guild id' && c.code === 'BAD_ID');
 
+    const dbTimeout = classify(Object.assign(
+        new Error('Connection terminated due to connection timeout'), { code: 'ETIMEDOUT' }
+    ));
+    check('database timeout becomes an actionable 503',
+        dbTimeout.status === 503 && dbTimeout.code === 'DATABASE_UNAVAILABLE');
+    const dbAuth = classify(Object.assign(
+        new Error('password authentication failed for user'), { code: '28P01' }
+    ));
+    check('database authentication failure does not expose credentials',
+        dbAuth.status === 503 && dbAuth.code === 'DATABASE_AUTH_FAILED'
+        && !dbAuth.message.includes('user'));
+
     console.log('\nLive server behaviour:\n');
 
     const srv = require('../../backend/src/server.js');
