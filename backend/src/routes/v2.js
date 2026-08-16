@@ -21,7 +21,7 @@ async function systemSnapshot(botClient) {
     const discordConfigured = /^\d{17,20}$/.test(String(process.env.CLIENT_ID || ''))
         && !!process.env.DISCORD_TOKEN;
     const oauthConfigured = discordConfigured && !!process.env.DISCORD_CLIENT_SECRET;
-    const ready = dashboardBuilt && databaseOnline && discordConfigured;
+    const ready = dashboardBuilt && databaseOnline && discordConfigured && botOnline;
     return {
         release: RELEASE,
         apiVersion: 'v2',
@@ -34,6 +34,12 @@ async function systemSnapshot(botClient) {
             botOnline,
         },
         databaseError: databaseOnline ? null : databaseError,
+        botBootstrap: {
+            state: botClient?.bootstrapState?.state || (botOnline ? 'ready' : 'unknown'),
+            attempt: botClient?.bootstrapState?.attempt || 0,
+            nextRetryAt: botClient?.bootstrapState?.nextRetryAt || null,
+            lastError: botClient?.bootstrapState?.lastError || null,
+        },
         capabilities: {
             bilingual: ['en', 'ar'],
             rtl: true,

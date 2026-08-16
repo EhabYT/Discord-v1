@@ -69,80 +69,110 @@ if (fs.existsSync(commandsPath)) {
   }
 }
 
+// Global error handling is installed before diagnostics so a failed bootstrap
+// can never produce an unobserved rejection while the dashboard stays online.
+const describe = (value) => {
+  if (value instanceof Error) return { error: value.message, stack: value.stack };
+  if (value && typeof value === 'object') {
+    try { return { error: JSON.stringify(value).slice(0, 500), stack: null }; }
+    catch { return { error: '[unserialisable rejection value]', stack: null }; }
+  }
+  return { error: String(value), stack: null };
+};
+process.on('unhandledRejection', (reason) => logger.error('Unhandled Rejection', describe(reason)));
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught Exception — shutting down', describe(error));
+  setTimeout(() => process.exit(1), 250).unref();
+});
+
 // Start the HTTP service before connecting to Discord. Render needs a listening
-// port to route OAuth callbacks; previously a missing/invalid bot credential
-// exited first and the public hostname returned `x-render-routing: no-server`.
-// Keeping the dashboard alive also makes /api/health report botOnline:false,
-// which is far more actionable than a platform-level 404.
+// port to route OAuth callbacks even while Discord or Supabase is recovering.
 startDashboard(client);
 
-// Startup Logic
-(async () => {
-  // Run Diagnostics. Configuration failures keep the dashboard online so the
-  // operator can inspect health and fix environment variables without losing
-  // the OAuth callback endpoint.
-  if (!(await runDiagnostics(db))) {
-    logger.error('Startup diagnostics failed. Dashboard remains online; bot connection is paused until configuration is fixed.');
-    return;
-  }
+client.bootstrapState = {
+  state: 'starting', attempt: 0, nextRetryAt: null, lastError: null,
+};
+let servicesLoaded = false;
+let retryTimer = null;
 
-  // Load Music Extractors
+function scheduleRetry(reason) {
+  if (retryTimer) return;
+  client.bootstrapState.attempt += 1;
+  const delay = Math.min(5 * 60_000, 15_000 * (2 ** Math.min(client.bootstrapState.attempt - 1, 5)));
+  client.bootstrapState.state = 'waiting';
+  client.bootstrapState.lastError = reason;
+  client.bootstrapState.nextRetryAt = Date.now() + delay;
+  logger.warn(`Bot bootstrap will retry in ${Math.round(delay / 1000)}s`, { reason });
+  retryTimer = setTimeout(() => {
+    retryTimer = null;
+    bootstrap().catch((err) => {
+      logger.error('Bot bootstrap retry failed', { error: err?.message || String(err) });
+      scheduleRetry('Unexpected bootstrap failure');
+    });
+  }, delay);
+  retryTimer.unref();
+}
+
+/* eslint-disable require-atomic-updates -- bootstrap attempts are serialized by retryTimer; these assignments intentionally publish lifecycle state after awaited I/O. */
+async function loadServicesOnce() {
+  if (servicesLoaded) return;
   try {
     const { DefaultExtractors } = require('@discord-player/extractor');
-    // AttachmentExtractor is safe to load: package.json pins the compatible
-    // local file-type backport, whose malformed-ASF regression is tested in CI.
     await player.extractors.loadMulti(DefaultExtractors);
     logger.info(`Music extractors loaded (${DefaultExtractors.length})`);
   } catch (err) {
     logger.error('Extractor error', { error: err.message });
   }
-
-  // Register Events
   loadEvents(client);
-
-  // Register Scheduler Jobs
   registerJobs(client, scheduler);
-
-  // Command registration is an explicit deployment action. The previous
-  // `|| !GUILD_ID` condition re-registered all global commands on every boot
-  // whenever GUILD_ID was empty, despite DEPLOY_COMMANDS=false.
   if (process.env.DEPLOY_COMMANDS === 'true') {
     await deployCommands(process.env.DISCORD_TOKEN, process.env.CLIENT_ID, process.env.GUILD_ID || null);
   }
+  servicesLoaded = true;
+}
 
-  // ── Global Error Handling ──
-  // A rejection value is not guaranteed to be an Error: `Promise.reject('x')`,
-  // axios and discord.js can all surface strings, plain objects or null.
-  // Reading `.message` off those yields undefined at best and throws at worst —
-  // i.e. the error handler itself becomes the crash.
-  const describe = (value) => {
-    if (value instanceof Error) return { error: value.message, stack: value.stack };
-    if (value && typeof value === 'object') {
-      try { return { error: JSON.stringify(value).slice(0, 500), stack: null }; }
-      catch { return { error: '[unserialisable rejection value]', stack: null }; }
-    }
-    return { error: String(value), stack: null };
-  };
+async function bootstrap() {
+  client.bootstrapState.state = 'checking';
+  client.bootstrapState.nextRetryAt = null;
 
-  process.on('unhandledRejection', (reason) => {
-    logger.error('Unhandled Rejection', describe(reason));
-  });
+  // Configuration/database failures are recoverable. Keep HTTP online and retry
+  // with bounded exponential backoff instead of requiring a process restart
+  // after a temporary Supabase outage.
+  if (!(await runDiagnostics(db))) {
+    logger.error('Startup diagnostics failed. Dashboard remains online; bot connection is paused until configuration is fixed.');
+    scheduleRetry('Startup diagnostics failed');
+    return;
+  }
 
-  process.on('uncaughtException', (error) => {
-    // Node's contract: after an uncaught exception the process is in an
-    // undefined state. Continuing risks corrupt SQLite writes and half-applied
-    // moderation actions, so log, give the stream a moment to flush, then exit
-    // non-zero and let the supervisor restart us cleanly.
-    logger.error('Uncaught Exception — shutting down', describe(error));
-    setTimeout(() => process.exit(1), 250).unref();
-  });
+  await loadServicesOnce();
+  if (client.isReady()) {
+    client.bootstrapState.state = 'ready';
+    client.bootstrapState.lastError = null;
+    client.bootstrapState.attempt = 0;
+    return;
+  }
 
-  // Login failures must not take down the web dashboard or OAuth callback.
+  client.bootstrapState.state = 'connecting';
   try {
     await client.login(process.env.DISCORD_TOKEN);
+    client.bootstrapState.state = 'ready';
+    client.bootstrapState.lastError = null;
+    client.bootstrapState.nextRetryAt = null;
+    client.bootstrapState.attempt = 0;
   } catch (err) {
-    logger.error('Discord login failed. Dashboard remains online.', {
-      error: err?.message || String(err),
-    });
+    const message = err?.message || String(err);
+    client.bootstrapState.state = 'failed';
+    client.bootstrapState.lastError = /token|secret|password/i.test(message)
+      ? 'Discord credentials were rejected'
+      : 'Discord connection failed';
+    logger.error('Discord login failed. Dashboard remains online.', { error: message });
+    // Invalid credentials require operator action and should not hammer Discord.
+    if (!/token|invalid/i.test(message)) scheduleRetry('Discord connection failed');
   }
-})();
+}
+
+bootstrap().catch((err) => {
+  logger.error('Initial bot bootstrap failed', { error: err?.message || String(err) });
+  scheduleRetry('Unexpected bootstrap failure');
+});
+/* eslint-enable require-atomic-updates */

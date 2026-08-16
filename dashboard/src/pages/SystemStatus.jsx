@@ -72,6 +72,23 @@ export default function SystemStatus({ pageHint }) {
         </span>
       </section>
 
+      {snapshot?.botBootstrap && snapshot.botBootstrap.state !== 'ready' && (
+        <section className="cyber-info">
+          <Bot size={17} className="text-cyan-300 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-cyan-100">
+              {ar ? 'حالة إعادة اتصال البوت' : 'Bot recovery state'}: {snapshot.botBootstrap.state}
+            </p>
+            <p className="text-xs text-cyan-200/65 mt-1">
+              {snapshot.botBootstrap.lastError || (ar ? 'في انتظار الإعداد' : 'Waiting for configuration')}
+              {snapshot.botBootstrap.nextRetryAt
+                ? ` · ${ar ? 'المحاولة التالية' : 'next retry'} ${new Date(snapshot.botBootstrap.nextRetryAt).toLocaleTimeString(locale)}`
+                : ''}
+            </p>
+          </div>
+        </section>
+      )}
+
       <section className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {Object.entries(CHECK_META).map(([key, meta]) => {
           const ok = !!snapshot?.checks?.[key];
