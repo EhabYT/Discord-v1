@@ -22,7 +22,17 @@ class MemoryDatabase {
 let sharedPool = null;
 let poolConfigError = null;
 
-function databaseConfigIssue(connectionString = String(process.env.DATABASE_URL || '').trim()) {
+function normalizeDatabaseUrl(value) {
+    let out = String(value || '').trim();
+    if ((out.startsWith('"') && out.endsWith('"'))
+        || (out.startsWith("'") && out.endsWith("'"))) {
+        out = out.slice(1, -1).trim();
+    }
+    return out;
+}
+
+function databaseConfigIssue(value = process.env.DATABASE_URL) {
+    const connectionString = normalizeDatabaseUrl(value);
     if (!connectionString) return 'DATABASE_URL is not configured';
     let parsed;
     try { parsed = new URL(connectionString); }
@@ -42,7 +52,7 @@ function databaseConfigIssue(connectionString = String(process.env.DATABASE_URL 
 
 function getPool() {
     if (sharedPool) return sharedPool;
-    const connectionString = String(process.env.DATABASE_URL || '').trim();
+    const connectionString = normalizeDatabaseUrl(process.env.DATABASE_URL);
     poolConfigError = databaseConfigIssue(connectionString);
     if (poolConfigError) return null;
     const hosted = !/^(postgres(?:ql)?:\/\/(?:localhost|127\.0\.0\.1))/i.test(connectionString);
@@ -122,5 +132,5 @@ async function deleteCached(key) { await db.delete(key); }
 
 module.exports = {
     db, getCached, setCached, deleteCached,
-    getPool, databaseConfigIssue, MemoryDatabase, PostgresDatabase,
+    getPool, normalizeDatabaseUrl, databaseConfigIssue, MemoryDatabase, PostgresDatabase,
 };

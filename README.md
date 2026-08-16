@@ -31,7 +31,7 @@ git clone https://github.com/EhabYT/Discord-v1.git
 cd Discord-v1
 
 cp .env.example .env          # add Discord credentials + Supabase DATABASE_URL
-npm install --omit=dev --ignore-scripts
+npm ci                        # also builds the React dashboard via postinstall
 npm start
 ```
 

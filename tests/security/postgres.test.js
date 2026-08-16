@@ -1,4 +1,4 @@
-const { PostgresDatabase, databaseConfigIssue } = require('../../database/index');
+const { PostgresDatabase, normalizeDatabaseUrl, databaseConfigIssue } = require('../../database/index');
 
 class FakePool {
     constructor() { this.data = new Map(); }
@@ -29,6 +29,9 @@ const check = (label, ok) => {
 
 (async () => {
     console.log('\nSupabase PostgreSQL key/value adapter:\n');
+    check('strips accidental surrounding quotes from Render values',
+        normalizeDatabaseUrl('  "postgresql://user:pass@host:5432/db"  ')
+            === 'postgresql://user:pass@host:5432/db');
     check('rejects a project ref instead of a connection URI',
         /complete postgresql/.test(databaseConfigIssue('yhyltmxdbbiybpgsaqki')));
     check('rejects placeholder hostnames before DNS lookup',

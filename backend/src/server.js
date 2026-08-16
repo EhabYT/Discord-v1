@@ -1,5 +1,6 @@
 const express = require('express');
 const http = require('http');
+const fs = require('fs');
 const session = require('express-session');
 const { createSessionStore } = require('./session-store');
 const path = require('path');
@@ -396,17 +397,19 @@ function startDashboard(botClient) {
     });
 
     const dashboardIndex = path.join(__dirname, '..', '..', 'dashboard', 'public', 'index.html');
-    app.get('/', (req, res, next) => {
-        // Keep an explicit root route so a successful OAuth callback always has
-        // a concrete landing page, even when static middleware behaviour differs
-        // across Express/platform versions.
-        res.sendFile(dashboardIndex, (err) => err ? next(err) : undefined);
-    });
+    const sendDashboard = (req, res, next) => {
+        if (!fs.existsSync(dashboardIndex)) {
+            return res.status(503).type('html').send(`<!doctype html><html><head><meta charset="utf-8"><title>Dashboard build missing</title></head><body style="font-family:system-ui;background:#070a0f;color:#e5e7eb;padding:2rem"><h1>Dashboard build missing</h1><p>The API is online, but the React bundle was not built.</p><code>npm --prefix dashboard ci && npm run build:dashboard</code></body></html>`);
+        }
+        return res.sendFile(dashboardIndex, (err) => err ? next(err) : undefined);
+    };
+
+    app.get('/', sendDashboard);
 
     app.get('/{*path}', (req, res, next) => {
         if (path.extname(req.path)) return next();
         if (req.path.startsWith('/api')) return res.status(404).json({ error: 'Not found' });
-        res.sendFile(dashboardIndex);
+        return sendDashboard(req, res, next);
     });
 
     // Terminal error middleware — must be registered after every route.
