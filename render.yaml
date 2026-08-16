@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: discord-v1-alkh
+    name: discord-v1-jrip
     runtime: node
     plan: free
     buildCommand: npm ci && npm run build:dashboard
@@ -16,9 +16,9 @@ services:
       - key: DASHBOARD_SECURE
         value: "true"
       - key: DASHBOARD_URL
-        value: https://discord-v1-alkh.onrender.com
+        value: https://discord-v1-jrip.onrender.com
       - key: DISCORD_REDIRECT_URI
-        value: https://discord-v1-alkh.onrender.com/api/auth/discord/callback
+        value: https://discord-v1-jrip.onrender.com/api/auth/discord/callback
       - key: SESSION_SECRET
         generateValue: true
       - key: DATABASE_URL
