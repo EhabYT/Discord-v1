@@ -50,22 +50,28 @@ app.set('trust proxy', 1);
 const crypto = require('crypto');
 const IS_PROD = process.env.NODE_ENV === 'production';
 
-// Fail-safe configuration: unknown/missing state must deny, not silently
-// downgrade. In production a missing session secret is fatal — an ephemeral
-// random secret invalidates every session on restart and, with multiple
-// workers, lets sessions be minted that peers cannot verify.
-if (IS_PROD && !process.env.SESSION_SECRET) {
-    logger.error('SESSION_SECRET is missing. Add a generated 32+ character value in Render → Environment, then redeploy.');
-    throw new Error('SESSION_SECRET is required in production (Render Environment variable missing)');
-}
+// Fail closed on authentication, but do not take Render's entire HTTP service
+// offline just because SESSION_SECRET was omitted. When Supabase is configured,
+// derive a stable, domain-separated signing key from its high-entropy connection
+// URI. An explicit independent SESSION_SECRET remains strongly recommended.
 if (IS_PROD && String(process.env.DASHBOARD_AUTH).toLowerCase() === 'false') {
     logger.error('DASHBOARD_AUTH=false is not permitted when NODE_ENV=production — refusing to start');
     throw new Error('DASHBOARD_AUTH=false is not permitted in production');
 }
 
-const sessionSecret = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
-if (!process.env.SESSION_SECRET) {
-    logger.warn('SESSION_SECRET is not set — using a random secret for this process only (sessions reset on restart)');
+const explicitSessionSecret = String(process.env.SESSION_SECRET || '').trim();
+const databaseSecretSource = String(process.env.DATABASE_URL || '').trim();
+const derivedSessionSecret = databaseSecretSource
+    ? crypto.createHash('sha256').update(`eb-dashboard-session-v1\0${databaseSecretSource}`).digest('hex')
+    : null;
+const sessionSecret = explicitSessionSecret
+    || derivedSessionSecret
+    || crypto.randomBytes(32).toString('hex');
+
+if (!explicitSessionSecret && derivedSessionSecret) {
+    logger.warn('SESSION_SECRET is missing — using a stable key derived from DATABASE_URL. Add an independent SESSION_SECRET in Render.');
+} else if (!explicitSessionSecret) {
+    logger.warn('SESSION_SECRET and DATABASE_URL are missing — using an ephemeral key; sessions reset on restart.');
 }
 
 const sessionMiddleware = session({

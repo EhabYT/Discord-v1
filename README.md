@@ -128,12 +128,11 @@ dashboard cannot accidentally expose it.
 
 ### Production requirements
 
-With `NODE_ENV=production` the server **refuses to start** unless:
-
-- `SESSION_SECRET` is set (no ephemeral fallback), and
-- `DASHBOARD_AUTH` is not `false`.
-
-The session cookie is also forced `Secure`.
+With `NODE_ENV=production`, `DASHBOARD_AUTH=false` is refused and cookies are
+forced `Secure`. Set an independent `SESSION_SECRET` for session signing. If it
+is accidentally omitted but `DATABASE_URL` is configured, the server remains
+online and derives a stable domain-separated key from the database URI; if both
+are missing it uses an ephemeral key and disables reliable OAuth persistence.
 
 > **Before going live:** set `NODE_ENV=production`, a strong `SESSION_SECRET`,
 > and `OWNER_ID`. Run `npm test`. If a bot token was ever used with an older,

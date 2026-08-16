@@ -146,6 +146,19 @@ function makeClient() {
     check('the exception was logged before exit', /logged:fatal/.test(child.stderr || ''));
     check('the process did NOT keep running', !/STILL-ALIVE/.test(child.stdout || ''));
 
+    const missingSecret = spawnSync(process.execPath, ['-e', `
+        process.env.NODE_ENV = 'production';
+        process.env.DASHBOARD_AUTH = 'true';
+        delete process.env.SESSION_SECRET;
+        delete process.env.DATABASE_URL;
+        require('./backend/src/server');
+        console.log('SERVER-MODULE-OK');
+        process.exit(0);
+    `], { cwd: path.join(__dirname, '..', '..'), encoding: 'utf8', timeout: 8000 });
+    check('missing SESSION_SECRET no longer takes Render offline',
+        missingSecret.status === 0 && /SERVER-MODULE-OK/.test(missingSecret.stdout || ''),
+        `exit=${missingSecret.status}`);
+
     console.log('\nSource-level guarantees:\n');
 
     const fs = require('fs');
