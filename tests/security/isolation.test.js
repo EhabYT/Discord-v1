@@ -160,6 +160,9 @@ async function loginAs(id) {
     r = await req(`/api/music/${GUILD_A}`, { cookie: viewerCookie });
     check('own-guild queue read still works', r.status === 200, `${r.status}`);
 
+    r = await req(`/api/events/stream?guildId=${GUILD_B}`, { cookie: viewerCookie });
+    check('cross-guild live event stream is refused', r.status === 403, `${r.status}`);
+
     console.log('\nBackup is an Admin-only export:\n');
 
     r = await req(`/api/guild/${GUILD_A}/backup`, { cookie: viewerCookie });

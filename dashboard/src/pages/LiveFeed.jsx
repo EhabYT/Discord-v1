@@ -73,7 +73,6 @@ export default function LiveFeed({ guild }) {
   const [totalCommands, setTotalCommands] = useState(0);
   const [paused, setPaused] = useState(false);
   const [query, setQuery] = useState('');
-  const [guildOnly, setGuildOnly] = useState(true);
   const [, setTick] = useState(0);
   const pausedRef = useRef(false);
   const esRef = useRef(null);
@@ -91,7 +90,8 @@ export default function LiveFeed({ guild }) {
   }, []);
 
   useEffect(() => {
-    const es = new EventSource('/api/events/stream');
+    if (!guild?.id) return undefined;
+    const es = new EventSource(`/api/events/stream?guildId=${window.encodeURIComponent(guild.id)}`);
     esRef.current = es;
 
     es.onopen = () => setConnected(true);
@@ -116,7 +116,7 @@ export default function LiveFeed({ guild }) {
     });
 
     return () => { es.close(); setConnected(false); };
-  }, [addEvent]);
+  }, [addEvent, guild?.id]);
 
   useEffect(() => {
     const t = setInterval(() => setTick((n) => n + 1), 15000);
@@ -140,10 +140,9 @@ export default function LiveFeed({ guild }) {
   const q = query.trim().toLowerCase();
   const visible = events.filter((e) => {
     if (!filter.has(e.type)) return false;
-    if (guildOnly && guild?.id) {
+    if (guild?.id) {
       const gid = e.guildId || e.guild || e.guild_id;
       if (gid && gid !== guild.id) return false;
-      if (!gid && e.guildName && guild.name && e.guildName !== guild.name) return false;
     }
     if (q) {
       const hay = `${e.user || ''} ${e.description || ''} ${e.channel || ''} ${e.guildName || ''}`.toLowerCase();
@@ -177,17 +176,12 @@ export default function LiveFeed({ guild }) {
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setGuildOnly((v) => !v)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-all ${
-                guildOnly
-                  ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300'
-                  : 'border-white/10 text-gray-400 hover:text-cyan-400'
-              }`}
-              title="Only this server"
+            <span
+              className="px-3 py-1.5 text-xs font-medium rounded-lg border bg-cyan-500/15 border-cyan-500/40 text-cyan-300 max-w-40 truncate"
+              title="Live feed is securely scoped to this server"
             >
-              {guildOnly ? (guild?.name || 'This server') : 'All servers'}
-            </button>
+              {guild?.name || 'This server'}
+            </span>
             <button
               onClick={() => setPaused(p => !p)}
               className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-all ${

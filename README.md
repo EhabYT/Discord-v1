@@ -258,7 +258,7 @@ cannot be used to bypass them.
 ## Testing
 
 ```bash
-npm test              # command loader + 9 security suites (137 assertions)
+npm test              # command loader + 13 security suites
 npm run test:security # security suites only
 npm run lint          # ESLint across bot, API and client
 npm run lint:gate     # CI gate — fails if lint problems increase
@@ -282,6 +282,11 @@ required — the suites mock Discord.
 | `oauth.test.js` | 13 | OAuth `state`, replay, session hygiene |
 | `abuse.test.js` | 10 | Bulk-kick cap, hierarchy in sweeps, per-endpoint rate limits |
 | `concurrency.test.js` | 11 | Points double-spend, giveaway double-draw, lock semantics |
+| `postgres.test.js` | — | Supabase URL validation and JSONB adapter compatibility |
+| `session-store.test.js` | — | Persistent PostgreSQL OAuth sessions and bounded fallback |
+| `migration.test.js` | — | Read-only SQLite validation and transactional migration |
+| `sse.test.js` | — | Server-side guild isolation for live event delivery |
+| `dependency-patches.test.js` | — | Security backport regression and normal file detection |
 
 The suites run the real Express stack against a mocked Discord client — no
 token or live guild required. They assert **both** that a request is rejected

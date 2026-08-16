@@ -374,10 +374,12 @@ module.exports = {
             if (sub === 'shorten') {
                 const url = str('url');
                 try {
-
-                    new URL(url);
+                    const parsed = new URL(url);
+                    if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) {
+                        throw new Error('unsupported URL');
+                    }
                 } catch {
-                    return reply({ content: '❌ That is not a valid URL.', flags: [MessageFlags.Ephemeral] });
+                    return reply({ content: '❌ Use a valid HTTP or HTTPS URL without embedded credentials.', flags: [MessageFlags.Ephemeral] });
                 }
                 const { data } = await axios.get('https://is.gd/create.php', {
                     timeout: 8000, params: { format: 'simple', url }
@@ -398,20 +400,27 @@ module.exports = {
             }
             if (sub === 'ip') {
                 const q = str('query');
-                const { data } = await axios.get(`http://ip-api.com/json/${encodeURIComponent(q)}`, {
-                    timeout: 8000, params: { fields: 'status,message,query,country,regionName,city,isp,org,timezone,as' }
+                // ip-api.com's free endpoint is plaintext HTTP. Use an HTTPS
+                // provider so lookup targets and responses cannot be modified
+                // in transit.
+                const { data } = await axios.get(`https://ipwho.is/${encodeURIComponent(q)}`, {
+                    timeout: 8000
                 });
-                if (data.status !== 'success') return reply({ content: `❌ Lookup failed: ${data.message || 'unknown'}.` });
-                return reply({ embeds: [new EmbedBuilder().setColor('#00fbff').setTitle(`🌐 ${data.query}`)
+                if (!data.success) return reply({ content: `❌ Lookup failed: ${data.message || 'unknown'}.` });
+                const isp = data.connection?.isp || data.connection?.org || '—';
+                const asn = data.connection?.asn ? `AS${data.connection.asn}` : '—';
+                return reply({ embeds: [new EmbedBuilder().setColor('#00fbff').setTitle(`🌐 ${data.ip || q}`)
                     .addFields(
-                        { name: 'Location', value: [data.city, data.regionName, data.country].filter(Boolean).join(', ') || '—', inline: true },
-                        { name: 'ISP', value: data.isp || '—', inline: true },
-                        { name: 'Timezone', value: data.timezone || '—', inline: true },
-                        { name: 'ASN', value: data.as || '—', inline: false }
+                        { name: 'Location', value: [data.city, data.region, data.country].filter(Boolean).join(', ') || '—', inline: true },
+                        { name: 'ISP', value: isp, inline: true },
+                        { name: 'Timezone', value: data.timezone?.id || '—', inline: true },
+                        { name: 'ASN', value: asn, inline: false }
                     )] });
             }
-        } catch (err) {
-            return reply({ content: `❌ Lookup failed. ${clip(err.message || 'Try again later.', 120)}` });
+        } catch {
+            // Third-party errors may include request URLs or provider internals;
+            // do not relay them verbatim into a public Discord channel.
+            return reply({ content: '❌ Lookup failed. Try again later.' });
         }
     }
 };

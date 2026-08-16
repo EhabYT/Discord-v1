@@ -8,7 +8,7 @@
  *
  *   - exhaust the bot's Discord rate limit budget (mass kick, panel spam),
  *     which degrades the bot for every guild it serves, not just theirs;
- *   - force repeated full-table scans (db.all()) on the shared SQLite file;
+ *   - force repeated full-table scans (db.all()) on the shared PostgreSQL table;
  *   - fan out messages through the bot as a spam relay.
  *
  * These limits are keyed per user (falling back to IP for the localhost dev

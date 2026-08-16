@@ -1,15 +1,18 @@
-const clients = new Set();
+// Response -> authorised guild id. Keeping the scope server-side prevents an
+// authenticated member of one guild receiving another guild's message/event
+// stream and merely hiding it in the browser.
+const clients = new Map();
 const guildThrottle = new Map();
 const THROTTLE_MS = 2000;
 
-function addClient(res) {
+function addClient(res, guildId) {
     res.writeHead(200, {
         'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
+        'Cache-Control': 'no-cache, no-transform',
         'Connection': 'keep-alive',
         'X-Accel-Buffering': 'no',
     });
-    clients.add(res);
+    clients.set(res, String(guildId));
     return () => clients.delete(res);
 }
 
@@ -30,7 +33,8 @@ function broadcast(event, data) {
     }
 
     const payload = { ...data, ts: Date.now() };
-    for (const res of clients) {
+    for (const [res, authorisedGuildId] of clients) {
+        if (guildId && String(guildId) !== authorisedGuildId) continue;
         send(res, event, payload);
     }
 }

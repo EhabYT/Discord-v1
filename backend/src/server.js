@@ -220,14 +220,32 @@ function startDashboard(botClient) {
         } catch (err) { next(err); }
     });
 
-    app.get('/api/events/stream', requireAuth, (req, res) => {
-        const remove = addClient(res);
-        const a = (() => { try { return require('../../shared/services/analytics'); } catch(e) { return null; } })();
-        send(res, 'connected', { totalCommands: a ? a.getGlobalTotal() : 0 });
-        const hb = setInterval(() => {
-            try { res.write(': heartbeat\n\n'); } catch(e) { clearInterval(hb); remove(); }
-        }, 20000);
-        req.on('close', () => { clearInterval(hb); remove(); });
+    app.get('/api/events/stream', requireAuth, async (req, res, next) => {
+        try {
+            const guildId = typeof req.query.guildId === 'string' ? req.query.guildId : '';
+            if (!/^\d{17,20}$/.test(guildId)) {
+                return res.status(400).json({ error: 'A valid guildId is required' });
+            }
+            const guild = botClient?.guilds?.cache?.get(guildId);
+            if (!guild) return res.status(404).json({ error: 'Server not found' });
+
+            const userId = req.session?.user?.id;
+            const listed = Array.isArray(req.session?.userGuilds)
+                && req.session.userGuilds.some((g) => String(g.id) === guildId);
+            const member = listed ? true : await guild.members.fetch(userId).catch(() => null);
+            if (!member) return res.status(403).json({ error: 'You are not a member of this server' });
+
+            const remove = addClient(res, guildId);
+            const a = (() => { try { return require('../../shared/services/analytics'); } catch(e) { return null; } })();
+            send(res, 'connected', { totalCommands: a ? a.getGlobalTotal() : 0, guildId });
+            const hb = setInterval(() => {
+                try { res.write(': heartbeat\n\n'); } catch(e) { clearInterval(hb); remove(); }
+            }, 20000);
+            req.on('close', () => { clearInterval(hb); remove(); });
+            return undefined;
+        } catch (err) {
+            return next(err);
+        }
     });
 
     app.get('/api/health', async (req, res) => {
