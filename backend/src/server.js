@@ -137,12 +137,14 @@ function startDashboard(botClient) {
     const musicRouter = require('./routes/music')(botClient);
     const permissionsRouter = require('./routes/permissions')(botClient);
     const devRouter = require('./routes/dev')(botClient);
+    const setupRouter = require('./routes/setup')();
 
     // The OAuth entry point mints session state on every hit; throttle it.
     app.use('/api/auth/discord', rl.limit('oauth-start', 20, 5 * 60 * 1000));
     app.use('/api/stats', statsRouter);
     app.use('/api/auth', authRouter);
     app.use('/api/dev', devRouter);
+    app.use('/setup', setupRouter);
     app.use('/api/guild/:guildId/permissions', permissionsRouter);
     app.use('/api/guild/:guildId', guildsRouter);
     app.use('/api/music/:guildId', musicRouter);

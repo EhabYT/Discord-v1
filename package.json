@@ -19,7 +19,7 @@
     "lint:fix": "eslint . --fix",
     "lint:gate": "node scripts/lint-gate.js",
     "test:unit": "node tests/unit/command-loader.test.js",
-    "test:security": "node tests/security/auth.test.js && node tests/security/hierarchy.test.js && node tests/security/isolation.test.js && node tests/security/oauth.test.js && node tests/security/abuse.test.js && node tests/security/concurrency.test.js && node tests/security/resilience.test.js && node tests/security/errors.test.js && node tests/security/audit-sweep.test.js && node tests/security/dependency-patches.test.js && node tests/security/session-store.test.js && node tests/security/postgres.test.js && node tests/security/migration.test.js && node tests/security/sse.test.js",
+    "test:security": "node tests/security/auth.test.js && node tests/security/hierarchy.test.js && node tests/security/isolation.test.js && node tests/security/oauth.test.js && node tests/security/abuse.test.js && node tests/security/concurrency.test.js && node tests/security/resilience.test.js && node tests/security/errors.test.js && node tests/security/audit-sweep.test.js && node tests/security/dependency-patches.test.js && node tests/security/session-store.test.js && node tests/security/postgres.test.js && node tests/security/migration.test.js && node tests/security/sse.test.js && node tests/security/setup.test.js",
     "test": "npm run test:unit && npm run test:security",
     "verify": "npm run lint:gate && npm test && npm run audit:prod && npm run build:dashboard",
     "audit:prod": "npm audit --omit=dev --audit-level=high && npm --prefix dashboard audit --omit=dev --audit-level=high",

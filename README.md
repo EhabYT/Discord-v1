@@ -144,6 +144,12 @@ are missing it uses an ephemeral key and disables reliable OAuth persistence.
 
 Copy `.env.example` to `.env`. Never commit `.env` — it is gitignored.
 
+For local development, an environment editor is available at
+`http://localhost:3000/setup`. It writes only allow-listed keys, validates
+Discord/Supabase values, uses an atomic `0600` file, and requires a direct
+loopback request. It deliberately returns `404` in production and through every
+proxy/tunnel; use Render's Environment panel for deployed secrets.
+
 ### Required
 
 | Variable | Purpose |
