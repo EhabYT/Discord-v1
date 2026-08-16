@@ -41,6 +41,21 @@ const FACTS = [
     'Koalas have fingerprints almost identical to humans.',
     'The inventor of the Pringles can is buried in one.'
 ];
+const NUMBER_FACTS = [
+    [0, 'Zero is the additive identity: adding it leaves every number unchanged.'],
+    [1, 'One is neither prime nor composite.'],
+    [2, 'Two is the only even prime number.'],
+    [3, 'Three is the first odd prime and the first triangular prime.'],
+    [6, 'Six is the smallest perfect number: 1 + 2 + 3 = 6.'],
+    [8, 'Eight is the first non-trivial perfect cube: 2 × 2 × 2.'],
+    [12, 'Twelve has more divisors than any smaller positive integer.'],
+    [24, 'Twenty-four is 4 factorial: 4 × 3 × 2 × 1.'],
+    [42, 'Forty-two is the sixth pronic number: 6 × 7.'],
+    [64, 'Sixty-four is both a square and a cube: 8² = 4³.'],
+    [100, 'One hundred is the square of 10 and the basis of percentages.'],
+    [144, 'One hundred forty-four is 12² and a Fibonacci number.'],
+    [1729, '1729 is the smallest number expressible as two positive cubes in two different ways.'],
+];
 const COMPLIMENTS = [
     'You light up every room you join.',
     'Your taste in bots is objectively elite.',
@@ -258,16 +273,11 @@ module.exports = {
         }
 
         if (sub === 'number') {
-            const n = Math.floor(Math.random() * 200) + 1;
-            try {
-                if (!interaction.deferred && !interaction.replied) await interaction.deferReply().catch(() => {});
-                const { data } = await axios.get(`http://numbersapi.com/${n}/trivia`, { timeout: 6000, responseType: 'text' });
-                return reply({ embeds: [new EmbedBuilder().setColor('#00fbff').setTitle(`🔢 ${n}`)
-                    .setDescription(String(data).slice(0, 1000))] });
-            } catch {
-                return reply({ embeds: [new EmbedBuilder().setColor('#00fbff').setTitle(`🔢 ${n}`)
-                    .setDescription(`${n} is a perfectly good number. The trivia API is napping.`)] });
-            }
+            // Keep number trivia local: the former provider only offered a
+            // plaintext HTTP endpoint, allowing facts to be modified in transit.
+            const [n, fact] = pick(NUMBER_FACTS);
+            return reply({ embeds: [new EmbedBuilder().setColor('#00fbff').setTitle(`🔢 ${n}`)
+                .setDescription(fact)] });
         }
 
         if (sub === 'color') {
