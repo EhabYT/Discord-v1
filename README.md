@@ -4,7 +4,7 @@ A Discord.js v14 bot with a React control panel — moderation, AutoMod, music,
 XP/levels, tickets, verification, giveaways and reaction roles, managed from a
 web dashboard with Discord OAuth login and role-based access control.
 
-**Version** 3.1.0 · **Node** ≥ 20.19 (or ≥ 22.12) · **100 slash commands** (Discord's per-app limit) · **MIT**
+**Version** 3.1.0 · **Node** 22.12 LTS · **100 slash commands** (Discord's per-app limit) · **MIT**
 
 ---
 
@@ -24,7 +24,7 @@ web dashboard with Discord OAuth login and role-based access control.
 
 ## Quick start
 
-Requires **Node 20.19 or newer**. Node 22.12+ is recommended for production. The unused direct `@discordjs/voice` dependency was removed; Discord Player provides the voice transport used by this project.
+Requires **Node 22.12 LTS**. The runtime is pinned so Render does not select an untested future major such as Node 26. The unused direct `@discordjs/voice` dependency was removed; Discord Player provides the voice transport used by this project.
 
 ```bash
 git clone https://github.com/EhabYT/Discord-v1.git
@@ -397,7 +397,7 @@ password. Render may not reach Supabase's direct IPv6-only connection. The app
 creates its tables automatically after connecting.
 
 **`EBADENGINE` on install**
-Use Node 20.19+ or Node 22.12+. The Render blueprint pins Node 22.12 for production.
+Use Node 22.12 LTS. Both `package.json` and `.node-version` pin this runtime for Render.
 
 **Dashboard login does nothing / redirect mismatch**
 `DISCORD_CLIENT_SECRET` is unset, or `DISCORD_REDIRECT_URI` does not match the

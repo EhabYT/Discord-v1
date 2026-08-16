@@ -55,8 +55,8 @@ const IS_PROD = process.env.NODE_ENV === 'production';
 // random secret invalidates every session on restart and, with multiple
 // workers, lets sessions be minted that peers cannot verify.
 if (IS_PROD && !process.env.SESSION_SECRET) {
-    logger.error('SESSION_SECRET must be set when NODE_ENV=production — refusing to start');
-    throw new Error('SESSION_SECRET is required in production');
+    logger.error('SESSION_SECRET is missing. Add a generated 32+ character value in Render → Environment, then redeploy.');
+    throw new Error('SESSION_SECRET is required in production (Render Environment variable missing)');
 }
 if (IS_PROD && String(process.env.DASHBOARD_AUTH).toLowerCase() === 'false') {
     logger.error('DASHBOARD_AUTH=false is not permitted when NODE_ENV=production — refusing to start');
