@@ -20,10 +20,31 @@ class MemoryDatabase {
 }
 
 let sharedPool = null;
+let poolConfigError = null;
+
+function databaseConfigIssue(connectionString = String(process.env.DATABASE_URL || '').trim()) {
+    if (!connectionString) return 'DATABASE_URL is not configured';
+    let parsed;
+    try { parsed = new URL(connectionString); }
+    catch { return 'DATABASE_URL must be a complete postgresql:// connection URI'; }
+    if (!['postgres:', 'postgresql:'].includes(parsed.protocol)) {
+        return 'DATABASE_URL must start with postgresql://';
+    }
+    if (!parsed.hostname || /^(base|host|hostname)$/i.test(parsed.hostname)
+        || /\[|\]|YOUR-|PROJECT_REF/i.test(connectionString)) {
+        return 'DATABASE_URL contains a placeholder hostname; copy the full Supabase Session Pooler URI';
+    }
+    if (!parsed.username || !parsed.password) {
+        return 'DATABASE_URL must include the Supabase database username and password';
+    }
+    return null;
+}
+
 function getPool() {
     if (sharedPool) return sharedPool;
     const connectionString = String(process.env.DATABASE_URL || '').trim();
-    if (!connectionString) return null;
+    poolConfigError = databaseConfigIssue(connectionString);
+    if (poolConfigError) return null;
     const hosted = !/^(postgres(?:ql)?:\/\/(?:localhost|127\.0\.0\.1))/i.test(connectionString);
     sharedPool = new Pool({
         connectionString,
@@ -44,7 +65,7 @@ class PostgresDatabase {
     }
 
     ready() {
-        if (!this.pool) return Promise.reject(new Error('DATABASE_URL is not configured'));
+        if (!this.pool) return Promise.reject(new Error(poolConfigError || databaseConfigIssue()));
         if (!this.initializing) {
             const attempt = this.pool.query(`
                 CREATE TABLE IF NOT EXISTS bot_kv (
@@ -101,5 +122,5 @@ async function deleteCached(key) { await db.delete(key); }
 
 module.exports = {
     db, getCached, setCached, deleteCached,
-    getPool, MemoryDatabase, PostgresDatabase,
+    getPool, databaseConfigIssue, MemoryDatabase, PostgresDatabase,
 };
