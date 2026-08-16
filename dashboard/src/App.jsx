@@ -288,6 +288,14 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const media = window.matchMedia('(min-width: 768px)');
+    const closeOnDesktop = (event) => { if (event.matches) setMobileOpen(false); };
+    media.addEventListener('change', closeOnDesktop);
+    closeOnDesktop(media);
+    return () => media.removeEventListener('change', closeOnDesktop);
+  }, []);
+
+  useEffect(() => {
     const onKey = (e) => {
       if (e.key === 'Escape') setMobileOpen(false);
       const tag = (e.target?.tagName || '').toLowerCase();
@@ -543,7 +551,7 @@ export default function App() {
         </div>
         )}
 
-        {!isHome && !mobileOpen && (
+        {!isHome && !mobileOpen && !paletteOpen && (
           <MobileDock page={page} onNavigate={navigate} onSearch={() => setPaletteOpen(true)} />
         )}
 

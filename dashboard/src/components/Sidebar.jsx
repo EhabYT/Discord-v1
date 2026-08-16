@@ -202,6 +202,8 @@ export default function Sidebar({
         onClick={() => setMobileOpen(!mobileOpen)}
         className="md:hidden fixed top-3 left-3 z-50 w-9 h-9 bg-[#070A0F]/90 border border-white/10 rounded-xl flex items-center justify-center text-cyan-200 backdrop-blur"
         aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+        aria-expanded={mobileOpen}
+        aria-controls="mobile-sidebar"
       >
         {mobileOpen ? <X size={18} /> : <Menu size={18} />}
       </button>
@@ -216,7 +218,13 @@ export default function Sidebar({
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-40">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <aside className="relative z-10 w-64 h-full bg-[#070A0F] border-r border-white/10 flex flex-col animate-slide-in">
+          <aside
+            id="mobile-sidebar"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Dashboard navigation"
+            className="relative z-10 w-64 h-full bg-[#070A0F] border-r border-white/10 flex flex-col animate-slide-in"
+          >
             <Content compact={false} />
           </aside>
         </div>
