@@ -543,7 +543,9 @@ export default function App() {
         </div>
         )}
 
-        {!isHome && <MobileDock page={page} onNavigate={navigate} onSearch={() => setPaletteOpen(true)} />}
+        {!isHome && !mobileOpen && (
+          <MobileDock page={page} onNavigate={navigate} onSearch={() => setPaletteOpen(true)} />
+        )}
 
         <CommandPalette
           open={paletteOpen}
