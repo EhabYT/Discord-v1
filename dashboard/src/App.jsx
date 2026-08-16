@@ -9,6 +9,7 @@ import Home from './pages/Home.jsx';
 // shipped every admin page in one 617 kB bundle, slowing down login and mobile
 // navigation even when a user only needed Overview.
 const Overview = lazy(() => import('./pages/Overview.jsx'));
+const SystemStatus = lazy(() => import('./pages/SystemStatus.jsx'));
 const MusicController = lazy(() => import('./pages/MusicController.jsx'));
 const WelcomeAutoResponse = lazy(() => import('./pages/WelcomeAutoResponse.jsx'));
 const TicketSystem = lazy(() => import('./pages/TicketSystem.jsx'));
@@ -43,6 +44,7 @@ import { Activity, AlertTriangle, CheckCircle2, Languages, Search, Wifi, WifiOff
 
 const PAGES = {
   overview: Overview,
+  system: SystemStatus,
   analytics: Analytics,
   leaderboard: Leaderboard,
   livefeed: LiveFeed,
@@ -519,11 +521,11 @@ export default function App() {
                   <code className="block mt-1 text-[11px] text-cyan-300 break-all">{auth.redirectUri}</code>
                 </div>
               )}
-              {page === 'developer' ? (
+              {page === 'developer' || page === 'system' ? (
                 <div className="h-full animate-fade-in">
-                  <PageErrorBoundary key="developer">
+                  <PageErrorBoundary key={page}>
                     <Suspense fallback={<PageLoading />}>
-                      <Developer />
+                      <PageComponent pageHint={PAGE_HINTS[page]} />
                     </Suspense>
                   </PageErrorBoundary>
                 </div>

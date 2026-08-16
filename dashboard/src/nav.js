@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard, Music, MessageSquare, Ticket, TrendingUp,
+  Activity, LayoutDashboard, Music, MessageSquare, Ticket, TrendingUp,
   ScrollText, Shield, Gift, Users, BarChart3, Settings,
   SlidersHorizontal, ShieldCheck, Trophy, Radio, Send, Zap, Terminal, BadgeCheck, Tags, Cake, Lightbulb, Vote, Hash, Ghost, Megaphone,
 } from 'lucide-react';
@@ -7,6 +7,7 @@ import {
 export const NAV = [
   { section: 'Core' },
   { id: 'overview',      icon: LayoutDashboard,  label: 'Overview',       hint: 'Server health, uptime and audit log', keywords: 'home status ping cpu memory audit' },
+  { id: 'system',        icon: Activity,         label: 'System Status',  hint: 'V2 readiness for Dashboard, Discord and Supabase', keywords: 'health ready status database oauth v2' },
   { id: 'analytics',     icon: BarChart3,         label: 'Analytics',      hint: '24h messages, joins and commands', keywords: 'stats chart csv peak' },
   { id: 'leaderboard',   icon: Trophy,            label: 'Leaderboard',    hint: 'XP ranks and top members', keywords: 'rank xp top levels' },
   { id: 'livefeed',      icon: Radio,             label: 'Live Feed',      hint: 'Realtime joins, messages and mods', keywords: 'realtime events stream' },

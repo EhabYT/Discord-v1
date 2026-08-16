@@ -3,7 +3,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 const AR = {
   'section.Core': 'الأساسيات', 'section.Features': 'الميزات', 'section.Config': 'الإعدادات',
   'section.Owner': 'المالك', 'section.Developer': 'المطور',
-  'nav.overview': 'نظرة عامة', 'nav.analytics': 'التحليلات', 'nav.leaderboard': 'لوحة الصدارة',
+  'nav.overview': 'نظرة عامة', 'nav.system': 'حالة النظام', 'nav.analytics': 'التحليلات', 'nav.leaderboard': 'لوحة الصدارة',
   'nav.livefeed': 'النشاط المباشر', 'nav.members': 'الأعضاء', 'nav.music': 'الموسيقى',
   'nav.giveaways': 'الهدايا', 'nav.progression': 'النقاط والمستويات', 'nav.tickets': 'التذاكر',
   'nav.reactionroles': 'رتب التفاعل', 'nav.birthdays': 'أعياد الميلاد', 'nav.suggestions': 'الاقتراحات',
