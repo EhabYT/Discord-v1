@@ -2,11 +2,13 @@ import React, { useMemo, useState } from 'react';
 import { ChevronDown, ChevronLeft, ChevronRight, Crown, LogIn, LogOut, Menu, Search, X } from 'lucide-react';
 import clsx from 'clsx';
 import { NAV, LEVEL_LABELS, LEVEL_COLORS } from '../nav.js';
+import { useI18n } from '../i18n.jsx';
 
 export default function Sidebar({
   page, setPage, guilds, selectedGuild, setSelectedGuild, me,
   permLevel = 0, auth = {}, mobileOpen, setMobileOpen, collapsed, onToggleCollapsed,
 }) {
+  const { t } = useI18n();
   const [guildOpen, setGuildOpen] = useState(false);
   const [guildQuery, setGuildQuery] = useState('');
 
@@ -26,7 +28,7 @@ export default function Sidebar({
           {!compact && (
             <div className="min-w-0">
               <p className="text-sm font-bold text-white leading-none">EB Bot</p>
-              <p className="text-[10px] text-zinc-500 tracking-[0.14em] uppercase mt-1">Dashboard v6</p>
+              <p className="text-[10px] text-zinc-500 tracking-[0.14em] uppercase mt-1">Dashboard V2</p>
             </div>
           )}
         </div>
@@ -110,7 +112,7 @@ export default function Sidebar({
                 item.minLevel ? 'text-amber-600' : 'text-zinc-600'
               )}>
                 {item.minLevel && <Crown size={9} className="text-amber-600" />}
-                {item.section}
+                {t(`section.${item.section}`, item.section)}
               </p>
             );
           }
@@ -120,7 +122,7 @@ export default function Sidebar({
           return (
             <button
               key={id}
-              title={compact ? label : item.hint}
+              title={compact ? t(`nav.${id}`, label) : item.hint}
               onClick={() => { setPage(id); setMobileOpen(false); }}
               className={clsx(
                 'w-full',
@@ -129,7 +131,7 @@ export default function Sidebar({
               )}
             >
               <Icon size={15} className={isActive ? 'text-cyan-300' : 'text-zinc-500'} />
-              {!compact && <span className="truncate">{label}</span>}
+              {!compact && <span className="truncate">{t(`nav.${id}`, label)}</span>}
             </button>
           );
         })}
@@ -139,7 +141,7 @@ export default function Sidebar({
         <div className={clsx('border-t border-white/[0.06] space-y-2', compact ? 'px-2 py-3' : 'px-3 py-3')}>
           {!compact && (
             <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/5">
-              <span className="text-[10px] text-zinc-600 uppercase tracking-wider">Access</span>
+              <span className="text-[10px] text-zinc-600 uppercase tracking-wider">{t('common.access', 'Access')}</span>
               <span className={`text-[11px] font-bold ${LEVEL_COLORS[Math.min(permLevel, 3)]}`}>
                 {LEVEL_LABELS[Math.min(permLevel, 3)] || 'Admin'}
               </span>
@@ -167,14 +169,14 @@ export default function Sidebar({
               onClick={async () => { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); window.location.reload(); }}
               className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] text-zinc-400 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all"
             >
-              <LogOut size={12} /> Sign out
+              <LogOut size={12} /> {t('common.signOut', 'Sign out')}
             </button>
           ) : auth.oauthEnabled ? (
             <a
               href="/api/auth/discord"
               className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-cyan-200 bg-cyan-400/10 border border-cyan-400/30 hover:bg-cyan-400/20 transition-all"
             >
-              <LogIn size={12} /> Login with Discord
+              <LogIn size={12} /> {t('common.loginDiscord', 'Login with Discord')}
             </a>
           ) : null)}
 
@@ -200,7 +202,7 @@ export default function Sidebar({
     <>
       <button
         onClick={() => setMobileOpen(!mobileOpen)}
-        className="md:hidden fixed top-3 left-3 z-50 w-9 h-9 bg-[#070A0F]/90 border border-white/10 rounded-xl flex items-center justify-center text-cyan-200 backdrop-blur"
+        className="mobile-menu-button md:hidden fixed top-3 left-3 z-50 w-9 h-9 bg-[#070A0F]/90 border border-white/10 rounded-xl flex items-center justify-center text-cyan-200 backdrop-blur"
         aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
         aria-expanded={mobileOpen}
         aria-controls="mobile-sidebar"
@@ -209,7 +211,7 @@ export default function Sidebar({
       </button>
 
       <aside className={clsx(
-        'hidden md:flex flex-col h-screen sticky top-0 flex-shrink-0 bg-[#070A0F]/90 border-r border-white/[0.06] transition-[width] duration-200',
+        'dashboard-sidebar hidden md:flex flex-col h-screen sticky top-0 flex-shrink-0 bg-[#070A0F]/90 border-r border-white/[0.06] transition-[width] duration-200',
         collapsed ? 'w-[72px]' : 'w-60'
       )}>
         <Content compact={collapsed} />
@@ -223,7 +225,7 @@ export default function Sidebar({
             role="dialog"
             aria-modal="true"
             aria-label="Dashboard navigation"
-            className="relative z-10 w-64 h-full bg-[#070A0F] border-r border-white/10 flex flex-col animate-slide-in"
+            className="mobile-sidebar-panel relative z-10 w-64 h-full bg-[#070A0F] border-r border-white/10 flex flex-col animate-slide-in"
           >
             <Content compact={false} />
           </aside>

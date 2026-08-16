@@ -34,6 +34,8 @@ const FAKE_GUILD = '999999999999999999';
 // Routes that are public by design. Anything not on this list must be gated.
 const PUBLIC_ALLOWLIST = new Set([
     'GET /api/health',            // keep-tunnel.sh probes it
+    'GET /api/v2/status',         // public deployment diagnostics, no secrets
+    'GET /api/v2/ready',          // readiness probe (200 ready / 503 degraded)
     'GET /api/auth/status',       // the login page needs to know if OAuth exists
     'GET /api/auth/discord',      // the OAuth entry point itself
     'GET /api/auth/callback',

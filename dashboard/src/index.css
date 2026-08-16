@@ -56,6 +56,9 @@
     animation: aurora 22s ease-in-out infinite alternate;
   }
   #root { position: relative; z-index: 1; }
+  html[dir='rtl'] .mobile-menu-button { left: auto; right: 0.75rem; }
+  html[dir='rtl'] .mobile-sidebar-panel { margin-left: 0; margin-right: auto; border-right: 0; border-left: 1px solid rgba(255,255,255,0.1); }
+  html[dir='rtl'] .dashboard-sidebar { border-right: 0; border-left: 1px solid rgba(255,255,255,0.06); }
   ::selection { background: rgba(34, 211, 238, 0.28); color: #fff; }
   h1, h2, h3 { letter-spacing: -0.03em; }
   :focus-visible {

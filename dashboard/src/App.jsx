@@ -38,7 +38,8 @@ const StaffBoard = lazy(() => import('./pages/StaffBoard.jsx'));
 import api from './api.js';
 import { PAGE_TITLES, PAGE_HINTS, DOCK_PAGES, SEARCHABLE_PAGES } from './nav.js';
 import { rememberRecentPage } from './lib/clipboard.js';
-import { Activity, AlertTriangle, CheckCircle2, Search, Wifi, WifiOff, X } from 'lucide-react';
+import { useI18n } from './i18n.jsx';
+import { Activity, AlertTriangle, CheckCircle2, Languages, Search, Wifi, WifiOff, X } from 'lucide-react';
 
 const PAGES = {
   overview: Overview,
@@ -118,6 +119,7 @@ function PageLoading() {
 }
 
 function OAuthNotice() {
+  const { t } = useI18n();
   const [result, setResult] = useState(() => {
     try { return new window.URLSearchParams(window.location.search).get('oauth'); }
     catch { return null; }
@@ -135,10 +137,10 @@ function OAuthNotice() {
   if (!result) return null;
   const success = result === 'success';
   const message = success
-    ? 'Signed in with Discord. Your servers and permissions are ready.'
+    ? t('oauth.success', 'Signed in with Discord. Your servers and permissions are ready.')
     : result === 'session'
-      ? 'The login session could not be saved. Please try again.'
-      : 'Discord did not return a login code. Please start the login again.';
+      ? t('oauth.sessionError', 'The login session could not be saved. Please try again.')
+      : t('oauth.codeError', 'Discord did not return a login code. Please start the login again.');
   const Icon = success ? CheckCircle2 : AlertTriangle;
 
   return (
@@ -150,7 +152,7 @@ function OAuthNotice() {
       }`}>
         <Icon size={18} className="mt-0.5 flex-shrink-0" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">{success ? 'Welcome back' : 'Login needs attention'}</p>
+          <p className="text-sm font-semibold">{success ? t('oauth.welcome', 'Welcome back') : t('oauth.attention', 'Login needs attention')}</p>
           <p className="text-xs opacity-75 mt-0.5 leading-relaxed">{message}</p>
         </div>
         <button onClick={() => setResult(null)} className="p-1 rounded-lg hover:bg-white/10" aria-label="Dismiss notification">
@@ -203,6 +205,7 @@ class PageErrorBoundary extends React.Component {
 }
 
 function MobileDock({ page, onNavigate, onSearch }) {
+  const { t } = useI18n();
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 glass-header border-t border-white/[0.06] pb-[env(safe-area-inset-bottom)]">
       <div className="grid grid-cols-5 h-14">
@@ -216,17 +219,17 @@ function MobileDock({ page, onNavigate, onSearch }) {
               key={id}
               onClick={() => onNavigate(id)}
               aria-current={active ? 'page' : undefined}
-              aria-label={item.label}
+              aria-label={t(`nav.${id}`, item.label)}
               className={`flex flex-col items-center justify-center gap-0.5 text-[10px] transition-colors ${active ? 'text-cyan-200' : 'text-zinc-500 hover:text-zinc-300'}`}
             >
               <Icon size={16} />
-              {item.label.split(' ')[0]}
+              {t(`nav.${id}`, item.label).split(' ')[0]}
             </button>
           );
         })}
         <button onClick={onSearch} className="flex flex-col items-center justify-center gap-0.5 text-[10px] text-zinc-500">
           <Search size={16} />
-          Search
+          {t('common.search', 'Search')}
         </button>
       </div>
     </nav>
@@ -234,6 +237,7 @@ function MobileDock({ page, onNavigate, onSearch }) {
 }
 
 export default function App() {
+  const { locale, t, toggleLocale } = useI18n();
   const [page, setPage] = useState(getHashPage);
   const [guilds, setGuilds] = useState([]);
   const [selectedGuild, setSelectedGuild] = useState(null);
@@ -274,7 +278,7 @@ export default function App() {
   useEffect(() => {
     const title = PAGE_TITLES[page] || (page === 'home' ? 'Home' : 'Dashboard');
     const guild = selectedGuild?.name ? ` · ${selectedGuild.name}` : '';
-    document.title = `${title}${guild} — EB BOT`;
+    document.title = `${title}${guild} — EB V2`;
   }, [page, selectedGuild]);
 
   useEffect(() => {
@@ -427,10 +431,10 @@ export default function App() {
                   <p className="text-[10px] uppercase tracking-[0.16em] text-zinc-500 truncate">
                     {selectedGuild?.name || 'EB Dashboard'}
                     <span className="text-zinc-700"> / </span>
-                    <span className="text-zinc-400">v6</span>
+                    <span className="text-zinc-400">V2</span>
                   </p>
                   <h2 className="text-sm font-semibold text-white truncate leading-tight">
-                    {PAGE_TITLES[page] || 'Dashboard'}
+                    {t(`nav.${page}`, PAGE_TITLES[page] || 'Dashboard')}
                   </h2>
                 </div>
               </div>
@@ -441,7 +445,7 @@ export default function App() {
                   className="hidden md:flex items-center gap-2 h-9 px-3 rounded-xl border border-white/10 bg-white/[0.03] text-zinc-500 hover:text-zinc-200 hover:border-cyan-400/30 transition-all min-w-[220px]"
                 >
                   <Search size={13} />
-                  <span className="text-xs flex-1 text-left">Search pages, warn, music…</span>
+                  <span className="text-xs flex-1 text-start">{t('shell.searchPlaceholder', 'Search pages, warn, music…')}</span>
                   <kbd className="kbd">⌘K</kbd>
                 </button>
                 <button
@@ -458,13 +462,22 @@ export default function App() {
                   </div>
                 )}
 
+                <button
+                  onClick={toggleLocale}
+                  className="cyber-icon-button"
+                  aria-label={locale === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}
+                  title={locale === 'ar' ? 'English' : 'العربية'}
+                >
+                  <Languages size={16} />
+                </button>
+
                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-medium ${
                   health?.botOnline
                     ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300'
                     : 'border-red-500/25 bg-red-500/10 text-red-300'
                 }`}>
                   {health?.botOnline ? <Wifi size={11} /> : <WifiOff size={11} />}
-                  <span>{health?.botOnline ? 'Online' : 'Offline'}</span>
+                  <span>{health?.botOnline ? t('common.online', 'Online') : t('common.offline', 'Offline')}</span>
                   {health?.uptime ? <span className="hidden sm:inline text-zinc-500">· {formatUptime(health.uptime)}</span> : null}
                 </span>
                 <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-white/10 text-zinc-400 text-[11px]">
@@ -476,26 +489,26 @@ export default function App() {
 
             {health?.maintenance && (
               <div className="px-4 sm:px-6 py-2 text-xs text-fuchsia-200 bg-fuchsia-500/10 border-b border-fuchsia-500/20">
-                Maintenance mode is on — slash commands are blocked for everyone except the owner.
+                {t('shell.maintenance', 'Maintenance mode is on — slash commands are blocked for everyone except the owner.')}
               </div>
             )}
             {!browserOnline && (
               <div className="px-4 sm:px-6 py-2 text-xs text-red-200 bg-red-500/10 border-b border-red-500/20 flex items-center justify-between gap-3" role="alert">
-                <span>You are offline. Changes will not be saved until your connection returns.</span>
-                <span className="flex-shrink-0 font-semibold">No connection</span>
+                <span>{t('shell.browserOffline', 'You are offline. Changes will not be saved until your connection returns.')}</span>
+                <span className="flex-shrink-0 font-semibold">{t('shell.noConnection', 'No connection')}</span>
               </div>
             )}
             {browserOnline && apiReachable === false && (
               <div className="px-4 sm:px-6 py-2 text-xs text-amber-200 bg-amber-500/10 border-b border-amber-500/20 flex items-center justify-between gap-3">
-                <span>Dashboard API is unreachable. The service may be restarting.</span>
+                <span>{t('shell.apiUnavailable', 'Dashboard API is unreachable. The service may be restarting.')}</span>
                 <button onClick={() => window.location.reload()} className="flex-shrink-0 px-2.5 py-1 rounded-lg border border-amber-400/25 hover:bg-amber-400/10 font-semibold">
-                  Retry
+                  {t('common.retry', 'Retry')}
                 </button>
               </div>
             )}
             {apiReachable === true && health !== null && !health.botOnline && (
               <div className="px-4 sm:px-6 py-2 text-xs text-amber-200 bg-amber-500/10 border-b border-amber-500/20">
-                Bot appears offline. Commands and live data may be delayed until it reconnects.
+                {t('shell.botOffline', 'Bot appears offline. Commands and live data may be delayed until it reconnects.')}
               </div>
             )}
 
@@ -518,14 +531,14 @@ export default function App() {
                 <div className="min-h-full flex items-center justify-center p-8">
                   <div className="text-center max-w-sm cyber-card p-8 animate-slide-up">
                     <img src="/eb_logo.svg" alt="EB BOT" className="w-14 h-14 mx-auto mb-4 rounded-2xl object-cover ring-1 ring-white/10" />
-                    <p className="text-white font-semibold mb-2">No server selected</p>
+                    <p className="text-white font-semibold mb-2">{t('shell.noServer', 'No server selected')}</p>
                     <p className="text-sm text-zinc-500 mb-5">
                       {auth.oauthEnabled && !auth.loggedIn
-                        ? 'Log in with Discord to see the servers you can manage.'
-                        : 'Invite the bot to a server, then refresh this page.'}
+                        ? t('shell.loginToSee', 'Log in with Discord to see the servers you can manage.')
+                        : t('shell.inviteRefresh', 'Invite the bot to a server, then refresh this page.')}
                     </p>
                     {auth.oauthEnabled && !auth.loggedIn && (
-                      <a href="/api/auth/discord" className="cyber-button-solid inline-flex">Login with Discord</a>
+                      <a href="/api/auth/discord" className="cyber-button-solid inline-flex">{t('common.loginDiscord', 'Login with Discord')}</a>
                     )}
                   </div>
                 </div>

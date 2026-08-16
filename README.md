@@ -4,7 +4,7 @@ A Discord.js v14 bot with a React control panel — moderation, AutoMod, music,
 XP/levels, tickets, verification, giveaways and reaction roles, managed from a
 web dashboard with Discord OAuth login and role-based access control.
 
-**Version** 3.1.0 · **Node** 22.12 LTS · **100 slash commands** (Discord's per-app limit) · **MIT**
+**Product** V2 · **Package** 3.1.0 · **Node** 22.12 LTS · **100 slash commands** · **MIT**
 
 ---
 
@@ -50,6 +50,20 @@ Generate secrets with:
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
+
+### V2 foundation
+
+V2 is an in-place, backward-compatible upgrade. Existing `/api/*` routes and
+PostgreSQL data remain valid. The dashboard shell, navigation, OAuth feedback
+and homepage support English and Arabic with persistent LTR/RTL switching.
+Deployment diagnostics are versioned separately:
+
+```text
+GET /api/v2/status   # always 200; ready/degraded checks and capabilities
+GET /api/v2/ready    # 200 when ready, 503 while configuration is incomplete
+```
+
+Neither endpoint returns tokens, connection strings or user data.
 
 ---
 
