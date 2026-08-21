@@ -84,4 +84,11 @@ function emitLog(guildId, event) {
     }
 }
 
-module.exports = { setupSocket, emitLog };
+function closeSocket() {
+    if (!io) return Promise.resolve();
+    const active = io;
+    io = null;
+    return new Promise((resolve) => active.close(() => resolve()));
+}
+
+module.exports = { setupSocket, emitLog, closeSocket };

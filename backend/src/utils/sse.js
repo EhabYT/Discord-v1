@@ -41,11 +41,20 @@ function broadcast(event, data) {
 
 function clientCount() { return clients.size; }
 
-setInterval(() => {
+function closeAll() {
+    for (const res of clients.keys()) {
+        try { res.end(); } catch { /* connection already closed */ }
+    }
+    clients.clear();
+    guildThrottle.clear();
+}
+
+const cleanupTimer = setInterval(() => {
     const now = Date.now();
     for (const [guildId, ts] of guildThrottle.entries()) {
         if (now - ts > 60000) guildThrottle.delete(guildId);
     }
 }, 60000);
+cleanupTimer.unref();
 
-module.exports = { addClient, broadcast, clientCount, send };
+module.exports = { addClient, broadcast, clientCount, send, closeAll };

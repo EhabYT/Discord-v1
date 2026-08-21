@@ -6,8 +6,8 @@ const { createSessionStore } = require('./session-store');
 const path = require('path');
 const compression = require('compression');
 const logger = require('../../shared/lib/logger');
-const { setupSocket } = require('./websocket/socket');
-const { addClient, broadcast, clientCount, send } = require('./utils/sse');
+const { setupSocket, closeSocket } = require('./websocket/socket');
+const { addClient, broadcast, clientCount, send, closeAll: closeSseClients } = require('./utils/sse');
 const { requireAuth, logAuthMode } = require('./middleware/auth');
 const { csrfGuard } = require('./middleware/csrf');
 const rl = require('./middleware/rate-limit');
@@ -125,10 +125,30 @@ app.use(csrfGuard);
 app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    res.setHeader('Content-Security-Policy', [
+        "default-src 'self'",
+        "base-uri 'self'",
+        "object-src 'none'",
+        "frame-ancestors 'self'",
+        "script-src 'self'",
+        "style-src 'self' 'unsafe-inline'",
+        "font-src 'self' data:",
+        "img-src 'self' data: https:",
+        "connect-src 'self' ws: wss:",
+    ].join('; '));
+    if (IS_PROD) res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     next();
 });
 
+let dashboardStarted = false;
 function startDashboard(botClient) {
+    if (dashboardStarted) {
+        logger.warn('Dashboard start requested more than once — reusing the existing server');
+        return httpServer;
+    }
+    dashboardStarted = true;
     setupSocket(httpServer, sessionMiddleware, botClient);
 
     const authRouter = require('./routes/auth')(botClient);
@@ -452,8 +472,16 @@ function startDashboard(botClient) {
     httpServer.listen(PORT, '0.0.0.0', () => {
         logger.info(`✨ Dashboard active at http://0.0.0.0:${PORT}`);
     });
+    return httpServer;
+}
+
+async function stopDashboard() {
+    closeSseClients();
+    await closeSocket();
+    if (!httpServer.listening) return;
+    await new Promise((resolve) => httpServer.close(() => resolve()));
 }
 
 if (require.main === module) startDashboard(null);
 
-module.exports = { startDashboard, app, httpServer, sessionMiddleware };
+module.exports = { startDashboard, stopDashboard, app, httpServer, sessionMiddleware };

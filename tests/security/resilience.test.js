@@ -180,6 +180,11 @@ function makeClient() {
         /Startup diagnostics failed[\s\S]{0,200}return;/.test(idx));
     check('Discord login rejection is handled locally',
         /await client\.login[\s\S]{0,800}catch \(err\)/.test(idx));
+    check('SIGTERM performs graceful lifecycle cleanup',
+        /process\.once\('SIGTERM'/.test(idx)
+        && /scheduler\.removeAll\(\)/.test(idx)
+        && /await stopDashboard\(\)/.test(idx)
+        && /await closePool\(\)/.test(idx));
 
     // Restore the real logger.
     for (const level of ['error', 'warn', 'info', 'debug']) {

@@ -179,6 +179,14 @@ class Logger {
     this.timers.delete(label);
     return ms;
   }
+
+  close() {
+    const end = (stream) => new Promise((resolve) => {
+      if (!stream || stream.destroyed || stream.closed) return resolve();
+      stream.end(resolve);
+    });
+    return Promise.all([end(this.generalStream), end(this.errorStream)]);
+  }
 }
 
 module.exports = new Logger();

@@ -3,14 +3,14 @@ const path = require('path');
 const fs = require('fs');
 const { Client, GatewayIntentBits, Partials, Collection } = require('discord.js');
 const { Player } = require('discord-player');
-const { db } = require('../../database/index');
+const { db, closePool } = require('../../database/index');
 
 const logger = require('../../shared/lib/logger');
 const scheduler = require('./scheduler.js');
 const { loadEvents } = require('./events');
 const { registerJobs } = require('../../shared/services/scheduler-jobs');
 const { deployCommands, runDiagnostics } = require('../../shared/services/startup');
-const { startDashboard } = require('../../backend/src/server');
+const { startDashboard, stopDashboard } = require('../../backend/src/server');
 
 // Initialize Client
 const client = new Client({
@@ -176,3 +176,30 @@ bootstrap().catch((err) => {
   scheduleRetry('Unexpected bootstrap failure');
 });
 /* eslint-enable require-atomic-updates */
+
+let shuttingDown = false;
+async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  client.bootstrapState.state = 'shutting-down';
+  logger.info(`Received ${signal}; shutting down gracefully`);
+  const forceExit = setTimeout(() => process.exit(1), 10_000);
+  forceExit.unref();
+  if (retryTimer) clearTimeout(retryTimer);
+  scheduler.removeAll();
+  try { await Promise.resolve(client.destroy()); } catch (err) {
+    logger.warn('Discord client shutdown failed', { error: err?.message || String(err) });
+  }
+  try { await stopDashboard(); } catch (err) {
+    logger.warn('HTTP shutdown failed', { error: err?.message || String(err) });
+  }
+  try { await closePool(); } catch (err) {
+    logger.warn('PostgreSQL pool shutdown failed', { error: err?.message || String(err) });
+  }
+  clearTimeout(forceExit);
+  await logger.close();
+  process.exit(0);
+}
+
+process.once('SIGTERM', () => shutdown('SIGTERM'));
+process.once('SIGINT', () => shutdown('SIGINT'));

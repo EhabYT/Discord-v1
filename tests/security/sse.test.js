@@ -1,4 +1,4 @@
-const { addClient, broadcast } = require('../../backend/src/utils/sse');
+const { addClient, broadcast, clientCount, closeAll } = require('../../backend/src/utils/sse');
 
 function fakeResponse() {
     return {
@@ -30,6 +30,8 @@ check('guild B receives its event', b.chunks.some((c) => c.includes('private-b')
 check('guild A cannot receive guild B event', !a.chunks.some((c) => c.includes('private-b')));
 check('SSE disables proxy transformations', a.headers?.['Cache-Control'] === 'no-cache, no-transform');
 
+closeAll();
+check('graceful shutdown closes every SSE client', clientCount() === 0);
 removeA();
 removeB();
 console.log(fails === 0 ? '\nAll SSE isolation checks passed.\n' : `\n${fails} CHECK(S) FAILED.\n`);

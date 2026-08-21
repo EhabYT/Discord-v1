@@ -67,7 +67,7 @@ function req(path, { method = 'GET', headers = {}, body } = {}) {
             (res) => {
                 let out = '';
                 res.on('data', (c) => { out += c; });
-                res.on('end', () => resolve({ status: res.statusCode, body: out }));
+                res.on('end', () => resolve({ status: res.statusCode, body: out, headers: res.headers }));
             }
         );
         r.on('error', () => resolve({ status: 0, body: '' }));
@@ -116,6 +116,13 @@ const MUST_401 = [
     const leaks = ['publicUrl', 'sseClients', '"guilds"'].filter((k) => health.body.includes(k));
     if (leaks.length) { failures++; console.log(`  FAIL  health leaks to anonymous: ${leaks.join(', ')}`); }
     else console.log('  PASS  no guild count / SSE count / public URL in anonymous health');
+    const csp = health.headers['content-security-policy'] || '';
+    const secureHeaders = csp.includes("default-src 'self'")
+        && health.headers['x-content-type-options'] === 'nosniff'
+        && health.headers['referrer-policy'] === 'no-referrer'
+        && /microphone=\(\)/.test(health.headers['permissions-policy'] || '');
+    if (!secureHeaders) failures++;
+    console.log(`  ${secureHeaders ? 'PASS' : 'FAIL'}  security headers and CSP are present`);
 
     console.log('\nForged proxy headers must not unlock the localhost bypass:\n');
     for (const h of [{ 'X-Forwarded-For': '1.2.3.4' }, { 'X-Forwarded-Host': 'evil.com' }]) {

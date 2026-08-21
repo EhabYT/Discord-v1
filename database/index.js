@@ -130,7 +130,15 @@ function getCached(key) { return db.get(key); }
 async function setCached(key, value) { await db.set(key, value); }
 async function deleteCached(key) { await db.delete(key); }
 
+async function closePool() {
+    if (!sharedPool) return;
+    const pool = sharedPool;
+    sharedPool = null;
+    poolConfigError = null;
+    await pool.end();
+}
+
 module.exports = {
     db, getCached, setCached, deleteCached,
-    getPool, normalizeDatabaseUrl, databaseConfigIssue, MemoryDatabase, PostgresDatabase,
+    getPool, closePool, normalizeDatabaseUrl, databaseConfigIssue, MemoryDatabase, PostgresDatabase,
 };
