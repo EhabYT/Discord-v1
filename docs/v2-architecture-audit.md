@@ -1,7 +1,7 @@
 # EB Bot V2 — Architecture, Security, and Dashboard Separation Audit
 
 Date: 2026-08-21  
-Scope: 352 tracked files, 29 dashboard pages, 11 shared components, 100 bot commands, 22 gateway/player event modules, and 149 explicit router endpoint declarations.
+Scope: 360 tracked files, 29 dashboard pages, 11 shared components, 100 bot commands, 22 gateway/player event modules, and 150 explicit router endpoint declarations.
 
 ## Executive summary
 
