@@ -206,6 +206,20 @@ proxy/tunnel; use Render's Environment panel for deployed secrets.
 | `LOG_LEVEL` | `info` | `debug` \| `info` \| `warn` \| `error` |
 | `SUPPORT_INVITE` | — | Support server invite shown in `/help` |
 
+### System roles
+
+Developer infrastructure access is separate from guild permissions:
+
+```text
+SUPER_ADMIN > DEVELOPER > SUPPORT > NONE
+```
+
+`OWNER_ID` and the Discord application owner receive `SUPER_ADMIN`.
+`DEVELOPER_IDS` requires an independent `DEV_TOKEN` second factor.
+`SUPPORT_IDS` receives read-only operational access. The canonical API prefix is
+`/api/developer/*`; the old `/api/dev/*` prefix redirects for compatibility.
+Guild Administrator permission never grants a system role.
+
 ### Discord Developer Portal setup
 
 1. **Bot → Privileged Gateway Intents** — enable **Server Members**,

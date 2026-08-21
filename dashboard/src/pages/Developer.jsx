@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Terminal, Lock, RefreshCw, FileText, Database, Cpu, Radio,
+  Activity, Terminal, Lock, RefreshCw, FileText, Database, Cpu, Radio,
   Shield, Power, KeyRound, Server,
 } from 'lucide-react';
 import PageHeader from '../components/PageHeader.jsx';
@@ -49,6 +49,7 @@ export default function Developer() {
   const [dbInfo, setDbInfo] = useState(null);
   const [guilds, setGuilds] = useState([]);
   const [audit, setAudit] = useState([]);
+  const [metrics, setMetrics] = useState(null);
   const [busy, setBusy] = useState('');
   const systemLevel = ROLE_LEVEL[who?.role] || 0;
 
@@ -90,6 +91,7 @@ export default function Developer() {
       if (tab === 'db') setDbInfo(await api.get('/api/developer/db'));
       if (tab === 'guilds') setGuilds((await api.get('/api/developer/guilds')).guilds || []);
       if (tab === 'audit') setAudit((await api.get('/api/developer/audit?limit=150')).events || []);
+      if (tab === 'performance') setMetrics(await api.get('/api/developer/metrics'));
     } catch (err) {
       if (String(err.message).includes('Developer')) loadWho();
       else toast.error(err.message || 'Load failed');
@@ -176,6 +178,7 @@ export default function Developer() {
     ['logs', 'Logs', 2],
     ['env', 'Environment', 2],
     ['db', 'Database', 2],
+    ['performance', 'Performance', 2],
     ['audit', 'Audit Log', 2],
   ].filter(([, , minimum]) => systemLevel >= minimum);
 
@@ -377,6 +380,42 @@ export default function Developer() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {tab === 'performance' && metrics && (
+        <div className="space-y-3">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {[
+              ['Requests', metrics.requests?.total ?? 0, `${(metrics.requests?.perSecond || 0).toFixed(2)}/s`],
+              ['P95 latency', `${(metrics.requests?.p95LatencyMs || 0).toFixed(1)} ms`, `avg ${(metrics.requests?.avgLatencyMs || 0).toFixed(1)} ms`],
+              ['Error rate', `${((metrics.requests?.errorRate || 0) * 100).toFixed(2)}%`, `${metrics.requests?.errors || 0} errors`],
+              ['Event loop P95', `${(metrics.process?.eventLoopP95Ms || 0).toFixed(1)} ms`, `max ${(metrics.process?.eventLoopMaxMs || 0).toFixed(1)} ms`],
+            ].map(([label, value, sub]) => (
+              <div key={label} className="cyber-card p-4">
+                <p className="text-[10px] uppercase tracking-widest text-zinc-600">{label}</p>
+                <p className="text-lg font-bold text-white mt-1">{value}</p>
+                <p className="text-[11px] text-zinc-600">{sub}</p>
+              </div>
+            ))}
+          </div>
+          <div className="cyber-card p-4">
+            <p className="text-xs font-semibold text-white mb-3 flex items-center gap-1.5"><Activity size={13} /> Top API paths</p>
+            <div className="max-h-80 overflow-auto space-y-1">
+              {(metrics.requests?.paths || []).map((row) => (
+                <div key={row.path} className="grid grid-cols-[1fr_auto_auto] gap-3 px-2 py-1.5 rounded bg-white/[0.025] text-[11px]">
+                  <span className="font-mono text-cyan-200 truncate">{row.path}</span>
+                  <span className="text-zinc-500">{row.requests} req</span>
+                  <span className="text-zinc-500">{row.avgLatencyMs.toFixed(1)} ms</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="cyber-card p-4 text-xs text-zinc-400 grid sm:grid-cols-3 gap-2">
+            <span>RSS: {bytes(metrics.process?.rss)}</span>
+            <span>Heap: {bytes(metrics.process?.heapUsed)}</span>
+            <span>401 / 403 / 429: {metrics.requests?.authFailures || 0} / {metrics.requests?.forbidden || 0} / {metrics.requests?.rateLimited || 0}</span>
+          </div>
         </div>
       )}
 

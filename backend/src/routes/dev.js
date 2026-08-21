@@ -11,6 +11,7 @@ const {
 const { isLoopback } = require('../middleware/auth');
 const { clientCount } = require('../utils/sse');
 const { recordDeveloperAction, readDeveloperAudit } = require('../../../shared/services/developer-audit');
+const { metricsSnapshot } = require('../metrics');
 
 const ROOT = path.join(__dirname, '..', '..', '..');
 const LOG_DIR = path.join(ROOT, 'logs');
@@ -263,6 +264,10 @@ module.exports = (botClient) => {
         await db.set('dev_flags', cur);
         recordDeveloperAction(req, 'features.update', 'dev_flags', 'success', cur);
         res.json(cur);
+    });
+
+    router.get('/metrics', developerOnly, (_req, res) => {
+        res.json(metricsSnapshot());
     });
 
     router.get('/audit', developerOnly, (req, res) => {

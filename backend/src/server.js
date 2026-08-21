@@ -12,6 +12,7 @@ const { requireAuth, logAuthMode } = require('./middleware/auth');
 const { csrfGuard } = require('./middleware/csrf');
 const rl = require('./middleware/rate-limit');
 const { errorHandler } = require('./middleware/errors');
+const { metricsMiddleware, closeMetrics } = require('./metrics');
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -59,6 +60,7 @@ app.use((req, res, next) => {
     res.setHeader('X-Request-ID', req.requestId);
     next();
 });
+app.use(metricsMiddleware);
 
 // Fail closed on authentication, but do not take Render's entire HTTP service
 // offline just because SESSION_SECRET was omitted. When Supabase is configured,
@@ -489,6 +491,7 @@ function startDashboard(botClient) {
 }
 
 async function stopDashboard() {
+    closeMetrics();
     closeSseClients();
     await closeSocket();
     if (!httpServer.listening) return;

@@ -76,6 +76,7 @@ Actual supported developer sections:
 - Feature flags and maintenance mode
 - Explicit command deployment
 - Persistent developer action audit log
+- Request, error-rate, latency, event-loop, and process-memory metrics
 
 No fake cache, Redis, Lavalink, shard, queue, arbitrary SQL, shell, rollback, or migration-control page was created because those capabilities do not exist in this runtime.
 
@@ -223,6 +224,22 @@ Currently audited actions include developer unlock/lock, authorization denials f
 - Internal stack traces and filesystem paths are not returned.
 - PostgreSQL operational failures become actionable, sanitized 503 responses.
 - Developer audit and ordinary application logs are separate.
+
+## Performance monitoring
+
+The backend collects bounded, process-local operational metrics without storing
+request bodies, query strings, guild IDs, or user IDs. Discord snowflakes and
+UUIDs are normalized before endpoint aggregation. Developer-only metrics include:
+
+- request totals and requests/second
+- 401, 403, 429, and 5xx counters
+- average, maximum, p50, and p95 response latency
+- top normalized API paths
+- RSS, heap, and external memory
+- event-loop mean, max, and p95 delay
+
+The in-memory samples are capped and reset on process restart. A shared metrics
+backend is still recommended before running multiple application instances.
 
 ## Deployment and lifecycle
 
