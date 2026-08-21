@@ -121,7 +121,7 @@ export default function Sidebar({
             );
           }
           if (item.minLevel && permLevel < item.minLevel) return null;
-          if (item.id === 'developer' && !canSeeDeveloper) return null;
+          if (item.systemOnly && !canSeeDeveloper) return null;
           const { id, icon: Icon, label } = item;
           const isActive = page === id;
           return (

@@ -386,6 +386,10 @@ export default function App() {
   const PageComponent = PAGES[page] || Overview;
   const isLive = page === 'livefeed';
   const isHome = page === 'home';
+  const canSeeSystem = developerAccess.baseRole !== 'NONE'
+    || developerAccess.role !== 'NONE'
+    || developerAccess.canUnlock === true;
+  const systemPageDenied = (page === 'system' || page === 'developer') && !canSeeSystem;
   const publicUrl = health?.publicUrl || '';
 
   if (loading) {
@@ -525,7 +529,16 @@ export default function App() {
                   <code className="block mt-1 text-[11px] text-cyan-300 break-all">{auth.redirectUri}</code>
                 </div>
               )}
-              {page === 'developer' || page === 'system' ? (
+              {systemPageDenied ? (
+                <div className="min-h-full flex items-center justify-center p-8">
+                  <div className="cyber-card max-w-sm p-7 text-center">
+                    <AlertTriangle size={28} className="mx-auto text-red-300 mb-3" />
+                    <p className="text-white font-semibold">System access required</p>
+                    <p className="text-sm text-zinc-500 mt-2">This backend page is available only to configured SUPPORT, DEVELOPER, or SUPER_ADMIN identities.</p>
+                    <button onClick={() => navigate('overview')} className="cyber-button mt-5">Return to dashboard</button>
+                  </div>
+                </div>
+              ) : page === 'developer' || page === 'system' ? (
                 <div className="h-full animate-fade-in">
                   <PageErrorBoundary key={page}>
                     <Suspense fallback={<PageLoading />}>

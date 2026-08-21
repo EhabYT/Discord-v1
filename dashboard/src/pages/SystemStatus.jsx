@@ -25,7 +25,7 @@ export default function SystemStatus({ pageHint }) {
   const refresh = useCallback(async () => {
     setError('');
     try {
-      setSnapshot(await api.get('/api/v2/status'));
+      setSnapshot(await api.get('/api/developer/system-status'));
     } catch (err) {
       setError(err.message || 'Status request failed');
     } finally {

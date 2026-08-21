@@ -220,7 +220,7 @@ React 19 + Vite, served from the same origin as the Express API.
 
 ### Normal Dashboard
 
-- Overview and System Status
+- Overview
 - Analytics, leaderboard, and live activity
 - Members and moderation
 - Music
@@ -266,7 +266,7 @@ Legacy `/api/dev/*` requests receive a method-preserving `308` redirect.
 
 | Feature | SUPPORT | DEVELOPER | SUPER_ADMIN |
 |---|:---:|:---:|:---:|
-| System overview | ✓ | ✓ | ✓ |
+| System overview and backend readiness | ✓ | ✓ | ✓ |
 | Command metadata | ✓ | ✓ | ✓ |
 | Safe Bot Config metadata | ✓ | ✓ | ✓ |
 | Guild operational summary | ✓ | ✓ | ✓ |
@@ -345,6 +345,7 @@ GET  /api/developer/whoami
 POST /api/developer/unlock
 POST /api/developer/lock
 GET  /api/developer/overview
+GET  /api/developer/system-status
 GET  /api/developer/commands
 GET  /api/developer/config
 GET  /api/developer/guilds
@@ -485,7 +486,7 @@ Current verification scope:
 - 100 Discord commands
 - Bot Config schema and AutoMod normalization
 - 20 security suites
-- 158 API routes
+- 159 API routes
 - OAuth, sessions, CSRF, and guild isolation
 - Discord hierarchy and privacy redaction
 - Abuse and rate limits
@@ -556,8 +557,8 @@ instances can sleep even when the gateway connection is healthy.
 Browser
   └─ React Dashboard V2
        ├─ Normal guild dashboard
-       ├─ Public secret-free System Status
        └─ Role-scoped Developer Control Center
+            └─ Backend-only System Status UI
             │
             ▼
 Express Backend

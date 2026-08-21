@@ -18,7 +18,7 @@ export default function CommandPalette({ open, onClose, onNavigate, permLevel = 
     const q = query.trim().toLowerCase();
     const pages = SEARCHABLE_PAGES.filter((item) => {
       if (item.minLevel && !item.always && permLevel < item.minLevel) return false;
-      if (item.id === 'developer' && !canSeeDeveloper) return false;
+      if (item.systemOnly && !canSeeDeveloper) return false;
       if (!q) return true;
       const hay = `${item.label} ${item.id} ${item.hint || ''} ${item.keywords || ''}`.toLowerCase();
       return hay.includes(q);

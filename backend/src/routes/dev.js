@@ -15,6 +15,7 @@ const { metricsSnapshot } = require('../metrics');
 const { invalidateMaintenanceCache } = require('../middleware/maintenance');
 const { config: botConfig } = require('../../../shared/config/bot-config');
 const scheduler = require('../../../bot/src/scheduler');
+const { systemSnapshot } = require('./v2');
 
 const ROOT = path.join(__dirname, '..', '..', '..');
 const LOG_DIR = path.join(ROOT, 'logs');
@@ -179,6 +180,11 @@ module.exports = (botClient) => {
         } catch (err) {
             next(err);
         }
+    });
+
+    router.get('/system-status', supportOnly, async (_req, res, next) => {
+        try { return res.json(await systemSnapshot(botClient)); }
+        catch (err) { return next(err); }
     });
 
     router.get('/logs', developerOnly, (req, res, next) => {

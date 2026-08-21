@@ -1,7 +1,7 @@
 # EB Bot V2 — Architecture, Security, and Dashboard Separation Audit
 
 Date: 2026-08-21  
-Scope: 364 tracked files, 29 dashboard pages, 11 shared components, 100 bot commands, 22 gateway/player event modules, and 155 explicit router endpoint declarations.
+Scope: 365 tracked files, 29 dashboard pages, 11 shared components, 100 bot commands, 22 gateway/player event modules, and 156 explicit router endpoint declarations.
 
 ## Executive summary
 
@@ -21,8 +21,8 @@ The largest issue found during this separation audit was not file placement but 
 Browser
   └─ React Dashboard V2
        ├─ normal guild-management pages
-       ├─ system readiness page (public, secret-free)
        └─ developer control center (system-role discovery)
+            └─ role-protected System Status page
             │
             ▼
 Express API
@@ -54,7 +54,7 @@ substring checks.
 
 The following remain visible to authenticated guild users subject to guild role level:
 
-- Overview and system readiness
+- Overview
 - Analytics, leaderboard, and live feed
 - Members and moderation tools
 - Music
@@ -76,6 +76,7 @@ The Developer navigation item is now shown only when `/api/developer/whoami` rep
 
 Actual supported developer sections:
 
+- Role-protected System Status and full-service readiness
 - System/process overview
 - Bot status, ping, guild count, and command registry
 - Approved application and tunnel logs

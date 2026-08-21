@@ -7,7 +7,6 @@ import {
 export const NAV = [
   { section: 'Core' },
   { id: 'overview',      icon: LayoutDashboard,  label: 'Overview',       hint: 'Server health, uptime and audit log', keywords: 'home status ping cpu memory audit' },
-  { id: 'system',        icon: Activity,         label: 'System Status',  hint: 'V2 readiness for Dashboard, Discord and Supabase', keywords: 'health ready status database oauth v2' },
   { id: 'analytics',     icon: BarChart3,         label: 'Analytics',      hint: '24h messages, joins and commands', keywords: 'stats chart csv peak' },
   { id: 'leaderboard',   icon: Trophy,            label: 'Leaderboard',    hint: 'XP ranks and top members', keywords: 'rank xp top levels' },
   { id: 'livefeed',      icon: Radio,             label: 'Live Feed',      hint: 'Realtime joins, messages and mods', keywords: 'realtime events stream' },
@@ -37,7 +36,8 @@ export const NAV = [
   { id: 'embedbuilder',  icon: Send,              label: 'Embed Builder',  hint: 'Compose and send rich embeds', minLevel: 3, keywords: 'embed send announce' },
   { id: 'autoresponder', icon: Zap,               label: 'Auto-Responder', hint: 'Keyword replies', minLevel: 3, keywords: 'trigger reply exact keyword' },
   { section: 'Developer', always: true },
-  { id: 'developer',     icon: Terminal,          label: 'Developer',      hint: 'Owner-only backend, logs and tunnel', always: true, keywords: 'dev logs env token tunnel debug' },
+  { id: 'system',        icon: Activity,          label: 'System Status',  hint: 'V2 backend readiness for Dashboard, Discord and Supabase', systemOnly: true, always: true, keywords: 'health ready status database oauth v2' },
+  { id: 'developer',     icon: Terminal,          label: 'Developer',      hint: 'Role-scoped backend control center', systemOnly: true, always: true, keywords: 'dev logs env token tunnel debug' },
 ];
 
 export const PAGE_TITLES = Object.fromEntries(
