@@ -4,17 +4,21 @@ import clsx from 'clsx';
 import { SEARCHABLE_PAGES } from '../nav.js';
 import { copyText, readRecentPages } from '../lib/clipboard.js';
 
-export default function CommandPalette({ open, onClose, onNavigate, permLevel = 0, page, publicUrl }) {
+export default function CommandPalette({ open, onClose, onNavigate, permLevel = 0, developerAccess = {}, page, publicUrl }) {
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const inputRef = useRef(null);
   const listRef = useRef(null);
   const recents = useMemo(() => (open ? readRecentPages() : []), [open]);
+  const canSeeDeveloper = developerAccess.baseRole !== 'NONE'
+    || developerAccess.role !== 'NONE'
+    || developerAccess.canUnlock === true;
 
   const items = useMemo(() => {
     const q = query.trim().toLowerCase();
     const pages = SEARCHABLE_PAGES.filter((item) => {
       if (item.minLevel && !item.always && permLevel < item.minLevel) return false;
+      if (item.id === 'developer' && !canSeeDeveloper) return false;
       if (!q) return true;
       const hay = `${item.label} ${item.id} ${item.hint || ''} ${item.keywords || ''}`.toLowerCase();
       return hay.includes(q);
@@ -35,7 +39,7 @@ export default function CommandPalette({ open, onClose, onNavigate, permLevel = 
       icon: Copy,
     }] : [];
     return [...actions, ...recentItems, ...rest];
-  }, [query, permLevel, recents, publicUrl]);
+  }, [query, permLevel, recents, publicUrl, canSeeDeveloper]);
 
   useEffect(() => {
     if (!open) return;

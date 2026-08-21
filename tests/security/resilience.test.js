@@ -126,6 +126,15 @@ function makeClient() {
     try { describe(circular); } catch { circularOk = false; }
     check('describe() handles a circular object', circularOk);
 
+    const redacted = logger.constructor._sanitizeMeta({
+        nested: { authorization: 'Bearer real-secret', databaseUrl: 'postgresql://secret' },
+        safe: 'ok',
+    });
+    check('logger recursively redacts nested credentials',
+        redacted.nested.authorization === '[REDACTED]'
+        && redacted.nested.databaseUrl === '[REDACTED]'
+        && redacted.safe === 'ok');
+
     console.log('\nH3 — uncaughtException must terminate the process:\n');
 
     // Run index.js's handler shape in a child process and assert it exits non-zero.

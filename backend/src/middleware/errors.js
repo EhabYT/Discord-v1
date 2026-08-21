@@ -127,7 +127,7 @@ function errorHandler(err, req, res, next) {
     if (res.headersSent) return next(err);
 
     const { status, message, code, expose } = classify(err);
-    const requestId = crypto.randomBytes(6).toString('hex');
+    const requestId = req.requestId || crypto.randomBytes(6).toString('hex');
 
     const logMeta = {
         requestId,

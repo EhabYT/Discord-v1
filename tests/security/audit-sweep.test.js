@@ -41,8 +41,11 @@ const PUBLIC_ALLOWLIST = new Set([
     'GET /api/auth/callback',
     'GET /api/auth/discord/callback',
     'POST /api/auth/logout',      // must work even with a dead session
-    'GET /api/dev/whoami',        // reports only whether you are unlocked
-    'POST /api/dev/unlock',       // the unlock endpoint, rate-limited
+    'GET /api/developer/whoami',  // canonical developer access discovery
+    'POST /api/developer/unlock', // authenticated role + second factor
+    'POST /api/developer/lock',
+    'GET /api/dev/whoami',        // backward-compatible alias
+    'POST /api/dev/unlock',
     'POST /api/dev/lock',
 ]);
 
@@ -178,7 +181,7 @@ const check = (label, ok, detail = '') => {
 
     // Pin the authoritative API inventory so a refactor cannot silently drop
     // (or accidentally duplicate) an endpoint while moving files.
-    check('route discovery found the full API surface', routes.length === 151, `${routes.length} routes`);
+    check('route discovery found the full API surface', routes.length === 152, `${routes.length} routes`);
 
     const leaks = [];
     for (const r of routes) {

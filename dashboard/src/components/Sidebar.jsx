@@ -6,11 +6,14 @@ import { useI18n } from '../i18n.jsx';
 
 export default function Sidebar({
   page, setPage, guilds, selectedGuild, setSelectedGuild, me,
-  permLevel = 0, auth = {}, mobileOpen, setMobileOpen, collapsed, onToggleCollapsed,
+  permLevel = 0, auth = {}, developerAccess = {}, mobileOpen, setMobileOpen, collapsed, onToggleCollapsed,
 }) {
   const { t } = useI18n();
   const [guildOpen, setGuildOpen] = useState(false);
   const [guildQuery, setGuildQuery] = useState('');
+  const canSeeDeveloper = developerAccess.baseRole !== 'NONE'
+    || developerAccess.role !== 'NONE'
+    || developerAccess.canUnlock === true;
 
   const filteredGuilds = useMemo(() => {
     const q = guildQuery.trim().toLowerCase();
@@ -102,6 +105,7 @@ export default function Sidebar({
       <nav className={clsx('flex-1 py-3 space-y-0.5 overflow-y-auto', compact ? 'px-2' : 'px-3')}>
         {NAV.map((item, i) => {
           if (item.section) {
+            if (item.section === 'Developer' && !canSeeDeveloper) return null;
             if (item.minLevel && !item.always && permLevel < item.minLevel) return null;
             if (compact) {
               return <div key={i} className="my-2 mx-2 h-px bg-white/[0.06]" />;
@@ -117,6 +121,7 @@ export default function Sidebar({
             );
           }
           if (item.minLevel && permLevel < item.minLevel) return null;
+          if (item.id === 'developer' && !canSeeDeveloper) return null;
           const { id, icon: Icon, label } = item;
           const isActive = page === id;
           return (

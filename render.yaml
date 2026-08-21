@@ -35,3 +35,9 @@ services:
         sync: false
       - key: OWNER_ID
         sync: false
+      - key: DEVELOPER_IDS
+        sync: false
+      - key: SUPPORT_IDS
+        sync: false
+      - key: DEV_TOKEN
+        sync: false

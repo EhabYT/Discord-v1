@@ -4,13 +4,18 @@ const path = require('path');
 const express = require('express');
 const { db } = require('../../../database/index');
 const { readPublicUrl } = require('../../../shared/services/public-url');
-const { requireDev, isDev, tokenOk, redactEnv, ownerIds } = require('../middleware/devauth');
+const {
+    SYSTEM_ROLES, ROLE_NAMES, requireSystemRole, systemRole, baseSystemRole,
+    tokenOk, redactEnv, ownerIds,
+} = require('../middleware/devauth');
+const { isLoopback } = require('../middleware/auth');
 const { clientCount } = require('../utils/sse');
+const { recordDeveloperAction, readDeveloperAudit } = require('../../../shared/services/developer-audit');
 
 const ROOT = path.join(__dirname, '..', '..', '..');
 const LOG_DIR = path.join(ROOT, 'logs');
 const ALLOWED_LOGS = new Set([
-    'general.log', 'error.log', 'tunnel-watch.log', 'cloudflared.log', 'dead-hosts.txt',
+    'general.log', 'error.log', 'developer-audit.log', 'tunnel-watch.log', 'cloudflared.log', 'dead-hosts.txt',
 ]);
 
 const unlockHits = new Map();
@@ -67,34 +72,57 @@ function procs() {
 
 module.exports = (botClient) => {
     const router = express.Router();
+    const supportOnly = requireSystemRole(botClient, SYSTEM_ROLES.SUPPORT);
+    const developerOnly = requireSystemRole(botClient, SYSTEM_ROLES.DEVELOPER);
+    const superAdminOnly = requireSystemRole(botClient, SYSTEM_ROLES.SUPER_ADMIN);
 
     router.get('/whoami', (req, res) => {
+        const base = baseSystemRole(req, botClient);
+        const effective = systemRole(req, botClient);
         res.json({
-            unlocked: isDev(req, botClient),
+            unlocked: effective >= SYSTEM_ROLES.SUPPORT,
             loggedIn: !!req.session?.user?.id,
-            userId: req.session?.user?.id || null,
-            tokenConfigured: !!(process.env.DEV_TOKEN && process.env.DEV_TOKEN.length >= 16),
-            ownerConfigured: !!(process.env.OWNER_ID),
+            role: ROLE_NAMES[effective],
+            baseRole: ROLE_NAMES[base],
+            canUnlock: base >= SYSTEM_ROLES.DEVELOPER
+                || (process.env.NODE_ENV !== 'production' && isLoopback(req)),
+            tokenConfigured: !!(process.env.DEV_TOKEN && process.env.DEV_TOKEN.length >= 32),
+            ownerConfigured: !!process.env.OWNER_ID,
         });
     });
 
     router.post('/unlock', (req, res) => {
         const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'x').split(',')[0].trim();
         if (!rateUnlock(ip)) return res.status(429).json({ error: 'Too many unlock attempts' });
-        const token = req.body?.token;
-        if (!tokenOk(token)) return res.status(403).json({ error: 'Invalid developer token' });
+        const base = baseSystemRole(req, botClient);
+        const localBootstrap = process.env.NODE_ENV !== 'production' && isLoopback(req);
+        if (base < SYSTEM_ROLES.DEVELOPER && !localBootstrap) {
+            if (req.session?.user?.id) recordDeveloperAction(req, 'developer.unlock', 'session', 'denied');
+            return res.status(403).json({ error: 'Developer identity required', code: 'DEVELOPER_IDENTITY_REQUIRED' });
+        }
+        if (base !== SYSTEM_ROLES.SUPER_ADMIN && !tokenOk(req.body?.token)) {
+            if (req.session?.user?.id) recordDeveloperAction(req, 'developer.unlock', 'session', 'denied');
+            return res.status(403).json({ error: 'Invalid developer token' });
+        }
         req.session.devUnlocked = true;
-        req.session.save(() => res.json({ ok: true }));
+        req.systemRole = ROLE_NAMES[base === SYSTEM_ROLES.SUPER_ADMIN ? base : SYSTEM_ROLES.DEVELOPER];
+        return req.session.save((err) => {
+            if (err) return res.status(500).json({ error: 'Could not save developer session' });
+            recordDeveloperAction(req, 'developer.unlock', 'session');
+            return res.json({ ok: true, role: req.systemRole });
+        });
     });
 
     router.post('/lock', (req, res) => {
+        req.systemRole = ROLE_NAMES[systemRole(req, botClient)];
+        recordDeveloperAction(req, 'developer.lock', 'session');
         req.session.devUnlocked = false;
-        req.session.save(() => res.json({ ok: true }));
+        return req.session.save((err) => err
+            ? res.status(500).json({ error: 'Could not save developer session' })
+            : res.json({ ok: true }));
     });
 
-    router.use(requireDev(botClient));
-
-    router.get('/overview', async (req, res, next) => {
+    router.get('/overview', supportOnly, async (req, res, next) => {
         try {
             const mem = process.memoryUsage();
             const publicUrl = readPublicUrl();
@@ -108,7 +136,6 @@ module.exports = (botClient) => {
                 node: process.version,
                 pid: process.pid,
                 platform: `${os.type()} ${os.release()}`,
-                cwd: process.cwd(),
                 uptimeSec: Math.round(process.uptime()),
                 bot: {
                     online: !!botClient?.user,
@@ -136,7 +163,7 @@ module.exports = (botClient) => {
                 sseClients: clientCount(),
                 processes: procs(),
                 deadHosts: dead.slice(-40),
-                owners: [...ownerIds(botClient)],
+                ownerCount: ownerIds(botClient).size,
                 flags: (await db.get('dev_flags')) || { maintenance: false, verbose: false },
                 files: {
                     env: safeStat(path.join(ROOT, '.env')),
@@ -150,24 +177,26 @@ module.exports = (botClient) => {
         }
     });
 
-    router.get('/logs', (req, res, next) => {
+    router.get('/logs', developerOnly, (req, res, next) => {
         const name = String(req.query.file || 'general.log');
         if (!ALLOWED_LOGS.has(name)) return res.status(400).json({ error: 'Unknown log file' });
         const file = path.join(LOG_DIR, name);
         if (!file.startsWith(LOG_DIR)) return res.status(400).json({ error: 'Bad path' });
         const lines = Math.min(400, Math.max(20, parseInt(req.query.lines, 10) || 120));
         try {
+            recordDeveloperAction(req, 'logs.read', name, 'success', { lines });
             res.json({ file: name, ...safeStat(file), text: tailFile(file, lines) });
         } catch (err) {
             next(err);
         }
     });
 
-    router.get('/env', (req, res) => {
+    router.get('/env', developerOnly, (req, res) => {
+        recordDeveloperAction(req, 'environment.inspect', 'runtime');
         res.json({ vars: redactEnv() });
     });
 
-    router.get('/commands', (req, res) => {
+    router.get('/commands', supportOnly, (req, res) => {
         const list = [];
         if (botClient?.commands) {
             for (const [name, cmd] of botClient.commands) {
@@ -187,7 +216,7 @@ module.exports = (botClient) => {
         res.json({ total: list.length, overLimit: list.length > 100, commands: list });
     });
 
-    router.get('/db', async (req, res, next) => {
+    router.get('/db', developerOnly, async (req, res, next) => {
         try {
             const all = await db.all();
             const prefixes = {};
@@ -198,6 +227,7 @@ module.exports = (botClient) => {
             }
             const top = Object.entries(prefixes).sort((a, b) => b[1] - a[1]).slice(0, 30)
                 .map(([prefix, count]) => ({ prefix, count }));
+            recordDeveloperAction(req, 'database.inspect', 'bot_kv', 'success', { keys: all.length });
             res.json({
                 keys: all.length,
                 provider: 'supabase-postgresql',
@@ -208,13 +238,12 @@ module.exports = (botClient) => {
         }
     });
 
-    router.get('/guilds', (req, res) => {
+    router.get('/guilds', supportOnly, (req, res) => {
         if (!botClient?.guilds) return res.json({ guilds: [] });
         const guilds = [...botClient.guilds.cache.values()].map((g) => ({
             id: g.id,
             name: g.name,
             members: g.memberCount,
-            ownerId: g.ownerId,
             shard: g.shardId ?? 0,
             channels: g.channels.cache.size,
             roles: g.roles.cache.size,
@@ -223,19 +252,29 @@ module.exports = (botClient) => {
         res.json({ guilds });
     });
 
-    router.get('/flags', async (req, res) => {
+    router.get('/flags', supportOnly, async (req, res) => {
         res.json((await db.get('dev_flags')) || { maintenance: false, verbose: false });
     });
 
-    router.post('/flags', async (req, res) => {
+    router.post('/flags', superAdminOnly, async (req, res) => {
         const cur = (await db.get('dev_flags')) || { maintenance: false, verbose: false };
         if (typeof req.body.maintenance === 'boolean') cur.maintenance = req.body.maintenance;
         if (typeof req.body.verbose === 'boolean') cur.verbose = req.body.verbose;
         await db.set('dev_flags', cur);
+        recordDeveloperAction(req, 'features.update', 'dev_flags', 'success', cur);
         res.json(cur);
     });
 
-    router.post('/deploy-commands', async (req, res, next) => {
+    router.get('/audit', developerOnly, (req, res) => {
+        const events = readDeveloperAudit({
+            limit: req.query.limit,
+            action: String(req.query.action || '').slice(0, 80),
+            result: String(req.query.result || '').slice(0, 30),
+        });
+        res.json({ events, total: events.length });
+    });
+
+    router.post('/deploy-commands', superAdminOnly, async (req, res, next) => {
         try {
             const { deployCommands } = require('../../../shared/services/startup');
             const guildIds = [...(botClient?.guilds?.cache?.keys() || [])];
@@ -246,6 +285,7 @@ module.exports = (botClient) => {
                 guildIds.slice(1),
                 false
             );
+            recordDeveloperAction(req, 'bot.deploy_commands', 'discord', 'success', { guilds: guildIds.length });
             res.json({ ok: true, guilds: guildIds.length });
         } catch (err) {
             next(err);

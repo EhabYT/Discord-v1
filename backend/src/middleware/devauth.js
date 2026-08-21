@@ -1,6 +1,14 @@
 const crypto = require('crypto');
+const { isLoopback } = require('./auth');
+const { recordDeveloperAction } = require('../../../shared/services/developer-audit');
 
-const SECRET_KEYS = /token|secret|password|passwd|private|credential|api[_-]?key|client_secret|jwt/i;
+const SECRET_KEYS = /token|secret|password|passwd|private|credential|api[_-]?key|client_secret|jwt|database_url/i;
+const SYSTEM_ROLES = Object.freeze({ NONE: 0, SUPPORT: 1, DEVELOPER: 2, SUPER_ADMIN: 3 });
+const ROLE_NAMES = ['NONE', 'SUPPORT', 'DEVELOPER', 'SUPER_ADMIN'];
+
+function csvIds(name) {
+    return new Set(String(process.env[name] || '').split(',').map((id) => id.trim()).filter(Boolean));
+}
 
 function ownerIds(botClient) {
     const ids = new Set();
@@ -15,48 +23,87 @@ function ownerIds(botClient) {
 
 function isOwnerSession(req, botClient) {
     const uid = req.session?.user?.id;
-    if (!uid) return false;
-    return ownerIds(botClient).has(String(uid));
+    return !!uid && ownerIds(botClient).has(String(uid));
+}
+
+function baseSystemRole(req, botClient) {
+    const uid = String(req.session?.user?.id || '');
+    if (!uid) return SYSTEM_ROLES.NONE;
+    if (ownerIds(botClient).has(uid)) return SYSTEM_ROLES.SUPER_ADMIN;
+    if (csvIds('DEVELOPER_IDS').has(uid)) return SYSTEM_ROLES.DEVELOPER;
+    if (csvIds('SUPPORT_IDS').has(uid)) return SYSTEM_ROLES.SUPPORT;
+    return SYSTEM_ROLES.NONE;
 }
 
 function tokenOk(raw) {
-    const expected = process.env.DEV_TOKEN || '';
-    if (!expected || !raw) return false;
+    const expected = String(process.env.DEV_TOKEN || '');
+    if (expected.length < 32 || !raw) return false;
     const a = Buffer.from(String(raw));
     const b = Buffer.from(expected);
     if (a.length !== b.length) return false;
     try { return crypto.timingSafeEqual(a, b); } catch { return false; }
 }
 
+function systemRole(req, botClient) {
+    const base = baseSystemRole(req, botClient);
+    if (base === SYSTEM_ROLES.SUPER_ADMIN || base === SYSTEM_ROLES.SUPPORT) return base;
+    if (base === SYSTEM_ROLES.DEVELOPER && req.session?.devUnlocked === true) return base;
+    // Local development can bootstrap with DEV_TOKEN without Discord OAuth.
+    if (process.env.NODE_ENV !== 'production' && req.session?.devUnlocked === true && isLoopback(req)) {
+        return SYSTEM_ROLES.DEVELOPER;
+    }
+    return SYSTEM_ROLES.NONE;
+}
+
 function isDev(req, botClient) {
-    if (req.session?.devUnlocked === true) return true;
-    if (isOwnerSession(req, botClient)) return true;
-    const header = req.headers['x-dev-token'];
-    if (tokenOk(header)) return true;
-    return false;
+    return systemRole(req, botClient) >= SYSTEM_ROLES.DEVELOPER;
+}
+
+function requireSystemRole(botClient, minimum = SYSTEM_ROLES.DEVELOPER) {
+    return (req, res, next) => {
+        const role = systemRole(req, botClient);
+        if (role >= minimum) {
+            req.systemRole = ROLE_NAMES[role];
+            return next();
+        }
+        req.systemRole = ROLE_NAMES[role];
+        if (req.session?.user?.id) {
+            recordDeveloperAction(req, 'authorization.denied', req.originalUrl, 'denied', {
+                required: ROLE_NAMES[minimum], yours: ROLE_NAMES[role],
+            });
+        }
+        return res.status(403).json({
+            error: 'Insufficient system access',
+            code: 'SYSTEM_ROLE_REQUIRED',
+            required: ROLE_NAMES[minimum],
+            yours: ROLE_NAMES[role],
+        });
+    };
 }
 
 function requireDev(botClient) {
-    return (req, res, next) => {
-        if (isDev(req, botClient)) return next();
-        return res.status(403).json({ error: 'Developer only', code: 'DEV_FORBIDDEN' });
-    };
+    return requireSystemRole(botClient, SYSTEM_ROLES.DEVELOPER);
 }
 
 function redactEnv() {
     const out = [];
-    for (const [k, v] of Object.entries(process.env)) {
-        if (!/^[A-Z][A-Z0-9_]+$/.test(k)) continue;
-        const secret = SECRET_KEYS.test(k);
+    for (const [key, value] of Object.entries(process.env)) {
+        if (!/^[A-Z][A-Z0-9_]+$/.test(key)) continue;
+        const secret = SECRET_KEYS.test(key);
         out.push({
-            key: k,
-            set: v != null && String(v).length > 0,
+            key,
+            set: value != null && String(value).length > 0,
             secret,
-            preview: secret ? (v ? `••••${String(v).slice(-4)}` : '') : String(v).slice(0, 80),
+            // Never return even a suffix of secret values to the browser.
+            preview: secret ? '' : String(value).slice(0, 80),
         });
     }
     out.sort((a, b) => a.key.localeCompare(b.key));
     return out;
 }
 
-module.exports = { requireDev, isDev, isOwnerSession, tokenOk, redactEnv, ownerIds };
+module.exports = {
+    SYSTEM_ROLES, ROLE_NAMES,
+    requireDev, requireSystemRole, isDev, systemRole, baseSystemRole,
+    isOwnerSession, tokenOk, redactEnv, ownerIds,
+};

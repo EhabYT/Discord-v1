@@ -18,6 +18,7 @@ web dashboard with Discord OAuth login and role-based access control.
 - [Testing](#testing)
 - [Deployment](#deployment)
 - [Architecture](#architecture)
+- [V2 architecture audit](docs/v2-architecture-audit.md)
 - [Troubleshooting](#troubleshooting)
 
 ---
@@ -186,7 +187,9 @@ proxy/tunnel; use Render's Environment panel for deployed secrets.
 | :--- | :--- | :--- |
 | `NODE_ENV` | — | `production` enables fail-safe startup checks |
 | `OWNER_ID` | — | Your Discord user ID; grants Admin and enables owner notices |
-| `DEV_TOKEN` | — | Unlocks `/api/dev` and the Developer page (32+ random chars) |
+| `DEV_TOKEN` | — | Independent 32+ character second factor for listed developers |
+| `DEVELOPER_IDS` | — | Comma-separated Discord IDs with DEVELOPER system access |
+| `SUPPORT_IDS` | — | Comma-separated Discord IDs with read-only SUPPORT access |
 | `DASHBOARD_URL` | — | Public URL; also pins the Socket.IO CORS origin |
 
 ### Optional

@@ -123,14 +123,29 @@ class Logger {
     return value.replace(/[\r\n]+/g, ' ⏎ ').replace(/[\u0000-\u0008\u000B-\u001F\u007F]/g, '');
   }
 
+  static _sanitizeMeta(value, key = '', depth = 0, seen = new WeakSet()) {
+    if (/token|secret|password|passwd|credential|authorization|database.?url|api.?key/i.test(key)) {
+      return '[REDACTED]';
+    }
+    if (typeof value === 'string') return Logger._sanitize(value);
+    if (value == null || typeof value !== 'object') return value;
+    if (depth >= 5) return '[MAX_DEPTH]';
+    if (seen.has(value)) return '[CIRCULAR]';
+    seen.add(value);
+    if (Array.isArray(value)) return value.slice(0, 100).map((item) => Logger._sanitizeMeta(item, '', depth + 1, seen));
+    const clean = {};
+    for (const [childKey, childValue] of Object.entries(value)) {
+      clean[childKey] = Logger._sanitizeMeta(childValue, childKey, depth + 1, seen);
+    }
+    return clean;
+  }
+
   _log(level, message, meta, type = level) {
     if (!this._shouldLog(level)) return;
 
     message = Logger._sanitize(message);
     if (meta && typeof meta === 'object') {
-      const clean = {};
-      for (const [k, v] of Object.entries(meta)) clean[k] = Logger._sanitize(v);
-      meta = clean;
+      meta = Logger._sanitizeMeta(meta);
     }
 
     const { consoleEntry, fileEntry } = this._formatMessage(type, message, meta);

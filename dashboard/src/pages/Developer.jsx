@@ -7,9 +7,12 @@ import PageHeader from '../components/PageHeader.jsx';
 import { useToast } from '../components/Toast.jsx';
 import api from '../api.js';
 
+const ROLE_LEVEL = { NONE: 0, SUPPORT: 1, DEVELOPER: 2, SUPER_ADMIN: 3 };
+
 const LOGS = [
   { id: 'general.log', label: 'general' },
   { id: 'error.log', label: 'error' },
+  { id: 'developer-audit.log', label: 'developer audit' },
   { id: 'tunnel-watch.log', label: 'tunnel' },
   { id: 'cloudflared.log', label: 'cloudflared' },
   { id: 'dead-hosts.txt', label: 'dead hosts' },
@@ -45,9 +48,11 @@ export default function Developer() {
   const [cmds, setCmds] = useState(null);
   const [dbInfo, setDbInfo] = useState(null);
   const [guilds, setGuilds] = useState([]);
+  const [audit, setAudit] = useState([]);
   const [busy, setBusy] = useState('');
+  const systemLevel = ROLE_LEVEL[who?.role] || 0;
 
-  const loadWho = () => api.get('/api/dev/whoami').then(setWho).catch(() => setWho({ unlocked: false }));
+  const loadWho = () => api.get('/api/developer/whoami').then(setWho).catch(() => setWho({ unlocked: false }));
 
   useEffect(() => { loadWho(); }, []);
 
@@ -55,7 +60,7 @@ export default function Developer() {
     e.preventDefault();
     setBusy('unlock');
     try {
-      await api.post('/api/dev/unlock', { token: token.trim() });
+      await api.post('/api/developer/unlock', { token: token.trim() });
       setToken('');
       await loadWho();
       toast.success('Developer backend unlocked.');
@@ -66,7 +71,7 @@ export default function Developer() {
   };
 
   const lock = async () => {
-    await api.post('/api/dev/lock', {}).catch(() => {});
+    await api.post('/api/developer/lock', {}).catch(() => {});
     setOv(null);
     loadWho();
   };
@@ -75,15 +80,16 @@ export default function Developer() {
     if (!who?.unlocked) return;
     setBusy('load');
     try {
-      if (tab === 'overview') setOv(await api.get('/api/dev/overview'));
+      if (tab === 'overview') setOv(await api.get('/api/developer/overview'));
       if (tab === 'logs') {
-        const d = await api.get(`/api/dev/logs?file=${encodeURIComponent(logFile)}&lines=180`);
+        const d = await api.get(`/api/developer/logs?file=${encodeURIComponent(logFile)}&lines=180`);
         setLog(d.text || '');
       }
-      if (tab === 'env') setEnv((await api.get('/api/dev/env')).vars || []);
-      if (tab === 'commands') setCmds(await api.get('/api/dev/commands'));
-      if (tab === 'db') setDbInfo(await api.get('/api/dev/db'));
-      if (tab === 'guilds') setGuilds((await api.get('/api/dev/guilds')).guilds || []);
+      if (tab === 'env') setEnv((await api.get('/api/developer/env')).vars || []);
+      if (tab === 'commands') setCmds(await api.get('/api/developer/commands'));
+      if (tab === 'db') setDbInfo(await api.get('/api/developer/db'));
+      if (tab === 'guilds') setGuilds((await api.get('/api/developer/guilds')).guilds || []);
+      if (tab === 'audit') setAudit((await api.get('/api/developer/audit?limit=150')).events || []);
     } catch (err) {
       if (String(err.message).includes('Developer')) loadWho();
       else toast.error(err.message || 'Load failed');
@@ -95,7 +101,7 @@ export default function Developer() {
 
   const setFlag = async (key, value) => {
     try {
-      const next = await api.post('/api/dev/flags', { [key]: value });
+      const next = await api.post('/api/developer/flags', { [key]: value });
       setOv((p) => (p ? { ...p, flags: next } : p));
       toast.success('Flag saved.');
     } catch (err) { toast.error(err.message); }
@@ -104,7 +110,7 @@ export default function Developer() {
   const deploy = async () => {
     setBusy('deploy');
     try {
-      const d = await api.post('/api/dev/deploy-commands', {});
+      const d = await api.post('/api/developer/deploy-commands', {});
       toast.success(`Commands deployed to ${d.guilds} guild(s).`);
     } catch (err) { toast.error(err.message); }
     setBusy('');
@@ -115,20 +121,30 @@ export default function Developer() {
   }
 
   if (!who.unlocked) {
+    if (!who.canUnlock) {
+      return (
+        <div className="page-shell-sm animate-fade-in">
+          <PageHeader icon={Lock} accentColor="red" title="Developer access denied" subtitle="This account has no system role." badge="forbidden" badgeColor="red" />
+          <div className="cyber-card p-6 text-sm text-zinc-400">
+            Developer tools require OWNER_ID, DEVELOPER_IDS or SUPPORT_IDS authorization on the backend.
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="page-shell-sm animate-fade-in">
         <PageHeader
           icon={Lock}
           accentColor="purple"
           title="Developer"
-          subtitle="Backend nur für Entwickler. Token aus .env → DEV_TOKEN."
+          subtitle="Developer-only backend. Authorized developers use the independent DEV_TOKEN as a second factor."
           badge="locked"
           badgeColor="red"
         />
         <form onSubmit={unlock} className="cyber-card max-w-md p-6 space-y-4">
           <p className="text-xs text-zinc-500 leading-relaxed">
-            Dieses Panel zeigt Logs, Prozesse, Tunnel und Command-Registry.
-            Secrets werden nicht im Klartext angezeigt.
+            This internal panel provides system logs, processes, database diagnostics and command metadata.
+            Secret values are never returned by the backend.
           </p>
           <div>
             <label className="cyber-label mb-1.5 flex items-center gap-1"><KeyRound size={11} /> DEV_TOKEN</label>
@@ -137,7 +153,7 @@ export default function Developer() {
               autoComplete="off"
               value={token}
               onChange={(e) => setToken(e.target.value)}
-              placeholder="Token aus discord-bot/.env"
+              placeholder="Independent DEV_TOKEN from local environment"
               className="cyber-input font-mono text-xs"
             />
           </div>
@@ -145,7 +161,7 @@ export default function Developer() {
             {busy === 'unlock' ? '…' : 'Unlock'}
           </button>
           {who.loggedIn && (
-            <p className="text-[11px] text-zinc-600">Eingeloggt als Owner? Session reicht — sonst Token.</p>
+            <p className="text-[11px] text-zinc-600">Signed-in owners are authorized automatically; listed developers require the second factor.</p>
           )}
         </form>
       </div>
@@ -153,6 +169,15 @@ export default function Developer() {
   }
 
   const p = ov?.processes || [];
+  const availableTabs = [
+    ['overview', 'Overview', 1],
+    ['commands', 'Commands', 1],
+    ['guilds', 'Guilds', 1],
+    ['logs', 'Logs', 2],
+    ['env', 'Environment', 2],
+    ['db', 'Database', 2],
+    ['audit', 'Audit Log', 2],
+  ].filter(([, , minimum]) => systemLevel >= minimum);
 
   return (
     <div className="page-shell-sm animate-fade-in">
@@ -160,27 +185,22 @@ export default function Developer() {
         icon={Terminal}
         accentColor="purple"
         title="Developer"
-        subtitle="Internes Backend · Logs, Tunnel, Registry"
-        badge="unlocked"
+        subtitle="Internal infrastructure control center"
+        badge={who.role || 'unlocked'}
         badgeColor="purple"
       >
         <button onClick={refresh} className="cyber-button text-xs inline-flex items-center gap-1.5">
           <RefreshCw size={12} className={busy === 'load' ? 'animate-spin' : ''} /> Refresh
         </button>
-        <button onClick={lock} className="cyber-button text-xs inline-flex items-center gap-1.5">
-          <Lock size={12} /> Lock
-        </button>
+        {who.baseRole === 'DEVELOPER' && (
+          <button onClick={lock} className="cyber-button text-xs inline-flex items-center gap-1.5">
+            <Lock size={12} /> Lock
+          </button>
+        )}
       </PageHeader>
 
       <div className="flex flex-wrap gap-1.5">
-        {[
-          ['overview', 'Overview'],
-          ['logs', 'Logs'],
-          ['env', 'Env'],
-          ['commands', 'Commands'],
-          ['db', 'Database'],
-          ['guilds', 'Guilds'],
-        ].map(([id, label]) => (
+        {availableTabs.map(([id, label]) => (
           <button
             key={id}
             onClick={() => setTab(id)}
@@ -232,8 +252,9 @@ export default function Developer() {
             </div>
           </div>
 
+          {systemLevel >= ROLE_LEVEL.SUPER_ADMIN && (
           <div className="cyber-card p-4 space-y-3">
-            <p className="text-xs font-semibold text-white flex items-center gap-1.5"><Shield size={13} /> Flags</p>
+            <p className="text-xs font-semibold text-white flex items-center gap-1.5"><Shield size={13} /> Feature flags & deployment</p>
             <label className="flex items-center justify-between text-xs text-zinc-300">
               Maintenance
               <input type="checkbox" className="accent-fuchsia-400" checked={!!ov.flags?.maintenance} onChange={(e) => setFlag('maintenance', e.target.checked)} />
@@ -246,6 +267,7 @@ export default function Developer() {
               <Power size={12} /> {busy === 'deploy' ? 'Deploying…' : 'Redeploy slash commands'}
             </button>
           </div>
+          )}
 
           {!!ov.deadHosts?.length && (
             <div className="cyber-card p-4">
@@ -288,7 +310,9 @@ export default function Developer() {
                 <tr key={v.key} className="border-t border-white/[0.05]">
                   <td className="px-3 py-1.5 font-mono text-cyan-300/90">{v.key}</td>
                   <td className="px-3 py-1.5 font-mono text-zinc-500">
-                    {v.secret ? <span className="text-amber-400/80">{v.preview}</span> : (v.set ? v.preview : '—')}
+                    {v.secret
+                      ? <span className="text-amber-400/80">{v.set ? 'Configured' : 'Not configured'}</span>
+                      : (v.set ? v.preview : '—')}
                   </td>
                 </tr>
               ))}
@@ -316,7 +340,7 @@ export default function Developer() {
       {tab === 'db' && dbInfo && (
         <div className="cyber-card p-4 space-y-3">
           <p className="text-xs text-zinc-400 flex items-center gap-1.5">
-            <Database size={12} /> {dbInfo.keys} keys · sqlite {bytes(dbInfo.sqlite?.size)}
+            <Database size={12} /> {dbInfo.keys} keys · {dbInfo.provider || 'supabase-postgresql'}
           </p>
           <div className="grid sm:grid-cols-2 gap-1.5">
             {(dbInfo.prefixes || []).map((p) => (
@@ -356,8 +380,31 @@ export default function Developer() {
         </div>
       )}
 
+      {tab === 'audit' && (
+        <div className="cyber-card overflow-hidden">
+          <div className="max-h-[32rem] overflow-auto">
+            {audit.length === 0 ? (
+              <p className="p-8 text-center text-sm text-zinc-500">No developer actions recorded yet.</p>
+            ) : audit.map((event, index) => (
+              <div key={`${event.timestamp}-${index}`} className="px-4 py-3 border-b border-white/[0.05] last:border-0">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-mono text-xs text-fuchsia-200">{event.action}</span>
+                  <span className={event.result === 'success' ? 'cyber-badge-green' : 'cyber-badge-red'}>{event.result}</span>
+                </div>
+                <p className="text-[11px] text-zinc-500 mt-1">
+                  {event.systemRole || 'UNKNOWN'} · {event.userId || 'local'} · {event.target}
+                </p>
+                <p className="text-[10px] text-zinc-600 mt-1 font-mono">
+                  {new Date(event.timestamp).toLocaleString()} · request {event.requestId || '—'}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <p className="text-[10px] text-zinc-700 flex items-center gap-1">
-        <Server size={10} /> Owner-only API · /api/dev/* · no raw secrets
+        <Server size={10} /> Role-enforced API · /api/developer/* · no raw secrets
       </p>
     </div>
   );

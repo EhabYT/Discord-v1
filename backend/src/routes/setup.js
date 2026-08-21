@@ -9,7 +9,7 @@ const ENV_FILE = path.join(ROOT, '.env');
 const ALLOWED_KEYS = new Set([
     'DISCORD_TOKEN', 'CLIENT_ID', 'DISCORD_CLIENT_SECRET',
     'DATABASE_URL', 'DATABASE_POOL_SIZE', 'DATABASE_SSL', 'DATABASE_SSL_REJECT_UNAUTHORIZED',
-    'SESSION_SECRET', 'DEV_TOKEN', 'OWNER_ID', 'GUILD_ID',
+    'SESSION_SECRET', 'DEV_TOKEN', 'OWNER_ID', 'DEVELOPER_IDS', 'SUPPORT_IDS', 'GUILD_ID',
     'DASHBOARD_URL', 'DISCORD_REDIRECT_URI', 'DASHBOARD_AUTH', 'DASHBOARD_SECURE',
     'DEPLOY_COMMANDS', 'SYNC_GLOBAL_COMMANDS', 'LOG_LEVEL', 'SUPPORT_INVITE',
 ]);
@@ -42,6 +42,16 @@ function validateUpdates(input) {
     }
     if (clean.CLIENT_ID && !/^\d{17,20}$/.test(clean.CLIENT_ID)) {
         throw new Error('CLIENT_ID must be a Discord Application ID');
+    }
+    for (const key of ['OWNER_ID', 'GUILD_ID']) {
+        if (clean[key] && !/^\d{17,20}$/.test(clean[key])) throw new Error(`${key} must be a Discord ID`);
+    }
+    for (const key of ['DEVELOPER_IDS', 'SUPPORT_IDS']) {
+        if (!clean[key]) continue;
+        const ids = clean[key].split(',').map((id) => id.trim()).filter(Boolean);
+        if (!ids.length || ids.some((id) => !/^\d{17,20}$/.test(id))) {
+            throw new Error(`${key} must contain comma-separated Discord IDs`);
+        }
     }
     if (clean.DATABASE_URL) {
         const issue = databaseConfigIssue(clean.DATABASE_URL);
@@ -101,6 +111,8 @@ function setupPage() {
         ['SESSION_SECRET', 'Session signing secret', 'password'],
         ['DEV_TOKEN', 'Developer access token', 'password'],
         ['OWNER_ID', 'Discord owner user ID', 'text'],
+        ['DEVELOPER_IDS', 'Developer user IDs (comma-separated)', 'text'],
+        ['SUPPORT_IDS', 'Support user IDs (comma-separated)', 'text'],
         ['DASHBOARD_URL', 'Dashboard public URL', 'url'],
         ['DISCORD_REDIRECT_URI', 'Discord redirect URI', 'url'],
     ];

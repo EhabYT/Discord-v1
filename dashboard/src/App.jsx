@@ -249,6 +249,7 @@ export default function App() {
   const [permLevel, setPermLevel] = useState(0);
   const [permLevelName, setPermLevelName] = useState('Viewer');
   const [auth, setAuth] = useState({ oauthEnabled: false, loggedIn: false, authRequired: false });
+  const [developerAccess, setDeveloperAccess] = useState({ role: 'NONE', baseRole: 'NONE', unlocked: false });
   const [health, setHealth] = useState(null);
   const [apiReachable, setApiReachable] = useState(null);
   const [browserOnline, setBrowserOnline] = useState(() => window.navigator.onLine);
@@ -326,11 +327,13 @@ export default function App() {
       api.get('/api/me').catch(() => null),
       api.get('/api/auth/status').catch(() => ({ oauthEnabled: false, loggedIn: false, authRequired: false })),
       api.get('/api/health').catch(() => null),
-    ]).then(([g, m, a, h]) => {
+      api.get('/api/developer/whoami').catch(() => ({ role: 'NONE', baseRole: 'NONE', unlocked: false })),
+    ]).then(([g, m, a, h, dev]) => {
       const list = Array.isArray(g) ? g : [];
       setGuilds(list);
       setMe(m);
       setAuth(a || { oauthEnabled: false, loggedIn: false, authRequired: false });
+      setDeveloperAccess(dev || { role: 'NONE', baseRole: 'NONE', unlocked: false });
       setHealth(h);
       setApiReachable(Boolean(h));
       const remembered = rememberedGuild();
@@ -421,6 +424,7 @@ export default function App() {
             me={me}
             permLevel={permLevel}
             auth={auth}
+            developerAccess={developerAccess}
             mobileOpen={mobileOpen}
             setMobileOpen={setMobileOpen}
             collapsed={collapsed}
@@ -575,6 +579,7 @@ export default function App() {
           onClose={() => setPaletteOpen(false)}
           onNavigate={navigate}
           permLevel={permLevel}
+          developerAccess={developerAccess}
           page={page}
           publicUrl={publicUrl}
         />

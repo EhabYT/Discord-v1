@@ -51,6 +51,15 @@ app.set('trust proxy', 1);
 const crypto = require('crypto');
 const IS_PROD = process.env.NODE_ENV === 'production';
 
+app.use((req, res, next) => {
+    const incoming = String(req.headers['x-request-id'] || '');
+    req.requestId = /^[a-zA-Z0-9_-]{8,64}$/.test(incoming)
+        ? incoming
+        : crypto.randomBytes(6).toString('hex');
+    res.setHeader('X-Request-ID', req.requestId);
+    next();
+});
+
 // Fail closed on authentication, but do not take Render's entire HTTP service
 // offline just because SESSION_SECRET was omitted. When Supabase is configured,
 // derive a stable, domain-separated signing key from its high-entropy connection
@@ -164,7 +173,11 @@ function startDashboard(botClient) {
     app.use('/api/auth/discord', rl.limit('oauth-start', 20, 5 * 60 * 1000));
     app.use('/api/stats', statsRouter);
     app.use('/api/auth', authRouter);
-    app.use('/api/dev', devRouter);
+    // /api/developer is the canonical system-control namespace. The legacy
+    // prefix redirects with 308 so methods/bodies are preserved without
+    // mounting a duplicate privileged route tree.
+    app.use('/api/developer', devRouter);
+    app.use('/api/dev', (req, res) => res.redirect(308, `/api/developer${req.url}`));
     app.use('/api/v2', v2Router);
     app.use('/setup', setupRouter);
     app.use('/api/guild/:guildId/permissions', permissionsRouter);
