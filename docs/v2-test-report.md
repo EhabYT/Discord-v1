@@ -18,7 +18,7 @@ npm run verify
 | ESLint gate | PASS — 0 errors, 0 warnings |
 | Discord command loader | PASS — 100 commands |
 | Security suites | PASS — 20 suites |
-| API inventory | PASS — 154 routes |
+| API inventory | PASS — 158 routes |
 | Backend syntax | PASS |
 | JSON validation | PASS |
 | Dashboard production build | PASS |
@@ -49,6 +49,7 @@ npm run verify
 - Developer system-role model
 - Direct Developer API authorization
 - Performance metrics and identifier normalization
+- Observable scheduler jobs, overlap prevention, retries, pause/resume, and failure stop
 - Backend-enforced maintenance mode
 
 ## Developer authorization matrix tested

@@ -55,7 +55,7 @@ async function login(id) { return cookieOf(await req(`/__dev_login/${id}`)); }
     console.log('\nDeveloper API route enforcement:\n');
 
     const ordinary = await login('444444444444444444');
-    for (const endpoint of ['overview', 'commands', 'config', 'guilds', 'flags', 'logs', 'env', 'db', 'audit']) {
+    for (const endpoint of ['overview', 'commands', 'config', 'guilds', 'flags', 'logs', 'env', 'db', 'metrics', 'jobs', 'audit']) {
         const r = await req(`/api/developer/${endpoint}`, { cookie: ordinary });
         check(`ordinary user denied /${endpoint}`, r.status === 403, `${r.status}`);
     }
@@ -66,6 +66,7 @@ async function login(id) { return cookieOf(await req(`/__dev_login/${id}`)); }
     check('support may read secret-free bot configuration',
         safeConfig.status === 200 && /"schemaVersion":2/.test(safeConfig.body) && !/"terms"/.test(safeConfig.body));
     check('support cannot read environment', (await req('/api/developer/env', { cookie: support })).status === 403);
+    check('support cannot inspect scheduler jobs', (await req('/api/developer/jobs', { cookie: support })).status === 403);
     check('support cannot write feature flags', (await req('/api/developer/flags', {
         method: 'POST', cookie: support, body: { maintenance: true },
     })).status === 403);
@@ -80,6 +81,8 @@ async function login(id) { return cookieOf(await req(`/__dev_login/${id}`)); }
     check('listed developer can unlock with second factor', unlock.status === 200, `${unlock.status}`);
     check('unlocked developer may inspect database',
         (await req('/api/developer/db', { cookie: devCookie })).status === 200);
+    check('unlocked developer may inspect scheduler metadata',
+        (await req('/api/developer/jobs', { cookie: devCookie })).status === 200);
     check('developer still cannot deploy commands',
         (await req('/api/developer/deploy-commands', { method: 'POST', cookie: devCookie, body: {} })).status === 403);
 

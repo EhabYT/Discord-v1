@@ -275,6 +275,8 @@ Legacy `/api/dev/*` requests receive a method-preserving `308` redirect.
 | Environment configured status | — | ✓ | ✓ |
 | Database diagnostics | — | ✓ | ✓ |
 | Performance metrics | — | ✓ | ✓ |
+| Scheduler job status | — | ✓ | ✓ |
+| Run/pause/resume scheduler jobs | — | — | ✓ |
 | Developer audit log | — | ✓ | ✓ |
 | Change maintenance/features | — | — | ✓ |
 | Deploy slash commands | — | — | ✓ |
@@ -351,7 +353,11 @@ GET  /api/developer/logs
 GET  /api/developer/env
 GET  /api/developer/db
 GET  /api/developer/metrics
+GET  /api/developer/jobs
 GET  /api/developer/audit
+POST /api/developer/jobs/:name/run
+POST /api/developer/jobs/:name/pause
+POST /api/developer/jobs/:name/resume
 POST /api/developer/flags
 POST /api/developer/deploy-commands
 ```
@@ -479,7 +485,7 @@ Current verification scope:
 - 100 Discord commands
 - Bot Config schema and AutoMod normalization
 - 20 security suites
-- 154 API routes
+- 158 API routes
 - OAuth, sessions, CSRF, and guild isolation
 - Discord hierarchy and privacy redaction
 - Abuse and rate limits

@@ -1,7 +1,7 @@
 # EB Bot V2 — Architecture, Security, and Dashboard Separation Audit
 
 Date: 2026-08-21  
-Scope: 360 tracked files, 29 dashboard pages, 11 shared components, 100 bot commands, 22 gateway/player event modules, and 150 explicit router endpoint declarations.
+Scope: 364 tracked files, 29 dashboard pages, 11 shared components, 100 bot commands, 22 gateway/player event modules, and 155 explicit router endpoint declarations.
 
 ## Executive summary
 
@@ -86,8 +86,9 @@ Actual supported developer sections:
 - Explicit command deployment
 - Persistent developer action audit log
 - Request, error-rate, latency, event-loop, and process-memory metrics
+- Scheduler job status, duration, errors, next run, and SUPER_ADMIN run/pause/resume controls
 
-No fake cache, Redis, Lavalink, shard, queue, arbitrary SQL, shell, rollback, or migration-control page was created because those capabilities do not exist in this runtime.
+No fake cache, Redis, Lavalink, shard-management, arbitrary SQL, shell, rollback, or migration-control page was created because those capabilities do not exist in this runtime.
 
 ## Backend classification
 
@@ -243,6 +244,16 @@ an optional end time and `Retry-After`. Health, OAuth, V2 status, and
 role-authorized developer diagnostics remain reachable. Discord slash commands
 apply the same message and automatically stop blocking after the configured end
 time. Only `SUPER_ADMIN` can change the policy.
+
+## Background jobs
+
+The existing in-process scheduler now exposes bounded operational metadata to
+`DEVELOPER` and `SUPER_ADMIN`: interval, status, active execution, last/next run,
+duration, run count, consecutive errors, and sanitized last error. Jobs cannot
+overlap. Five consecutive failures stop a job. Only `SUPER_ADMIN` may run,
+pause, or resume an already registered callback, every action requires frontend
+confirmation, and every action is audited. The browser cannot create callbacks
+or submit arbitrary code.
 
 ## Performance monitoring
 

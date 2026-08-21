@@ -51,6 +51,7 @@ export default function Developer() {
   const [audit, setAudit] = useState([]);
   const [metrics, setMetrics] = useState(null);
   const [botConfig, setBotConfig] = useState(null);
+  const [jobs, setJobs] = useState([]);
   const [maintenanceMessage, setMaintenanceMessage] = useState('');
   const [maintenanceDuration, setMaintenanceDuration] = useState('');
   const [busy, setBusy] = useState('');
@@ -100,6 +101,7 @@ export default function Developer() {
       if (tab === 'audit') setAudit((await api.get('/api/developer/audit?limit=150')).events || []);
       if (tab === 'performance') setMetrics(await api.get('/api/developer/metrics'));
       if (tab === 'config') setBotConfig(await api.get('/api/developer/config'));
+      if (tab === 'jobs') setJobs((await api.get('/api/developer/jobs')).jobs || []);
     } catch (err) {
       if (String(err.message).includes('Developer')) loadWho();
       else toast.error(err.message || 'Load failed');
@@ -129,6 +131,17 @@ export default function Developer() {
       setOv((previous) => previous ? { ...previous, flags: next } : previous);
       toast.success('Maintenance policy saved and enforced by the backend.');
     } catch (err) { toast.error(err.message || 'Could not save maintenance policy'); }
+    setBusy('');
+  };
+
+  const jobAction = async (name, action) => {
+    if (!window.confirm(`${action} scheduled job "${name}"?`)) return;
+    setBusy(`job:${name}`);
+    try {
+      await api.post(`/api/developer/jobs/${window.encodeURIComponent(name)}/${action}`, {});
+      setJobs((await api.get('/api/developer/jobs')).jobs || []);
+      toast.success(`Job ${action} completed.`);
+    } catch (err) { toast.error(err.message || `Could not ${action} job`); }
     setBusy('');
   };
 
@@ -203,6 +216,7 @@ export default function Developer() {
     ['env', 'Environment', 2],
     ['db', 'Database', 2],
     ['performance', 'Performance', 2],
+    ['jobs', 'Jobs', 2],
     ['audit', 'Audit Log', 2],
   ].filter(([, , minimum]) => systemLevel >= minimum);
 
@@ -496,6 +510,41 @@ export default function Developer() {
             <span>Heap: {bytes(metrics.process?.heapUsed)}</span>
             <span>401 / 403 / 429: {metrics.requests?.authFailures || 0} / {metrics.requests?.forbidden || 0} / {metrics.requests?.rateLimited || 0}</span>
           </div>
+        </div>
+      )}
+
+      {tab === 'jobs' && (
+        <div className="space-y-2">
+          {jobs.length === 0 ? (
+            <div className="cyber-card p-8 text-center text-sm text-zinc-500">No scheduler jobs are registered while the bot is offline.</div>
+          ) : jobs.map((job) => (
+            <div key={job.name} className="cyber-card p-4 flex flex-col lg:flex-row lg:items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-sm text-cyan-200 truncate">{job.name}</span>
+                  <span className={job.status === 'running' ? 'cyber-badge-green' : 'cyber-badge-yellow'}>{job.status}</span>
+                  {job.running && <span className="cyber-badge-purple">executing</span>}
+                </div>
+                <p className="text-[11px] text-zinc-500 mt-1">
+                  Every {Math.round(job.intervalMs / 1000)}s · {job.runCount} runs · {job.errorCount} consecutive errors
+                </p>
+                <p className="text-[10px] text-zinc-600 mt-1">
+                  Last: {job.lastRunAt ? new Date(job.lastRunAt).toLocaleString() : 'never'}
+                  {job.lastDurationMs != null ? ` · ${job.lastDurationMs.toFixed(1)} ms` : ''}
+                  {job.nextRunAt ? ` · next ${new Date(job.nextRunAt).toLocaleTimeString()}` : ''}
+                </p>
+                {job.lastError && <p className="text-[10px] text-red-400 mt-1 truncate">{job.lastError}</p>}
+              </div>
+              {systemLevel >= ROLE_LEVEL.SUPER_ADMIN && (
+                <div className="flex gap-2 flex-wrap">
+                  <button disabled={busy === `job:${job.name}` || job.running} onClick={() => jobAction(job.name, 'run')} className="cyber-button text-xs">Run now</button>
+                  {job.status === 'running'
+                    ? <button onClick={() => jobAction(job.name, 'pause')} className="cyber-button-danger text-xs">Pause</button>
+                    : <button onClick={() => jobAction(job.name, 'resume')} className="cyber-button-success text-xs">Resume</button>}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
 

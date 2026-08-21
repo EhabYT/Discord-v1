@@ -14,6 +14,7 @@ const { recordDeveloperAction, readDeveloperAudit } = require('../../../shared/s
 const { metricsSnapshot } = require('../metrics');
 const { invalidateMaintenanceCache } = require('../middleware/maintenance');
 const { config: botConfig } = require('../../../shared/config/bot-config');
+const scheduler = require('../../../bot/src/scheduler');
 
 const ROOT = path.join(__dirname, '..', '..', '..');
 const LOG_DIR = path.join(ROOT, 'logs');
@@ -301,6 +302,34 @@ module.exports = (botClient) => {
 
     router.get('/metrics', developerOnly, (_req, res) => {
         res.json(metricsSnapshot());
+    });
+
+    router.get('/jobs', developerOnly, (_req, res) => {
+        res.json({ jobs: scheduler.listJobs() });
+    });
+
+    router.post('/jobs/:name/run', superAdminOnly, async (req, res) => {
+        const name = String(req.params.name || '');
+        if (!/^[a-z0-9_-]{1,64}$/i.test(name)) return res.status(400).json({ error: 'Invalid job name' });
+        const result = await scheduler.runNow(name);
+        recordDeveloperAction(req, 'jobs.run', name, result.ok ? 'success' : 'failed', result);
+        return res.status(result.ok ? 200 : 409).json(result);
+    });
+
+    router.post('/jobs/:name/pause', superAdminOnly, (req, res) => {
+        const name = String(req.params.name || '');
+        if (!/^[a-z0-9_-]{1,64}$/i.test(name)) return res.status(400).json({ error: 'Invalid job name' });
+        const ok = scheduler.pauseJob(name);
+        recordDeveloperAction(req, 'jobs.pause', name, ok ? 'success' : 'failed');
+        return res.status(ok ? 200 : 404).json({ ok });
+    });
+
+    router.post('/jobs/:name/resume', superAdminOnly, (req, res) => {
+        const name = String(req.params.name || '');
+        if (!/^[a-z0-9_-]{1,64}$/i.test(name)) return res.status(400).json({ error: 'Invalid job name' });
+        const ok = scheduler.resumeJob(name);
+        recordDeveloperAction(req, 'jobs.resume', name, ok ? 'success' : 'failed');
+        return res.status(ok ? 200 : 404).json({ ok });
     });
 
     router.get('/audit', developerOnly, (req, res) => {
