@@ -50,6 +50,8 @@ export default function Developer() {
   const [guilds, setGuilds] = useState([]);
   const [audit, setAudit] = useState([]);
   const [metrics, setMetrics] = useState(null);
+  const [maintenanceMessage, setMaintenanceMessage] = useState('');
+  const [maintenanceDuration, setMaintenanceDuration] = useState('');
   const [busy, setBusy] = useState('');
   const systemLevel = ROLE_LEVEL[who?.role] || 0;
 
@@ -81,7 +83,11 @@ export default function Developer() {
     if (!who?.unlocked) return;
     setBusy('load');
     try {
-      if (tab === 'overview') setOv(await api.get('/api/developer/overview'));
+      if (tab === 'overview') {
+        const data = await api.get('/api/developer/overview');
+        setOv(data);
+        setMaintenanceMessage(data.flags?.maintenanceMessage || '');
+      }
       if (tab === 'logs') {
         const d = await api.get(`/api/developer/logs?file=${encodeURIComponent(logFile)}&lines=180`);
         setLog(d.text || '');
@@ -107,6 +113,21 @@ export default function Developer() {
       setOv((p) => (p ? { ...p, flags: next } : p));
       toast.success('Flag saved.');
     } catch (err) { toast.error(err.message); }
+  };
+
+  const saveMaintenance = async () => {
+    setBusy('maintenance');
+    try {
+      const duration = Number(maintenanceDuration) || 0;
+      const next = await api.post('/api/developer/flags', {
+        maintenance: true,
+        maintenanceMessage,
+        maintenanceUntil: duration ? Date.now() + duration : null,
+      });
+      setOv((previous) => previous ? { ...previous, flags: next } : previous);
+      toast.success('Maintenance policy saved and enforced by the backend.');
+    } catch (err) { toast.error(err.message || 'Could not save maintenance policy'); }
+    setBusy('');
   };
 
   const deploy = async () => {
@@ -266,9 +287,29 @@ export default function Developer() {
               Verbose analytics
               <input type="checkbox" className="accent-fuchsia-400" checked={!!ov.flags?.verbose} onChange={(e) => setFlag('verbose', e.target.checked)} />
             </label>
-            <button onClick={deploy} disabled={busy === 'deploy'} className="cyber-button text-xs inline-flex items-center gap-1.5">
-              <Power size={12} /> {busy === 'deploy' ? 'Deploying…' : 'Redeploy slash commands'}
-            </button>
+            <div className="grid sm:grid-cols-[1fr_auto] gap-2">
+              <input
+                value={maintenanceMessage}
+                onChange={(e) => setMaintenanceMessage(e.target.value)}
+                maxLength={300}
+                placeholder="Maintenance message shown to users"
+                className="cyber-input text-xs"
+              />
+              <select value={maintenanceDuration} onChange={(e) => setMaintenanceDuration(e.target.value)} className="cyber-select text-xs sm:w-36">
+                <option value="">No auto-end</option>
+                <option value="3600000">1 hour</option>
+                <option value="21600000">6 hours</option>
+                <option value="86400000">24 hours</option>
+              </select>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={saveMaintenance} disabled={busy === 'maintenance'} className="cyber-button text-xs">
+                {busy === 'maintenance' ? 'Saving…' : 'Save maintenance policy'}
+              </button>
+              <button onClick={deploy} disabled={busy === 'deploy'} className="cyber-button text-xs inline-flex items-center gap-1.5">
+                <Power size={12} /> {busy === 'deploy' ? 'Deploying…' : 'Redeploy slash commands'}
+              </button>
+            </div>
           </div>
           )}
 

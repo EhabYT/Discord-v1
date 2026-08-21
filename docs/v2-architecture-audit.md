@@ -224,6 +224,16 @@ Currently audited actions include developer unlock/lock, authorization denials f
 - Internal stack traces and filesystem paths are not returned.
 - PostgreSQL operational failures become actionable, sanitized 503 responses.
 - Developer audit and ordinary application logs are separate.
+- Discord command failures return a short Error ID instead of raw exception messages; the matching stack remains in backend logs.
+
+## Maintenance enforcement
+
+Maintenance mode is enforced by backend middleware, not by hidden frontend
+buttons. Normal API requests receive a sanitized `503 MAINTENANCE` response with
+an optional end time and `Retry-After`. Health, OAuth, V2 status, and
+role-authorized developer diagnostics remain reachable. Discord slash commands
+apply the same message and automatically stop blocking after the configured end
+time. Only `SUPER_ADMIN` can change the policy.
 
 ## Performance monitoring
 

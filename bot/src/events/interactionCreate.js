@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const { Events, MessageFlags } = require('discord.js');
 const logger = require('../../../shared/lib/logger');
 const { safeReply } = require('../../../shared/utils/discord');
@@ -24,11 +25,13 @@ module.exports = {
 
             try {
                 const flags = await db.get('dev_flags') || {};
-                if (flags.maintenance) {
+                const expired = flags.maintenanceUntil && Number(flags.maintenanceUntil) <= Date.now();
+                if (flags.maintenance && !expired) {
                     const owner = process.env.OWNER_ID;
                     if (!owner || interaction.user.id !== owner) {
+                        const message = String(flags.maintenanceMessage || 'EB is temporarily under maintenance.').slice(0, 300);
                         return interaction.reply({
-                            content: '🛠️ EB is in **maintenance mode**. Try again in a minute.',
+                            content: `🛠️ ${message}`,
                             flags: [MessageFlags.Ephemeral]
                         }).catch(() => {});
                     }
@@ -54,9 +57,13 @@ module.exports = {
             try {
                 await command.execute(interaction, client, db);
             } catch (err) {
-                logger.error(`Command error: /${interaction.commandName}`, { error: err.message, stack: err.stack });
+                const errorId = crypto.randomBytes(5).toString('hex');
+                logger.error(`Command error: /${interaction.commandName}`, {
+                    errorId, error: err.message, stack: err.stack,
+                    guildId: interaction.guildId, userId: interaction.user.id,
+                });
                 const EmbedHelper = require('../../../shared/utils/embed');
-                const embed = EmbedHelper.error(`There was an error while executing this command!\n\`\`\`${err.message}\`\`\``, client);
+                const embed = EmbedHelper.error(`The command could not be completed. Error ID: \`${errorId}\``, client);
                 await safeReply(interaction, {
                     embeds: [embed],
                     flags: [MessageFlags.Ephemeral]

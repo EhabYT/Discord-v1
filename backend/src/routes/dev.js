@@ -12,6 +12,7 @@ const { isLoopback } = require('../middleware/auth');
 const { clientCount } = require('../utils/sse');
 const { recordDeveloperAction, readDeveloperAudit } = require('../../../shared/services/developer-audit');
 const { metricsSnapshot } = require('../metrics');
+const { invalidateMaintenanceCache } = require('../middleware/maintenance');
 
 const ROOT = path.join(__dirname, '..', '..', '..');
 const LOG_DIR = path.join(ROOT, 'logs');
@@ -261,7 +262,20 @@ module.exports = (botClient) => {
         const cur = (await db.get('dev_flags')) || { maintenance: false, verbose: false };
         if (typeof req.body.maintenance === 'boolean') cur.maintenance = req.body.maintenance;
         if (typeof req.body.verbose === 'boolean') cur.verbose = req.body.verbose;
+        if (typeof req.body.maintenanceMessage === 'string') {
+            cur.maintenanceMessage = req.body.maintenanceMessage.trim().slice(0, 300);
+        }
+        if (req.body.maintenanceUntil === null || req.body.maintenanceUntil === '') {
+            cur.maintenanceUntil = null;
+        } else if (req.body.maintenanceUntil !== undefined) {
+            const until = Number(req.body.maintenanceUntil);
+            if (!Number.isFinite(until) || until <= Date.now() || until > Date.now() + 30 * 24 * 60 * 60 * 1000) {
+                return res.status(400).json({ error: 'maintenanceUntil must be within the next 30 days' });
+            }
+            cur.maintenanceUntil = until;
+        }
         await db.set('dev_flags', cur);
+        invalidateMaintenanceCache();
         recordDeveloperAction(req, 'features.update', 'dev_flags', 'success', cur);
         res.json(cur);
     });

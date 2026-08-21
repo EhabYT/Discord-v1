@@ -12,6 +12,7 @@ const { requireAuth, logAuthMode } = require('./middleware/auth');
 const { csrfGuard } = require('./middleware/csrf');
 const rl = require('./middleware/rate-limit');
 const { errorHandler } = require('./middleware/errors');
+const { maintenanceGuard } = require('./middleware/maintenance');
 const { metricsMiddleware, closeMetrics } = require('./metrics');
 
 const app = express();
@@ -170,6 +171,10 @@ function startDashboard(botClient) {
     const devRouter = require('./routes/dev')(botClient);
     const setupRouter = require('./routes/setup')();
     const v2Router = require('./routes/v2')(botClient);
+
+    // Maintenance is enforced server-side for every normal API. Health, OAuth,
+    // V2 diagnostics and role-authorized developer APIs remain reachable.
+    app.use('/api', maintenanceGuard(botClient));
 
     // The OAuth entry point mints session state on every hit; throttle it.
     app.use('/api/auth/discord', rl.limit('oauth-start', 20, 5 * 60 * 1000));
