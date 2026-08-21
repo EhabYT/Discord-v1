@@ -32,6 +32,7 @@ module.exports = (botClient) => {
             }
 
             const track = queue.currentTrack;
+            const queuePreview = botClient.config?.limits?.queuePreview || 25;
             const progress = queue.node.getTimestamp();
             const paused = !!queue.node.isPaused();
             const vc = queue.channel;
@@ -49,7 +50,7 @@ module.exports = (botClient) => {
                     progress: progress ? Math.round(progress.progress) : 0,
                     source: track.raw?.source || (track.url?.includes('spotify') ? 'spotify' : 'youtube')
                 },
-                queue: queue.tracks.toArray().slice(0, 25).map((t, i) => ({
+                queue: queue.tracks.toArray().slice(0, queuePreview).map((t, i) => ({
                     index: i,
                     title: t.title,
                     author: t.author,

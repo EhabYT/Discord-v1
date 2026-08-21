@@ -1,6 +1,6 @@
 const { Events, EmbedBuilder } = require('discord.js');
 const { hasModPerms } = require('../../../shared/utils/discord');
-const config = require('../../../config/bot.json');
+const { config, containsProfanity } = require('../../../shared/config/bot-config');
 const logger = require('../../../shared/lib/logger');
 const { getCached, setCached } = require('../../../database/index');
 
@@ -147,7 +147,7 @@ module.exports = {
 
         // 2. Bad Words
         if (!violation && autoModCfg.badWords) {
-            if (config.profanity.some(word => message.content.toLowerCase().includes(word))) {
+            if (containsProfanity(message.content, config.automod.profanity)) {
                 violation = 'Profanity';
                 violationType = 'profanity';
             }

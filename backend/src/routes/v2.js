@@ -2,6 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { db, databaseConfigIssue } = require('../../../database/index');
+const { config: botConfig } = require('../../../shared/config/bot-config');
 
 const RELEASE = '2.0.0';
 const DASHBOARD_INDEX = path.join(__dirname, '..', '..', '..', 'dashboard', 'public', 'index.html');
@@ -25,6 +26,12 @@ async function systemSnapshot(botClient) {
     return {
         release: RELEASE,
         apiVersion: 'v2',
+        configuration: {
+            schemaVersion: botConfig.schemaVersion,
+            botName: botConfig.identity.name,
+            product: botConfig.identity.product,
+            version: botConfig.identity.version,
+        },
         status: ready ? 'ready' : 'degraded',
         checks: {
             dashboardBuilt,

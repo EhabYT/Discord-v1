@@ -27,9 +27,9 @@ module.exports = {
             const text = interaction.options.getString('text');
             notes.push({ id: randomUUID().split('-')[0], text, mod: interaction.user.tag, ts: Date.now() });
             // Cap growth to match the dashboard endpoint.
-            await db.set(key, notes.slice(-200));
+            await db.set(key, notes.slice(-(client.config.limits.warningHistory || 200)));
             return client.helpers.safeReply(interaction, {
-                embeds: [new EmbedBuilder().setColor('#00fbff').setDescription(`📝 Note added for ${user}. (${notes.length} total)`)]
+                embeds: [new EmbedBuilder().setColor(client.config.colors.primary).setDescription(`📝 Note added for ${user}. (${notes.length} total)`)]
             });
         }
 
@@ -59,7 +59,7 @@ module.exports = {
             `**${i + 1}.** ${n.text}\n*${n.mod} · <t:${Math.floor((n.ts || 0) / 1000)}:R>*`
         ).join('\n\n');
         const embed = new EmbedBuilder()
-            .setColor('#00fbff')
+            .setColor(client.config.colors.primary)
             .setTitle(`Notes · ${user.username}`)
             .setDescription(desc)
             .setFooter({ text: `${notes.length} note(s)` });

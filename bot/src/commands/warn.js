@@ -20,10 +20,10 @@ module.exports = {
         const warnings = await db.get(key) || [];
         warnings.push(warning);
         // Cap growth: this list is append-only and unbounded otherwise.
-        await db.set(key, warnings.slice(-200));
+        await db.set(key, warnings.slice(-(client.config.limits.warningHistory || 200)));
 
         const embed = new EmbedBuilder()
-            .setColor('#00fbff') // Neon Blue
+            .setColor(client.config.colors.primary)
             .setTitle('⚠️ User Warned')
             .addFields(
                 { name: 'User', value: `${user.tag} (${user.id})`, inline: true },

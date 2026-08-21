@@ -1,20 +1,48 @@
 {
-    "colors": {
-        "primary": "#00fbff",
-        "success": "#00FF00",
-        "warning": "#FFA500",
-        "error": "#FF0000",
-        "info": "#0099FF"
-    },
-    "emojis": {
-        "music": "🎵",
-        "ticket": "🎫",
-        "lock": "🔒",
-        "party": "🎉",
-        "check": "✅",
-        "cross": "❌"
-    },
-    "profanity": [
+  "$schema": "./bot.schema.json",
+  "schemaVersion": 2,
+  "identity": {
+    "name": "EB Bot",
+    "shortName": "EB",
+    "product": "EB Dashboard V2",
+    "version": "2.0.0",
+    "defaultActivity": "/help · dashboard"
+  },
+  "colors": {
+    "primary": "#22D3EE",
+    "secondary": "#8B5CF6",
+    "success": "#22C55E",
+    "warning": "#F59E0B",
+    "error": "#EF4444",
+    "info": "#3B82F6",
+    "neutral": "#71717A"
+  },
+  "emojis": {
+    "music": "🎵",
+    "ticket": "🎫",
+    "lock": "🔒",
+    "party": "🎉",
+    "check": "✅",
+    "cross": "❌",
+    "warning": "⚠️",
+    "info": "ℹ️",
+    "loading": "⏳",
+    "online": "🟢",
+    "offline": "🔴"
+  },
+  "limits": {
+    "warningHistory": 200,
+    "queuePreview": 25,
+    "bulkModeration": 50,
+    "embedDescription": 4096,
+    "embedFields": 25
+  },
+  "automod": {
+    "profanity": {
+      "matchMode": "word",
+      "normalizeUnicode": true,
+      "normalizeLeetspeak": true,
+      "terms": [
         "fuck",
         "shit",
         "bitch",
@@ -30,5 +58,7 @@
         "retard",
         "wanker",
         "motherfucker"
-    ]
+      ]
+    }
+  }
 }

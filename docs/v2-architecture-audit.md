@@ -39,6 +39,15 @@ Supabase          Discord
 PostgreSQL        Gateway/REST/Voice
 ```
 
+## Bot configuration
+
+`config/bot.json` is a secret-free, schema-versioned runtime configuration for
+identity, accessible embed colors, emojis, bounded operational limits, and
+AutoMod terms. `config/bot.schema.json` documents the contract, while the
+backend loader validates and deep-freezes it before startup. Profanity matching
+uses Unicode/leet normalization and exact word tokens rather than unsafe
+substring checks.
+
 ## Frontend classification
 
 ### Normal dashboard

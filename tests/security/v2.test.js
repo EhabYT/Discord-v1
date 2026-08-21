@@ -9,7 +9,9 @@ const check = (label, ok) => {
 (async () => {
     console.log('\nV2 system contract:\n');
     const snapshot = await systemSnapshot({ user: null, isReady: () => false });
-    check('release is explicitly versioned', RELEASE === '2.0.0' && snapshot.apiVersion === 'v2');
+    check('release and bot configuration are explicitly versioned',
+        RELEASE === '2.0.0' && snapshot.apiVersion === 'v2'
+        && snapshot.configuration.schemaVersion === 2 && snapshot.configuration.version === '2.0.0');
     check('readiness has a stable machine-readable state', ['ready', 'degraded'].includes(snapshot.status));
     check('capabilities advertise bilingual RTL support',
         snapshot.capabilities.rtl === true && snapshot.capabilities.bilingual.includes('ar'));

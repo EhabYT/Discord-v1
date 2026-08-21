@@ -4,6 +4,7 @@ const fs = require('fs');
 const { Client, GatewayIntentBits, Partials, Collection } = require('discord.js');
 const { Player } = require('discord-player');
 const { db, closePool } = require('../../database/index');
+const { config: botConfig } = require('../../shared/config/bot-config');
 
 const logger = require('../../shared/lib/logger');
 const scheduler = require('./scheduler.js');
@@ -39,7 +40,7 @@ const client = new Client({
 client.commands = new Collection();
 client.db = db;
 client.helpers = require('../../shared/utils/discord');
-client.config = require('../../config/bot.json');
+client.config = botConfig;
 
 // Initialize Music Player
 const player = new Player(client, {

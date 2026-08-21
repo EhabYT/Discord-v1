@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://eb-bot.local/schemas/bot.schema.json",
+  "title": "EB Bot configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "identity", "colors", "emojis", "limits", "automod"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 2 },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "shortName", "product", "version", "defaultActivity"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "shortName": { "type": "string", "minLength": 1, "maxLength": 16 },
+        "product": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "defaultActivity": { "type": "string", "minLength": 1, "maxLength": 128 }
+      }
+    },
+    "colors": {
+      "type": "object",
+      "required": ["primary", "secondary", "success", "warning", "error", "info", "neutral"],
+      "additionalProperties": false,
+      "properties": {
+        "primary": { "$ref": "#/$defs/color" },
+        "secondary": { "$ref": "#/$defs/color" },
+        "success": { "$ref": "#/$defs/color" },
+        "warning": { "$ref": "#/$defs/color" },
+        "error": { "$ref": "#/$defs/color" },
+        "info": { "$ref": "#/$defs/color" },
+        "neutral": { "$ref": "#/$defs/color" }
+      }
+    },
+    "emojis": {
+      "type": "object",
+      "minProperties": 6,
+      "additionalProperties": { "type": "string", "minLength": 1, "maxLength": 32 }
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["warningHistory", "queuePreview", "bulkModeration", "embedDescription", "embedFields"],
+      "properties": {
+        "warningHistory": { "type": "integer", "minimum": 1, "maximum": 1000 },
+        "queuePreview": { "type": "integer", "minimum": 1, "maximum": 100 },
+        "bulkModeration": { "type": "integer", "minimum": 1, "maximum": 100 },
+        "embedDescription": { "type": "integer", "minimum": 1, "maximum": 4096 },
+        "embedFields": { "type": "integer", "minimum": 1, "maximum": 25 }
+      }
+    },
+    "automod": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profanity"],
+      "properties": {
+        "profanity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["matchMode", "normalizeUnicode", "normalizeLeetspeak", "terms"],
+          "properties": {
+            "matchMode": { "const": "word" },
+            "normalizeUnicode": { "type": "boolean" },
+            "normalizeLeetspeak": { "type": "boolean" },
+            "terms": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 500,
+              "uniqueItems": true,
+              "items": { "type": "string", "minLength": 2, "maxLength": 64 }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" }
+  }
+}

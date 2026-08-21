@@ -11,7 +11,7 @@ module.exports = {
         try {
             const saved = await client.db.get('bot_presence').catch(() => null);
             const status = saved?.status || 'online';
-            const text = saved?.activityText || '/help · dashboard';
+            const text = saved?.activityText || client.config.identity.defaultActivity;
             const type = Number.isInteger(saved?.activityType) ? saved.activityType : 3;
             await client.user.setPresence({
                 status,

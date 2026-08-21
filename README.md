@@ -66,6 +66,15 @@ GET /api/v2/ready    # 200 when ready, 503 while configuration is incomplete
 
 Neither endpoint returns tokens, connection strings or user data.
 
+### Versioned bot configuration
+
+`config/bot.json` uses schema version 2 and is documented by
+`config/bot.schema.json`. Startup validation rejects unsupported keys, malformed
+colors, out-of-range limits, duplicate profanity terms, and invalid identity
+metadata. The runtime object is deeply immutable. AutoMod uses normalized
+whole-word matching, preventing false positives such as `class` matching a
+short blocked term.
+
 ---
 
 ## Security model
