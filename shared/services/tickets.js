@@ -1,5 +1,5 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, PermissionFlagsBits, MessageFlags } = require('discord.js');
-const config = require('../../config/bot.json');
+const config = require('../config/bot-config').config;
 
 async function handleTicketCreate(i, client, db) {
     if (!i.guild) return i.reply({ content: '❌ Tickets only work in a server.', flags: [MessageFlags.Ephemeral] }).catch(() => {});

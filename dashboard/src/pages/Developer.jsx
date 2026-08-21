@@ -50,6 +50,7 @@ export default function Developer() {
   const [guilds, setGuilds] = useState([]);
   const [audit, setAudit] = useState([]);
   const [metrics, setMetrics] = useState(null);
+  const [botConfig, setBotConfig] = useState(null);
   const [maintenanceMessage, setMaintenanceMessage] = useState('');
   const [maintenanceDuration, setMaintenanceDuration] = useState('');
   const [busy, setBusy] = useState('');
@@ -98,6 +99,7 @@ export default function Developer() {
       if (tab === 'guilds') setGuilds((await api.get('/api/developer/guilds')).guilds || []);
       if (tab === 'audit') setAudit((await api.get('/api/developer/audit?limit=150')).events || []);
       if (tab === 'performance') setMetrics(await api.get('/api/developer/metrics'));
+      if (tab === 'config') setBotConfig(await api.get('/api/developer/config'));
     } catch (err) {
       if (String(err.message).includes('Developer')) loadWho();
       else toast.error(err.message || 'Load failed');
@@ -195,6 +197,7 @@ export default function Developer() {
   const availableTabs = [
     ['overview', 'Overview', 1],
     ['commands', 'Commands', 1],
+    ['config', 'Bot Config', 1],
     ['guilds', 'Guilds', 1],
     ['logs', 'Logs', 2],
     ['env', 'Environment', 2],
@@ -377,6 +380,42 @@ export default function Developer() {
                 {c.subs?.length ? <span className="text-[10px] text-fuchsia-300/80">{c.subs.length} subs</span> : null}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {tab === 'config' && botConfig && (
+        <div className="space-y-3">
+          <div className="cyber-card p-5">
+            <p className="cyber-label">Schema V{botConfig.schemaVersion}</p>
+            <h3 className="text-lg font-bold text-white mt-1">{botConfig.identity?.product}</h3>
+            <p className="text-xs text-zinc-500 mt-1">{botConfig.identity?.name} · {botConfig.identity?.version} · {botConfig.identity?.defaultActivity}</p>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div className="cyber-card p-4">
+              <p className="text-xs font-semibold text-white mb-3">Embed palette</p>
+              <div className="grid grid-cols-2 gap-2">
+                {Object.entries(botConfig.colors || {}).map(([name, color]) => (
+                  <div key={name} className="flex items-center gap-2 text-[11px] text-zinc-400">
+                    <span className="w-5 h-5 rounded-md border border-white/10" style={{ backgroundColor: color }} />
+                    <span>{name}</span><span className="font-mono text-zinc-600">{color}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="cyber-card p-4">
+              <p className="text-xs font-semibold text-white mb-3">Validated limits</p>
+              <div className="space-y-1.5">
+                {Object.entries(botConfig.limits || {}).map(([name, value]) => (
+                  <div key={name} className="flex justify-between text-[11px]"><span className="text-zinc-500">{name}</span><span className="font-mono text-cyan-200">{value}</span></div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="cyber-card p-4 flex flex-wrap gap-2">
+            {Object.entries(botConfig.emojis || {}).map(([name, emoji]) => <span key={name} className="cyber-badge-cyan">{emoji} {name}</span>)}
+            <span className="cyber-badge-purple">{botConfig.automod?.profanity?.termCount || 0} protected terms</span>
+            <span className="cyber-badge-green">whole-word AutoMod</span>
           </div>
         </div>
       )}

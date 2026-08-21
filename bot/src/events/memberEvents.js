@@ -1,5 +1,5 @@
 const { Events, EmbedBuilder, AuditLogEvent, PermissionsBitField } = require('discord.js');
-const config = require('../../../config/bot.json');
+const config = require('../../../shared/config/bot-config').config;
 const logger = require('../../../shared/lib/logger');
 
 function emitLog(guildId, event) {

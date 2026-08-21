@@ -1,5 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
-const config = require('../../../../config/bot.json');
+const config = require('../../../../shared/config/bot-config').config;
 
 module.exports = {
     name: 'playerSkip',

@@ -55,13 +55,16 @@ async function login(id) { return cookieOf(await req(`/__dev_login/${id}`)); }
     console.log('\nDeveloper API route enforcement:\n');
 
     const ordinary = await login('444444444444444444');
-    for (const endpoint of ['overview', 'commands', 'guilds', 'flags', 'logs', 'env', 'db', 'audit']) {
+    for (const endpoint of ['overview', 'commands', 'config', 'guilds', 'flags', 'logs', 'env', 'db', 'audit']) {
         const r = await req(`/api/developer/${endpoint}`, { cookie: ordinary });
         check(`ordinary user denied /${endpoint}`, r.status === 403, `${r.status}`);
     }
 
     const support = await login('333333333333333333');
     check('support may read overview', (await req('/api/developer/overview', { cookie: support })).status === 200);
+    const safeConfig = await req('/api/developer/config', { cookie: support });
+    check('support may read secret-free bot configuration',
+        safeConfig.status === 200 && /"schemaVersion":2/.test(safeConfig.body) && !/"terms"/.test(safeConfig.body));
     check('support cannot read environment', (await req('/api/developer/env', { cookie: support })).status === 403);
     check('support cannot write feature flags', (await req('/api/developer/flags', {
         method: 'POST', cookie: support, body: { maintenance: true },

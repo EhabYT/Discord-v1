@@ -58,7 +58,7 @@ module.exports = {
 
             // Create Embed and Button
             const embed = new EmbedBuilder()
-                .setColor(require('../../../config/bot.json').colors?.success || '#00FF00')
+                .setColor(require('../../../shared/config/bot-config').config.colors?.success || '#00FF00')
                 .setTitle(title)
                 .setDescription(description)
                 .setFooter({ text: interaction.guild.name, iconURL: interaction.guild.iconURL() });

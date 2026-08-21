@@ -13,6 +13,7 @@ const { clientCount } = require('../utils/sse');
 const { recordDeveloperAction, readDeveloperAudit } = require('../../../shared/services/developer-audit');
 const { metricsSnapshot } = require('../metrics');
 const { invalidateMaintenanceCache } = require('../middleware/maintenance');
+const { config: botConfig } = require('../../../shared/config/bot-config');
 
 const ROOT = path.join(__dirname, '..', '..', '..');
 const LOG_DIR = path.join(ROOT, 'logs');
@@ -196,6 +197,24 @@ module.exports = (botClient) => {
     router.get('/env', developerOnly, (req, res) => {
         recordDeveloperAction(req, 'environment.inspect', 'runtime');
         res.json({ vars: redactEnv() });
+    });
+
+    router.get('/config', supportOnly, (_req, res) => {
+        res.json({
+            schemaVersion: botConfig.schemaVersion,
+            identity: botConfig.identity,
+            colors: botConfig.colors,
+            emojis: botConfig.emojis,
+            limits: botConfig.limits,
+            automod: {
+                profanity: {
+                    matchMode: botConfig.automod.profanity.matchMode,
+                    normalizeUnicode: botConfig.automod.profanity.normalizeUnicode,
+                    normalizeLeetspeak: botConfig.automod.profanity.normalizeLeetspeak,
+                    termCount: botConfig.automod.profanity.terms.length,
+                },
+            },
+        });
     });
 
     router.get('/commands', supportOnly, (req, res) => {

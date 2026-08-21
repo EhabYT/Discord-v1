@@ -1,6 +1,6 @@
 const { Events, EmbedBuilder } = require('discord.js');
 const { getCached, setCached } = require('../../../database/index');
-const config = require('../../../config/bot.json');
+const config = require('../../../shared/config/bot-config').config;
 
 const voiceJoinTimes = new Map();
 

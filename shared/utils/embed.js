@@ -1,5 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
-const config = require('../../config/bot.json');
+const config = require('../config/bot-config').config;
 
 /**
  * Standardized Embed Utility for EB Bot "Elite" Branding
