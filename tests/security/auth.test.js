@@ -116,13 +116,25 @@ const MUST_401 = [
     const leaks = ['publicUrl', 'sseClients', '"guilds"'].filter((k) => health.body.includes(k));
     if (leaks.length) { failures++; console.log(`  FAIL  health leaks to anonymous: ${leaks.join(', ')}`); }
     else console.log('  PASS  no guild count / SSE count / public URL in anonymous health');
-    const csp = health.headers['content-security-policy'] || '';
-    const secureHeaders = csp.includes("default-src 'self'")
-        && health.headers['x-content-type-options'] === 'nosniff'
-        && health.headers['referrer-policy'] === 'no-referrer'
-        && /microphone=\(\)/.test(health.headers['permissions-policy'] || '');
+    const hasSecurityHeaders = response => {
+        const csp = response.headers['content-security-policy'] || '';
+        return csp.includes("default-src 'self'")
+            && response.headers['x-content-type-options'] === 'nosniff'
+            && response.headers['x-frame-options'] === 'SAMEORIGIN'
+            && response.headers['referrer-policy'] === 'no-referrer'
+            && /microphone=\(\)/.test(response.headers['permissions-policy'] || '');
+    };
+    const secureHeaders = hasSecurityHeaders(health);
     if (!secureHeaders) failures++;
-    console.log(`  ${secureHeaders ? 'PASS' : 'FAIL'}  security headers and CSP are present`);
+    console.log(`  ${secureHeaders ? 'PASS' : 'FAIL'}  API security headers and CSP are present`);
+
+    // express.static used to be mounted before the header middleware. Static
+    // Dashboard responses ended the request early and silently bypassed CSP,
+    // frame, MIME, referrer, and permissions policy headers.
+    const dashboard = await req('/');
+    const dashboardHeaders = dashboard.status === 200 && hasSecurityHeaders(dashboard);
+    if (!dashboardHeaders) failures++;
+    console.log(`  ${dashboardHeaders ? 'PASS' : 'FAIL'}  static Dashboard security headers and CSP are present`);
 
     console.log('\nForged proxy headers must not unlock the localhost bypass:\n');
     for (const h of [{ 'X-Forwarded-For': '1.2.3.4' }, { 'X-Forwarded-Host': 'evil.com' }]) {

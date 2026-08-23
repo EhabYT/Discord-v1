@@ -105,6 +105,29 @@ const sessionMiddleware = session({
 });
 app.use(sessionMiddleware);
 
+// Security headers must precede express.static. Express ends a successful
+// static-file response immediately, so middleware registered after it never
+// runs for Dashboard HTML, JavaScript, CSS, images, or fonts.
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    res.setHeader('Content-Security-Policy', [
+        "default-src 'self'",
+        "base-uri 'self'",
+        "object-src 'none'",
+        "frame-ancestors 'self'",
+        "script-src 'self'",
+        "style-src 'self' 'unsafe-inline'",
+        "font-src 'self' data:",
+        "img-src 'self' data: https:",
+        "connect-src 'self' ws: wss:",
+    ].join('; '));
+    if (IS_PROD) res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    next();
+});
+
 app.use(compression());
 app.use(express.static(path.join(__dirname, '..', '..', 'dashboard', 'public'), {
     maxAge: 0,
@@ -133,26 +156,6 @@ app.use(rateLimiter);
 // Origin check on unsafe methods; see middleware/csrf.js for why SameSite alone
 // is not treated as sufficient.
 app.use(csrfGuard);
-
-app.use((req, res, next) => {
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-    res.setHeader('Referrer-Policy', 'no-referrer');
-    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-    res.setHeader('Content-Security-Policy', [
-        "default-src 'self'",
-        "base-uri 'self'",
-        "object-src 'none'",
-        "frame-ancestors 'self'",
-        "script-src 'self'",
-        "style-src 'self' 'unsafe-inline'",
-        "font-src 'self' data:",
-        "img-src 'self' data: https:",
-        "connect-src 'self' ws: wss:",
-    ].join('; '));
-    if (IS_PROD) res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-    next();
-});
 
 let dashboardStarted = false;
 function startDashboard(botClient) {

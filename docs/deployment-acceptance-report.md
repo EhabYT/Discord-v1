@@ -154,9 +154,28 @@ Main JS bundle:                259.55 kB (81.65 kB gzip)
 Main CSS bundle:                66.06 kB (12.49 kB gzip)
 ```
 
-README deployment commands and the security-suite count were updated. No
-runtime endpoint, command, database, authorization, or frontend source behavior
-was changed by this workstream.
+README deployment commands and the security-suite count were updated.
+
+## Preview-discovered static header fix
+
+The first local live-smoke run exposed a middleware-ordering defect that the API
+header test did not cover: `express.static` was mounted before the security
+header middleware, so successful Dashboard HTML/JS/CSS responses ended before
+CSP, frame, MIME, referrer, and permissions headers were applied.
+
+The header middleware now runs before static delivery. A regression assertion
+in `tests/security/auth.test.js` independently checks the static Dashboard, and
+the local degraded deployment preflight now reports:
+
+```text
+Passed: 30
+Failed:  0
+```
+
+The complete release gate passed again with zero lint findings and zero
+vulnerabilities. No endpoint, command, database format, authorization decision,
+or frontend feature behavior changed; static responses now receive the intended
+security policy.
 
 ## Required external next actions
 
