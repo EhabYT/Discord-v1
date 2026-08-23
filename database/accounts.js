@@ -601,6 +601,36 @@ class AccountStore {
         return row ? { account: safeAccount(row), passwordHash: row.password_hash } : null;
     }
 
+    async linkDiscordIdentity(accountId, discordUser, requestId = null) {
+        await this.ready();
+        const client = await this.pool.connect();
+        const discordId = String(discordUser.id);
+        try {
+            await client.query('BEGIN');
+            await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`account:discord:${discordId}`]);
+            const existing = await client.query(`SELECT account_id FROM account_identities
+                WHERE provider = 'discord' AND provider_user_id = $1 FOR UPDATE`, [discordId]);
+            if (existing.rows[0] && String(existing.rows[0].account_id) !== String(accountId)) {
+                const error = new Error('Discord identity is already linked'); error.code = 'DISCORD_ALREADY_LINKED'; throw error;
+            }
+            await client.query(`INSERT INTO account_identities
+                (account_id, provider, provider_user_id, provider_username, provider_avatar_url)
+                VALUES ($1, 'discord', $2, $3, $4)
+                ON CONFLICT (provider, provider_user_id) DO UPDATE SET
+                    provider_username = EXCLUDED.provider_username,
+                    provider_avatar_url = EXCLUDED.provider_avatar_url, updated_at = NOW()`,
+            [accountId, discordId, discordUser.username || null, discordUser.avatar || null]);
+            await client.query(`INSERT INTO account_security_events (id, account_id, event_type, request_id, metadata)
+                VALUES ($1, $2, 'discord_identity_linked', $3, '{}'::jsonb)`, [crypto.randomUUID(), accountId, requestId]);
+            const account = await this.byId(accountId, client);
+            await client.query('COMMIT');
+            return account;
+        } catch (err) {
+            try { await client.query('ROLLBACK'); } catch { /* preserve original */ }
+            throw err;
+        } finally { client.release(); }
+    }
+
     async ensureDiscordAccount(discordUser, requestId = null) {
         await this.ready();
         const client = await this.pool.connect();

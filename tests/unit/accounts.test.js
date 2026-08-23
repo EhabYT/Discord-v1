@@ -24,6 +24,10 @@ class FakePool {
             const identity = [...this.identities.values()].find(item => item.account_id === params[0]);
             return { rows: account ? [{ ...account, ...(identity || {}) }] : [] };
         }
+        if (/SELECT account_id FROM account_identities/.test(sql)) {
+            const identity = this.identities.get(String(params[0]));
+            return { rows: identity ? [{ account_id: identity.account_id }] : [] };
+        }
         if (/SELECT 1 FROM accounts/.test(sql)) {
             return { rows: [...this.accounts.values()].some(a => a.username.toLowerCase() === params[0].toLowerCase()) ? [{ '?column?': 1 }] : [] };
         }
@@ -81,7 +85,19 @@ class FakePool {
     assert.strictEqual(second.avatarUrl, 'https://cdn.example/new.png');
     assert.strictEqual(pool.accounts.size, 1);
     assert.strictEqual(pool.events.length, 1, 'ordinary identity refresh must not duplicate provisioning events');
-    assert.strictEqual(pool.releases, 2, 'transaction clients must always release');
+
+    const localId = '22222222-2222-4222-8222-222222222222';
+    pool.accounts.set(localId, { id: localId, display_name: 'Local', username: 'local_user', email: 'local@example.com', email_verified_at: null, status: 'active', created_at: new Date().toISOString() });
+    const linked = await store.linkDiscordIdentity(localId, { id: '222222222222222222', username: 'Linked', avatar: null }, 'request-link');
+    assert.strictEqual(linked.id, localId);
+    assert.strictEqual(linked.linkedDiscord.id, '222222222222222222');
+    await assert.rejects(
+        store.linkDiscordIdentity(localId, { id: '111111111111111111', username: 'Taken', avatar: null }),
+        err => err.code === 'DISCORD_ALREADY_LINKED',
+        'an identity linked to another account must never auto-link by email or request',
+    );
+    assert.strictEqual(pool.events.length, 2, 'explicit linking creates one security event');
+    assert.strictEqual(pool.releases, 4, 'transaction clients must always release');
 
     console.log('Account foundation tests passed.');
 })().catch(err => {

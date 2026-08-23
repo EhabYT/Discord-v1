@@ -44,6 +44,7 @@ export const PAGE_TITLES = {
   ...Object.fromEntries(NAV.filter((item) => item.id).map((item) => [item.id, item.label])),
   profile: 'Profile',
   accountSecurity: 'Account Security',
+  accountSettings: 'Account Settings',
 };
 
 export const PAGE_HINTS = Object.fromEntries(

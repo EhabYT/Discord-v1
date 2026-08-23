@@ -43,6 +43,7 @@ const ForgotPassword = lazy(() => import('./pages/ForgotPassword.jsx'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword.jsx'));
 const VerifyEmail = lazy(() => import('./pages/VerifyEmail.jsx'));
 const AccountSecurity = lazy(() => import('./pages/AccountSecurity.jsx'));
+const AccountSettings = lazy(() => import('./pages/AccountSettings.jsx'));
 import api from './api.js';
 import { useAuth } from './auth/AuthContext.jsx';
 import { PAGE_TITLES, PAGE_HINTS, DOCK_PAGES, SEARCHABLE_PAGES } from './nav.js';
@@ -86,6 +87,7 @@ const PAGES = {
   resetPassword: ResetPassword,
   verifyEmail: VerifyEmail,
   accountSecurity: AccountSecurity,
+  accountSettings: AccountSettings,
 };
 
 export const PermContext = React.createContext({ level: 0, levelName: 'Viewer' });
@@ -94,7 +96,8 @@ function getHashPage() {
   const pathRoutes = {
     '/profile': 'profile', '/login': 'login', '/register': 'register',
     '/forgot-password': 'forgotPassword', '/reset-password': 'resetPassword',
-    '/verify-email': 'verifyEmail', '/settings/security': 'accountSecurity',
+    '/verify-email': 'verifyEmail', '/settings': 'accountSettings',
+    '/settings/security': 'accountSecurity',
   };
   if (pathRoutes[window.location.pathname]) return pathRoutes[window.location.pathname];
   const h = window.location.hash.replace('#', '').trim();
@@ -399,6 +402,14 @@ export default function App() {
     return () => { current = false; };
   }, [selectedGuild]);
 
+  const accountProtectedPage = ['profile', 'accountSettings', 'accountSecurity'].includes(page);
+  useEffect(() => {
+    if (!authLoading && accountProtectedPage && !account) {
+      const returnPath = `${window.location.pathname}${window.location.search}`;
+      window.location.replace(`/login?return=${window.encodeURIComponent(returnPath)}`);
+    }
+  }, [accountProtectedPage, account, authLoading]);
+
   const PageComponent = PAGES[page] || Overview;
   const isLive = page === 'livefeed';
   const isHome = page === 'home';
@@ -423,6 +434,8 @@ export default function App() {
       </div>
     );
   }
+
+  if (accountProtectedPage && !account) return <PageLoading />;
 
   if (['login', 'register', 'forgotPassword', 'resetPassword', 'verifyEmail'].includes(page)) {
     return (
@@ -573,7 +586,7 @@ export default function App() {
                     </Suspense>
                   </PageErrorBoundary>
                 </div>
-              ) : page === 'profile' || page === 'accountSecurity' ? (
+              ) : ['profile', 'accountSettings', 'accountSecurity'].includes(page) ? (
                 <div className="h-full animate-fade-in">
                   <PageErrorBoundary key={page}>
                     <Suspense fallback={<PageLoading />}>

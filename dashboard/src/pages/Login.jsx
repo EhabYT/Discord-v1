@@ -10,16 +10,18 @@ export default function Login() {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  useEffect(() => { if (account) window.location.replace('/profile'); }, [account]);
+  const requestedReturn = new window.URLSearchParams(window.location.search).get('return') || '';
+  const destination = requestedReturn.startsWith('/') && !requestedReturn.startsWith('//') ? requestedReturn : '/profile';
+  useEffect(() => { if (account) window.location.replace(destination); }, [account, destination]);
   const submit = async event => {
     event.preventDefault(); setBusy(true); setError('');
-    try { const result = await login(form); if (result.mfaRequired) setMfaRequired(true); else window.location.replace('/profile'); }
+    try { const result = await login(form); if (result.mfaRequired) setMfaRequired(true); else window.location.replace(destination); }
     catch (err) { setError(err.message); }
     finally { setBusy(false); }
   };
   const submitMfa = async event => {
     event.preventDefault(); setBusy(true); setError('');
-    try { await verifyMfa(code); window.location.replace('/profile'); }
+    try { await verifyMfa(code); window.location.replace(destination); }
     catch (err) { setError(err.message); }
     finally { setBusy(false); }
   };

@@ -144,6 +144,11 @@ module.exports = (botClient) => {
         }
         const redirectUri = redirectUriFor(req);
         req.session.oauthRedirect = redirectUri;
+        if (req.session.account?.id && !req.session.user?.id) {
+            req.session.oauthLinkAccountId = req.session.account.id;
+        } else {
+            delete req.session.oauthLinkAccountId;
+        }
         // OAuth CSRF ("login CSRF"): without a state parameter an attacker can
         // feed a victim their own authorization code and silently sign the
         // victim's browser into the attacker's Discord account.
@@ -215,8 +220,11 @@ module.exports = (botClient) => {
             // snowflake used by every guild authorization path. Credential-free
             // test/local diagnostics can run without PostgreSQL; production OAuth
             // already refuses to start unless the database is available.
+            const linkAccountId = req.session.oauthLinkAccountId || null;
             const account = getPool()
-                ? await getAccountStore().ensureDiscordAccount(user, req.requestId)
+                ? (linkAccountId
+                    ? await getAccountStore().linkDiscordIdentity(linkAccountId, user, req.requestId)
+                    : await getAccountStore().ensureDiscordAccount(user, req.requestId))
                 : null;
 
             // Session fixation: an attacker who plants a known session id in the
@@ -249,6 +257,10 @@ module.exports = (botClient) => {
                 ? `${dashboardHomeFor(req)}/login?mfa=1`
                 : loginResultUrl(req, 'success'));
         } catch (err) {
+            if (err.code === 'DISCORD_ALREADY_LINKED' || err.code === '23505') {
+                return oauthErrorPage(res, 'Discord linking failed',
+                    'That Discord identity is already linked to another EB account.', '');
+            }
             const data = err.response?.data;
             const desc = data?.error_description || data?.error || '';
             console.error('OAuth2 Error:', data || err.message);

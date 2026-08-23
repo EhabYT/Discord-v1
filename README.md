@@ -100,6 +100,18 @@ Never commit `.env`. In Render, configure values in the Environment panel.
 | `DASHBOARD_AUTH=true` | Enforce Discord OAuth |
 | `DASHBOARD_SECURE=true` | Force secure cookies |
 
+### Account email, avatar, and MFA providers
+
+| Variable | Purpose |
+|---|---|
+| `EMAIL_PROVIDER=resend` | Account email adapter |
+| `EMAIL_FROM` | Verified Resend sender |
+| `RESEND_API_KEY` | Newly generated Resend API key |
+| `SUPABASE_URL` | HTTPS Supabase project origin for Storage |
+| `SUPABASE_SERVICE_ROLE_KEY` | Newly rotated backend-only Storage key |
+| `SUPABASE_AVATAR_BUCKET=avatars` | Public-read avatar bucket |
+| `ACCOUNT_ENCRYPTION_KEY` | Independent 32-byte TOTP/recovery protection key |
+
 ### System-role configuration
 
 | Variable | Purpose |
@@ -213,6 +225,29 @@ SUPER_ADMIN > DEVELOPER > SUPPORT > NONE
 Public allow-listed endpoints such as health, OAuth entry/status, and V2
 readiness are intentionally reachable without a session and return no secrets.
 All other `/api/*` routes fail closed.
+
+## Account and authentication system
+
+The existing Discord OAuth flow is extended by one unified internal EB account;
+it is not a second backend, Dashboard, or database.
+
+```text
+Public UI:    /login /register /forgot-password /reset-password /verify-email
+Protected UI: /profile /settings /settings/security
+```
+
+Features include Argon2id credentials, Resend verification/recovery, editable
+profile and pending email changes, validated Supabase Storage avatars, encrypted
+TOTP MFA, hashed single-use recovery codes, MFA-pending password/Discord login,
+30-minute idle and 24-hour absolute sessions, device/session revocation,
+persistent security activity, recent reauthentication, and delayed account
+deactivation.
+
+Discord linking remains mandatory for guild administration. Internal account
+UUIDs never replace Discord snowflakes in guild permissions, hierarchy,
+Socket.IO, or SSE authorization. Provider variables are documented in
+`.env.example` and `render.yaml` and must be configured with newly rotated
+secrets.
 
 ## Dashboard
 
@@ -489,8 +524,8 @@ Current verification scope:
 
 - 100 Discord commands
 - Bot Config schema and AutoMod normalization
-- 22 security suites
-- 159 API routes
+- 23 security suites
+- 183 API routes
 - OAuth, sessions, CSRF, and guild isolation
 - Discord hierarchy and privacy redaction
 - Abuse and rate limits
