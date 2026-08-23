@@ -104,13 +104,11 @@ module.exports = (botClient) => {
         try {
             const { guildId } = req.params;
             const type = req.query.type || 'xp';
-            const all = await db.all();
+            const filterPrefix = type === 'xp' ? `xp_${guildId}_` : `stats_${guildId}_`;
+            const all = await db.allByPrefix(filterPrefix);
 
             let entries = [];
-            const filterPrefix = type === 'xp' ? `xp_${guildId}_` : `stats_${guildId}_`;
-
             entries = all
-                .filter(e => e.id.startsWith(filterPrefix))
                 .map(e => ({ userId: e.id.replace(filterPrefix, ''), ...e.value }));
 
             if (type === 'xp') {
@@ -139,9 +137,9 @@ module.exports = (botClient) => {
     router.get('/warnings', async (req, res, next) => {
         try {
             const { guildId } = req.params;
-            const allKeys = await db.all();
+            const prefix = `warnings_${guildId}_`;
+            const allKeys = await db.allByPrefix(prefix);
             const warnings = allKeys
-                .filter(e => e.id.startsWith(`warnings_${guildId}_`))
                 .flatMap(e => (e.value || []).map((w, i) => ({
                     userId: e.id.replace(`warnings_${guildId}_`, ''),
                     ...w,
@@ -198,7 +196,7 @@ module.exports = (botClient) => {
             };
             const [audit, allKeys] = await Promise.all([
                 guild.fetchAuditLogs({ limit: 25 }).catch(() => ({ entries: [] })),
-                db.all()
+                db.allByPrefix(`warnings_${guildId}_`)
             ]);
 
             const activities = [...audit.entries.values()].map(e => {
@@ -219,7 +217,6 @@ module.exports = (botClient) => {
             });
 
             const warnings = allKeys
-                .filter(e => e.id.startsWith(`warnings_${guildId}_`))
                 .flatMap(e => (e.value || []).map(w => ({
                     type: 'warning',
                     userId: e.id.replace(`warnings_${guildId}_`, ''),
@@ -540,13 +537,13 @@ module.exports = (botClient) => {
         try {
             const { guildId } = req.params;
             const cfg = await db.get(`birthday_config_${guildId}`) || {};
-            const all = await db.all();
             const prefix = `birthday_${guildId}_`;
+            const all = await db.allByPrefix(prefix);
             const today = new Date();
             const todayM = today.getMonth() + 1;
             const todayD = today.getDate();
             const entries = all
-                .filter((e) => e.id.startsWith(prefix) && e.value && e.value.month)
+                .filter((e) => e.value && e.value.month)
                 .map((e) => {
                     const userId = e.id.replace(prefix, '');
                     const month = Number(e.value.month);
@@ -845,9 +842,8 @@ module.exports = (botClient) => {
     router.get('/tickets', async (req, res, next) => {
         try {
             const { guildId } = req.params;
-            const allKeys = await db.all();
+            const allKeys = await db.allByPrefix(`ticket_${guildId}_`);
             const tickets = allKeys
-                .filter(e => e.id.startsWith(`ticket_${guildId}_`))
                 .map(e => ({ id: e.id.replace(`ticket_${guildId}_`, ''), ...e.value }));
             res.json(tickets);
         } catch (err) { next(err); }
@@ -1143,9 +1139,8 @@ module.exports = (botClient) => {
     router.get('/notes', async (req, res, next) => {
         try {
             const { guildId } = req.params;
-            const allKeys = await db.all();
+            const allKeys = await db.allByPrefix(`notes_${guildId}_`);
             const notes = allKeys
-                .filter(e => e.id.startsWith(`notes_${guildId}_`))
                 .flatMap(e => normalizeNotes(e.value || []).map(n => ({
                     userId: e.id.replace(`notes_${guildId}_`, ''),
                     ...n,
@@ -1234,8 +1229,7 @@ module.exports = (botClient) => {
     router.delete('/warnings', requirePerm(3), rl.bulkModeration(), async (req, res, next) => {
         try {
             const { guildId } = req.params;
-            const allKeys = await db.all();
-            const keys = allKeys.filter(e => e.id.startsWith(`warnings_${guildId}_`));
+            const keys = await db.allByPrefix(`warnings_${guildId}_`);
             await Promise.all(keys.map(e => db.set(e.id, [])));
             res.json({ success: true, cleared: keys.length });
         } catch (err) { next(err); }
@@ -1693,16 +1687,12 @@ module.exports = (botClient) => {
     router.post('/xp/reset', requirePerm(3), rl.bulkModeration(), async (req, res, next) => {
         try {
             const { guildId } = req.params;
-            const allKeys = await db.all();
-            const xpKeys = allKeys.filter(e => e.id.startsWith(`xp_${guildId}_`));
-            const statsKeys = allKeys.filter(e => e.id.startsWith(`stats_${guildId}_`));
-
-            await Promise.all([
-                ...xpKeys.map(e => db.delete(e.id)),
-                ...statsKeys.map(e => db.delete(e.id))
+            const [xpCount, statsCount] = await Promise.all([
+                db.deletePrefix(`xp_${guildId}_`),
+                db.deletePrefix(`stats_${guildId}_`),
             ]);
 
-            res.json({ success: true, cleared: xpKeys.length + statsKeys.length });
+            res.json({ success: true, cleared: xpCount + statsCount });
         } catch (err) { next(err); }
     });
 

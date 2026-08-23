@@ -55,6 +55,7 @@ if (!process.env.DATABASE_URL) {
                 value JSONB NOT NULL,
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
+            CREATE INDEX IF NOT EXISTS bot_kv_key_prefix ON bot_kv (key text_pattern_ops);
             ALTER TABLE bot_kv ENABLE ROW LEVEL SECURITY;
         `);
         for (const row of rows) {

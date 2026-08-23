@@ -83,10 +83,9 @@ function registerJobs(client, scheduler) {
                 const ch = await guild.channels.fetch(cfg.channelId).catch(() => null);
                 if (!ch) continue;
 
-                const all     = await db.all();
                 const prefix  = `birthday_${guildId}_`;
+                const all = await db.allByPrefix(prefix);
                 const entries = all.filter(e =>
-                    e.id.startsWith(prefix) &&
                     e.value?.month === month &&
                     e.value?.day   === day
                 );
@@ -136,8 +135,8 @@ function registerJobs(client, scheduler) {
     // Expire birthday roles after 24h (survives restarts)
     scheduler.addJob('birthday-roles', 60 * 60 * 1000, async () => {
         const now = Date.now();
-        const all = await db.all();
-        for (const entry of all.filter(e => e.id.startsWith('bday_role_'))) {
+        const all = await db.allByPrefix('bday_role_');
+        for (const entry of all) {
             if (!entry.value || entry.value > now) continue;
             const parts = entry.id.split('_');
             const guildId = parts[2];
@@ -155,8 +154,8 @@ function registerJobs(client, scheduler) {
     // Fire due reminders
     scheduler.addJob('reminders', 15000, async () => {
         const now = Date.now();
-        const all = await db.all();
-        for (const entry of all.filter(e => e.id.startsWith('reminders_'))) {
+        const all = await db.allByPrefix('reminders_');
+        for (const entry of all) {
             const list = Array.isArray(entry.value) ? entry.value : [];
             if (!list.length) continue;
             const remaining = [];

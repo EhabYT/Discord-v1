@@ -8,6 +8,9 @@ CREATE TABLE IF NOT EXISTS public.bot_kv (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE INDEX IF NOT EXISTS bot_kv_key_prefix
+    ON public.bot_kv (key text_pattern_ops);
+
 CREATE TABLE IF NOT EXISTS public.dashboard_sessions (
     sid TEXT PRIMARY KEY,
     sess JSONB NOT NULL,

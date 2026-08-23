@@ -127,10 +127,10 @@ flags: [MessageFlags.Ephemeral]
         if (sub === 'list') {
             await interaction.deferReply();
 
-            const all   = await db.all();
             const prefix = `birthday_${guildId}_`;
+            const all = await db.allByPrefix(prefix);
             const entries = all
-                .filter(e => e.id.startsWith(prefix) && e.value && e.value.month)
+                .filter(e => e.value && e.value.month)
                 .map(e => ({ userId: e.id.replace(prefix, ''), ...e.value }))
                 .sort((a, b) => {
                     const da = daysUntil(a.month, a.day);

@@ -3,6 +3,16 @@ const { Pool } = require('pg');
 const isTestProcess = process.env.NODE_ENV === 'test'
     || process.argv.some((arg) => /(?:^|[\\/])tests[\\/]/.test(arg));
 
+function normalizePrefixOptions(prefix, options = {}) {
+    const cleanPrefix = String(prefix || '');
+    if (!cleanPrefix || cleanPrefix.length > 200) throw new Error('prefix must be 1-200 characters');
+    const limit = Math.min(5000, Math.max(1, Number(options.limit) || 1000));
+    const cursor = options.cursor == null ? null : String(options.cursor);
+    if (cursor && !cursor.startsWith(cleanPrefix)) throw new Error('cursor must belong to prefix');
+    const likePrefix = `${cleanPrefix.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
+    return { prefix: cleanPrefix, likePrefix, limit, cursor };
+}
+
 class MemoryDatabase {
     constructor() { this.data = new Map(); }
     ready() { return Promise.resolve(true); }
@@ -16,6 +26,40 @@ class MemoryDatabase {
     delete(key) { return Promise.resolve(this.data.delete(String(key))); }
     all() {
         return Promise.resolve([...this.data.entries()].map(([id, value]) => ({ id, value: structuredClone(value) })));
+    }
+    scanPrefix(prefix, options = {}) {
+        const normalized = normalizePrefixOptions(prefix, options);
+        const matches = [...this.data.entries()]
+            .filter(([id]) => id.startsWith(normalized.prefix) && (!normalized.cursor || id > normalized.cursor))
+            .sort(([a], [b]) => a.localeCompare(b));
+        const page = matches.slice(0, normalized.limit)
+            .map(([id, value]) => ({ id, value: structuredClone(value) }));
+        return Promise.resolve({
+            rows: page,
+            nextCursor: matches.length > normalized.limit ? page.at(-1).id : null,
+        });
+    }
+    allByPrefix(prefix, options = {}) {
+        return collectPrefixRows(this, prefix, options);
+    }
+    deletePrefix(prefix) {
+        const normalized = normalizePrefixOptions(prefix);
+        let deleted = 0;
+        for (const key of [...this.data.keys()]) {
+            if (key.startsWith(normalized.prefix)) { this.data.delete(key); deleted++; }
+        }
+        return Promise.resolve(deleted);
+    }
+    keyCount() { return Promise.resolve(this.data.size); }
+    prefixStats(limit = 30) {
+        const counts = new Map();
+        for (const key of this.data.keys()) {
+            const prefix = key.split('_')[0] || key;
+            counts.set(prefix, (counts.get(prefix) || 0) + 1);
+        }
+        return Promise.resolve([...counts].map(([prefix, count]) => ({ prefix, count }))
+            .sort((a, b) => b.count - a.count || a.prefix.localeCompare(b.prefix))
+            .slice(0, Math.min(100, Math.max(1, Number(limit) || 30))));
     }
 }
 
@@ -68,6 +112,18 @@ function getPool() {
     return sharedPool;
 }
 
+async function collectPrefixRows(database, prefix, { pageSize = 1000, maxRows = 50_000 } = {}) {
+    const rows = [];
+    let cursor = null;
+    do {
+        const page = await database.scanPrefix(prefix, { limit: pageSize, cursor });
+        rows.push(...page.rows);
+        if (rows.length > maxRows) throw new Error(`Prefix scan exceeded ${maxRows} rows`);
+        cursor = page.nextCursor;
+    } while (cursor);
+    return rows;
+}
+
 class PostgresDatabase {
     constructor(pool = getPool()) {
         this.pool = pool;
@@ -83,6 +139,8 @@ class PostgresDatabase {
                     value JSONB NOT NULL,
                     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 );
+                CREATE INDEX IF NOT EXISTS bot_kv_key_prefix
+                    ON bot_kv (key text_pattern_ops);
                 ALTER TABLE bot_kv ENABLE ROW LEVEL SECURITY;
             `).then(() => true);
             this.initializing = attempt.catch((err) => {
@@ -122,6 +180,56 @@ class PostgresDatabase {
         const result = await this.pool.query('SELECT key AS id, value FROM bot_kv ORDER BY key');
         return result.rows;
     }
+
+    async scanPrefix(prefix, options = {}) {
+        await this.ready();
+        const normalized = normalizePrefixOptions(prefix, options);
+        const result = await this.pool.query(`
+            SELECT key AS id, value
+            FROM bot_kv
+            WHERE key LIKE $1 ESCAPE '\\'
+              AND ($2::text IS NULL OR key > $2)
+            ORDER BY key
+            LIMIT $3
+        `, [normalized.likePrefix, normalized.cursor, normalized.limit]);
+        return {
+            rows: result.rows,
+            nextCursor: result.rows.length === normalized.limit ? result.rows.at(-1).id : null,
+        };
+    }
+
+    allByPrefix(prefix, options = {}) {
+        return collectPrefixRows(this, prefix, options);
+    }
+
+    async deletePrefix(prefix) {
+        await this.ready();
+        const normalized = normalizePrefixOptions(prefix);
+        const result = await this.pool.query(
+            "DELETE FROM bot_kv WHERE key LIKE $1 ESCAPE '\\'",
+            [normalized.likePrefix]
+        );
+        return result.rowCount;
+    }
+
+    async keyCount() {
+        await this.ready();
+        const result = await this.pool.query('SELECT COUNT(*)::int AS count FROM bot_kv');
+        return result.rows[0]?.count || 0;
+    }
+
+    async prefixStats(limit = 30) {
+        await this.ready();
+        const safeLimit = Math.min(100, Math.max(1, Number(limit) || 30));
+        const result = await this.pool.query(`
+            SELECT split_part(key, '_', 1) AS prefix, COUNT(*)::int AS count
+            FROM bot_kv
+            GROUP BY 1
+            ORDER BY count DESC, prefix ASC
+            LIMIT $1
+        `, [safeLimit]);
+        return result.rows;
+    }
 }
 
 const db = isTestProcess ? new MemoryDatabase() : new PostgresDatabase();
@@ -140,5 +248,6 @@ async function closePool() {
 
 module.exports = {
     db, getCached, setCached, deleteCached,
-    getPool, closePool, normalizeDatabaseUrl, databaseConfigIssue, MemoryDatabase, PostgresDatabase,
+    getPool, closePool, normalizeDatabaseUrl, databaseConfigIssue,
+    normalizePrefixOptions, collectPrefixRows, MemoryDatabase, PostgresDatabase,
 };

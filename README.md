@@ -408,8 +408,11 @@ bot_kv
 dashboard_sessions
 ```
 
-RLS is enabled without browser policies. Use the Supabase **Session Pooler** URI
-for Render IPv4 compatibility:
+RLS is enabled without browser policies. Prefix-heavy features use indexed,
+keyset-paginated PostgreSQL scans instead of loading the full key/value table.
+Developer key counts use SQL aggregates without transferring JSONB values.
+
+Use the Supabase **Session Pooler** URI for Render IPv4 compatibility:
 
 ```text
 postgresql://postgres.PROJECT_REF:ENCODED_PASSWORD@HOST.pooler.supabase.com:5432/postgres
@@ -662,6 +665,8 @@ Set an independent `SESSION_SECRET`. A stable key is derived from
 ## Documentation
 
 - [V2 architecture and security audit](docs/v2-architecture-audit.md)
+- [Phase 1 optimization audit and manifest](docs/phase1-optimization-audit.md)
+- [Phase 2 indexed prefix-query optimization](docs/phase2-prefix-query-optimization.md)
 - [Complete V2 test report](docs/v2-test-report.md)
 - [Engineering lessons](docs/engineering-lessons.md)
 - [Supabase schema](supabase/schema.sql)

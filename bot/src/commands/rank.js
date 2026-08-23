@@ -23,10 +23,9 @@ module.exports = {
             const xpNeeded = level * 100;
 
             // Calculate rank: count members with higher (level * 100 + xp)
-            const allKeys = await db.all().catch(() => []);
             const prefix  = `xp_${guildId}_`;
+            const allKeys = await db.allByPrefix(prefix).catch(() => []);
             const scores  = allKeys
-                .filter(e => e.id.startsWith(prefix))
                 .map(e => ({ userId: e.id.replace(prefix, ''), score: (e.value.textLevel || 1) * 100 + (e.value.textXp || 0) }));
 
             const myScore = level * 100 + xp;

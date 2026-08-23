@@ -246,18 +246,10 @@ module.exports = (botClient) => {
 
     router.get('/db', developerOnly, async (req, res, next) => {
         try {
-            const all = await db.all();
-            const prefixes = {};
-            for (const row of all) {
-                const id = String(row.id || '');
-                const p = id.split('_')[0] || id;
-                prefixes[p] = (prefixes[p] || 0) + 1;
-            }
-            const top = Object.entries(prefixes).sort((a, b) => b[1] - a[1]).slice(0, 30)
-                .map(([prefix, count]) => ({ prefix, count }));
-            recordDeveloperAction(req, 'database.inspect', 'bot_kv', 'success', { keys: all.length });
+            const [top, keys] = await Promise.all([db.prefixStats(30), db.keyCount()]);
+            recordDeveloperAction(req, 'database.inspect', 'bot_kv', 'success', { keys });
             res.json({
-                keys: all.length,
+                keys,
                 provider: 'supabase-postgresql',
                 prefixes: top,
             });

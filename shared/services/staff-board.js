@@ -57,10 +57,10 @@ async function deleteAnnouncement(guild, db, id) {
 }
 
 async function listAfk(guild, db) {
-    const all = await db.all();
     const prefix = `afk_${guild.id}_`;
+    const all = await db.allByPrefix(prefix);
     const items = [];
-    for (const e of all.filter((x) => x.id.startsWith(prefix) && x.value)) {
+    for (const e of all.filter((x) => x.value)) {
         const userId = e.id.slice(prefix.length);
         const member = guild.members.cache.get(userId);
         items.push({
@@ -82,9 +82,9 @@ async function clearAfk(db, guildId, userId) {
 }
 
 async function listReminders(guild, db) {
-    const all = await db.all();
+    const all = await db.allByPrefix('reminders_');
     const items = [];
-    for (const e of all.filter((x) => x.id.startsWith('reminders_'))) {
+    for (const e of all) {
         const userId = e.id.replace('reminders_', '');
         const list = Array.isArray(e.value) ? e.value : [];
         list.forEach((r, index) => {
