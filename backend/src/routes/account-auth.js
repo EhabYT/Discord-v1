@@ -7,6 +7,7 @@ const {
     sendVerificationEmail, sendEmailChangedNotice, sendPasswordResetEmail,
 } = require('../../../shared/services/account-mail');
 const logger = require('../../../shared/lib/logger');
+const { attachSessionSecurity } = require('../../../shared/services/account-sessions');
 const { decryptSecret, verifyTotp, recoveryHash } = require('../../../shared/services/account-mfa');
 const { normalizeDisplayName, normalizeLocalUsername, normalizeEmail } = require('../../../shared/services/account-validation');
 // Unknown accounts still perform one Argon2 verification to reduce timing-based
@@ -95,6 +96,7 @@ module.exports = () => {
             }
             await regenerate(req);
             attachLocalAccount(req.session, account);
+            attachSessionSecurity(req.session, req);
             await save(req);
             let verificationEmailSent = false;
             try {
@@ -135,7 +137,9 @@ module.exports = () => {
                 return res.status(202).json({ mfaRequired: true, challengeExpiresIn: 300 });
             }
             attachLocalAccount(req.session, credential.account);
+            attachSessionSecurity(req.session, req);
             await save(req);
+            await store.recordSecurityEvent(credential.account.id, 'login_success', req.requestId, { method: 'password' });
             return res.json({ account: credential.account, verificationRequired: !credential.account.emailVerified });
         } catch (err) { return next(err); }
     });
@@ -172,7 +176,9 @@ module.exports = () => {
             await regenerate(req);
             if (pendingDiscord) attachDiscordAccount(req.session, account, pendingDiscord);
             else attachLocalAccount(req.session, account);
+            attachSessionSecurity(req.session, req);
             await save(req);
+            await store.recordSecurityEvent(account.id, 'login_success', req.requestId, { method: pendingDiscord ? 'discord_mfa' : 'password_mfa' });
             return res.json({ account, verificationRequired: !account.emailVerified });
         } catch (err) {
             if (err.code === 'MFA_UNAVAILABLE') return res.status(503).json({ error: 'MFA verification is unavailable', code: err.code });

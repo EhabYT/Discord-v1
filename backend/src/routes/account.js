@@ -4,7 +4,8 @@ const { getAccountStore } = require('../../../database/accounts');
 const { getPool } = require('../../../database/index');
 const { requireAccount } = require('../middleware/auth');
 const { normalizeDisplayName, normalizeLocalUsername, normalizeEmail } = require('../../../shared/services/account-validation');
-const { verifyPassword } = require('../../../shared/services/passwords');
+const { validatePassword, hashPassword, verifyPassword } = require('../../../shared/services/passwords');
+const { hasRecentReauthentication, markReauthenticated } = require('../../../shared/services/account-sessions');
 const { sendEmailChangeVerification } = require('../../../shared/services/account-mail');
 const { normalizeAvatar, uploadAvatar, deleteAvatar } = require('../../../shared/services/account-avatars');
 const {
@@ -128,6 +129,87 @@ module.exports = () => {
         } catch (err) { return next(err); }
     });
 
+    router.post('/reauthenticate', requireAccount, async (req, res, next) => {
+        try {
+            const store = getAccountStore();
+            const account = await store.byId(req.accountId);
+            const passwordHash = await store.credentialByAccount(req.accountId);
+            const passwordOk = passwordHash && await verifyPassword(passwordHash, String(req.body?.currentPassword || ''));
+            const factorOk = !account.mfaEnabled || (passwordOk && await verifyCurrentFactor(store, req.accountId, String(req.body?.code || '')));
+            if (!passwordOk || !factorOk) return res.status(401).json({ error: 'Reauthentication failed', code: 'REAUTH_FAILED' });
+            markReauthenticated(req.session);
+            await saveSession(req.session);
+            await store.recordSecurityEvent(req.accountId, 'reauthenticated', req.requestId);
+            return res.json({ success: true, validFor: 600 });
+        } catch (err) { return next(err); }
+    });
+
+    router.post('/password/change', requireAccount, async (req, res, next) => {
+        try {
+            const issue = validatePassword(req.body?.newPassword);
+            if (issue) return res.status(400).json({ error: issue, code: 'PASSWORD_POLICY' });
+            if (req.body.newPassword !== req.body.confirmPassword) return res.status(400).json({ error: 'Passwords do not match', code: 'VALIDATION_ERROR' });
+            const store = getAccountStore();
+            const account = await store.byId(req.accountId);
+            const oldHash = await store.credentialByAccount(req.accountId);
+            const passwordOk = oldHash && await verifyPassword(oldHash, String(req.body?.currentPassword || ''));
+            const factorOk = !account.mfaEnabled || (passwordOk && await verifyCurrentFactor(store, req.accountId, String(req.body?.code || '')));
+            if (!passwordOk || !factorOk) return res.status(401).json({ error: 'Current password and MFA factor are required', code: 'REAUTH_FAILED' });
+            const nextHash = await hashPassword(req.body.newPassword);
+            const revoked = await store.changePassword(req.accountId, nextHash, req.sessionID, req.body?.revokeOtherSessions !== false, req.requestId);
+            markReauthenticated(req.session);
+            await saveSession(req.session);
+            return res.json({ success: true, otherSessionsRevoked: revoked });
+        } catch (err) { return next(err); }
+    });
+
+    router.get('/sessions', requireAccount, async (req, res, next) => {
+        try { return res.json(await getAccountStore().sessions(req.accountId, req.sessionID)); }
+        catch (err) { return next(err); }
+    });
+
+    router.delete('/sessions/:id', requireAccount, async (req, res, next) => {
+        try {
+            const sessions = await getAccountStore().sessions(req.accountId, req.sessionID);
+            const target = sessions.find(item => String(item.id) === String(req.params.id));
+            if (!target) return res.status(404).json({ error: 'Session not found', code: 'SESSION_NOT_FOUND' });
+            await getAccountStore().revokeSession(req.accountId, req.params.id);
+            await getAccountStore().recordSecurityEvent(req.accountId, 'session_revoked', req.requestId, { current: target.current });
+            if (target.current) return req.session.destroy(() => { res.clearCookie('eb.sid'); res.json({ success: true, currentSessionRevoked: true }); });
+            return res.json({ success: true, currentSessionRevoked: false });
+        } catch (err) { return next(err); }
+    });
+
+    router.post('/sessions/revoke-others', requireAccount, async (req, res, next) => {
+        try {
+            const count = await getAccountStore().revokeOtherSessions(req.accountId, req.sessionID);
+            await getAccountStore().recordSecurityEvent(req.accountId, 'other_sessions_revoked', req.requestId, { count });
+            return res.json({ success: true, revoked: count });
+        } catch (err) { return next(err); }
+    });
+
+    router.post('/sessions/revoke-all', requireAccount, async (req, res, next) => {
+        try {
+            await getAccountStore().recordSecurityEvent(req.accountId, 'all_sessions_revoked', req.requestId);
+            const count = await getAccountStore().revokeAllSessions(req.accountId);
+            return req.session.destroy(() => { res.clearCookie('eb.sid'); res.json({ success: true, revoked: count }); });
+        } catch (err) { return next(err); }
+    });
+
+    router.get('/activity', requireAccount, async (req, res, next) => {
+        try { return res.json(await getAccountStore().activity(req.accountId)); }
+        catch (err) { return next(err); }
+    });
+
+    router.post('/deactivate', requireAccount, async (req, res, next) => {
+        try {
+            if (!hasRecentReauthentication(req.session)) return res.status(403).json({ error: 'Recent reauthentication required', code: 'REAUTH_REQUIRED' });
+            if (String(req.body?.confirmation || '') !== 'DELETE') return res.status(400).json({ error: 'Type DELETE to confirm deactivation', code: 'CONFIRMATION_REQUIRED' });
+            await getAccountStore().deactivateAccount(req.accountId, req.requestId);
+            return req.session.destroy(() => { res.clearCookie('eb.sid'); res.setHeader('Clear-Site-Data', '"cache", "cookies", "storage"'); res.json({ success: true, deactivated: true }); });
+        } catch (err) { return next(err); }
+    });
+
     router.post('/mfa/enroll', requireAccount, async (req, res, next) => {
         try {
             const store = getAccountStore();
@@ -158,6 +240,7 @@ module.exports = () => {
             const account = await getAccountStore().enableMfa(
                 req.accountId, encrypted, recoveryCodes.map(recoveryHash), req.requestId
             );
+            await getAccountStore().revokeOtherSessions(req.accountId, req.sessionID);
             clearEnrollment(req.session);
             attachAccount(req.session, account);
             await saveSession(req.session);
@@ -176,6 +259,7 @@ module.exports = () => {
             const factorOk = passwordOk && await verifyCurrentFactor(store, req.accountId, String(req.body?.code || ''));
             if (!factorOk) return res.status(401).json({ error: 'Password and current authentication factor are required', code: 'REAUTH_FAILED' });
             const account = await store.disableMfa(req.accountId, req.requestId);
+            await store.revokeOtherSessions(req.accountId, req.sessionID);
             attachAccount(req.session, account);
             await saveSession(req.session);
             return res.json({ account });
@@ -196,6 +280,7 @@ module.exports = () => {
             if (!factorOk) return res.status(401).json({ error: 'Password and current authentication factor are required', code: 'REAUTH_FAILED' });
             const recoveryCodes = generateRecoveryCodes();
             await store.replaceRecoveryCodes(req.accountId, recoveryCodes.map(recoveryHash), req.requestId);
+            await store.revokeOtherSessions(req.accountId, req.sessionID);
             return res.json({ recoveryCodes });
         } catch (err) {
             if (err.code === 'MFA_UNAVAILABLE') return res.status(503).json({ error: err.message, code: err.code });

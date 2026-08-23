@@ -3,12 +3,21 @@ const {
 } = require('../../backend/src/session-store');
 
 class FakePool {
-    constructor() { this.rows = new Map(); }
+    constructor() { this.rows = new Map(); this.metadata = new Map(); }
     async query(sql, params = []) {
         if (/CREATE TABLE|CREATE INDEX/.test(sql)) return { rows: [], rowCount: 0 };
         if (/INSERT INTO dashboard_sessions/.test(sql)) {
             this.rows.set(params[0], { sess: JSON.parse(params[1]), expires: new Date(params[2]).getTime() });
             return { rows: [], rowCount: 1 };
+        }
+        if (/INSERT INTO account_session_metadata/.test(sql)) {
+            const existing = this.metadata.get(params[0]);
+            this.metadata.set(params[0], { publicId: existing?.publicId || params[1], accountId: params[2], lastSeen: params[4] });
+            return { rows: [], rowCount: 1 };
+        }
+        if (/UPDATE account_session_metadata/.test(sql)) {
+            const row = this.metadata.get(params[1]); if (row) row.lastSeen = params[0];
+            return { rows: [], rowCount: row ? 1 : 0 };
         }
         if (/SELECT sess/.test(sql)) {
             const row = this.rows.get(params[0]);
@@ -48,6 +57,15 @@ function check(label, ok, detail = '') {
     await call(store, 'set', 'sid-1', session);
     let loaded = await call(store, 'get', 'sid-1');
     check('session can be written and read', loaded?.oauthState === 'state-value');
+    const accountSession = {
+        account: { id: '11111111-1111-4111-8111-111111111111' },
+        security: { createdAt: Date.now(), lastSeenAt: Date.now(), absoluteExpiresAt: Date.now() + 86_400_000, deviceLabel: 'Test Browser' },
+        cookie: { maxAge: 60_000 },
+    };
+    await call(store, 'set', 'sid-account', accountSession);
+    check('account session receives a public metadata handle', /^[0-9a-f-]{36}$/.test(pool.metadata.get('sid-account')?.publicId || ''));
+    await call(store, 'touch', 'sid-account', accountSession);
+    check('account session activity metadata is touched', !!pool.metadata.get('sid-account')?.lastSeen);
     clearInterval(store.pruneTimer);
 
     store = new PostgresSessionStore(pool);

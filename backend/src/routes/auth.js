@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const { requireAuth } = require('../middleware/auth');
 const { db, getPool } = require('../../../database/index');
 const { getAccountStore } = require('../../../database/accounts');
+const { attachSessionSecurity } = require('../../../shared/services/account-sessions');
 
 function publicOrigin(req) {
     const xfHost = req.headers['x-forwarded-host'];
@@ -229,6 +230,7 @@ module.exports = (botClient) => {
                 attachMfaChallenge(req.session, account.id, { user, userGuilds: guildsResponse.data });
             } else {
                 attachAuthenticatedSession(req.session, user, guildsResponse.data, account);
+                if (account) attachSessionSecurity(req.session, req);
             }
             // The Discord access token is not needed after this point — the
             // dashboard authorises from session identity + the bot's own gateway
@@ -236,6 +238,9 @@ module.exports = (botClient) => {
             await new Promise((resolve, reject) => {
                 req.session.save((sessionErr) => sessionErr ? reject(sessionErr) : resolve());
             });
+            if (account && !account.mfaEnabled) {
+                await getAccountStore().recordSecurityEvent(account.id, 'login_success', req.requestId, { method: 'discord' });
+            }
 
             // Use the configured public dashboard origin rather than a relative
             // redirect. This is deterministic behind Render's proxy and avoids
@@ -321,7 +326,11 @@ module.exports = (botClient) => {
     });
 
     router.post('/logout', (req, res) => {
-        req.session.destroy(() => res.json({ success: true }));
+        req.session.destroy(() => {
+            res.clearCookie('eb.sid');
+            res.setHeader('Clear-Site-Data', '"cache", "cookies", "storage"');
+            res.json({ success: true });
+        });
     });
 
     return router;

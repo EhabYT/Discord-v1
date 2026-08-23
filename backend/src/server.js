@@ -13,6 +13,7 @@ const { csrfGuard } = require('./middleware/csrf');
 const rl = require('./middleware/rate-limit');
 const { errorHandler } = require('./middleware/errors');
 const { maintenanceGuard } = require('./middleware/maintenance');
+const { attachSessionSecurity, touchSessionSecurity } = require('../../shared/services/account-sessions');
 const { metricsMiddleware, closeMetrics } = require('./metrics');
 
 const app = express();
@@ -93,6 +94,7 @@ const sessionMiddleware = session({
     store: createSessionStore(),
     resave: false,
     saveUninitialized: false,
+    rolling: true,
     cookie: {
         // 'auto' only marks the cookie Secure when Express believes the request
         // was HTTPS; behind a tunnel that depends on X-Forwarded-Proto. Force it
@@ -100,10 +102,25 @@ const sessionMiddleware = session({
         secure: (process.env.DASHBOARD_SECURE === 'true' || IS_PROD) ? true : 'auto',
         httpOnly: true,
         sameSite: 'lax',
-        maxAge: 86400000
+        maxAge: 30 * 60 * 1000
     }
 });
 app.use(sessionMiddleware);
+app.use((req, res, next) => {
+    if (!req.session?.account) return next();
+    if (!req.session.security) attachSessionSecurity(req.session, req, { reauthenticated: false });
+    if (Number(req.session.security.absoluteExpiresAt) <= Date.now()) {
+        return req.session.destroy(() => {
+            res.clearCookie('eb.sid');
+            if (req.path.startsWith('/api/')) {
+                return res.status(401).json({ error: 'Session expired', code: 'SESSION_EXPIRED' });
+            }
+            return res.redirect(303, '/login?reason=expired');
+        });
+    }
+    touchSessionSecurity(req.session);
+    return next();
+});
 
 // Security headers must precede express.static. Express ends a successful
 // static-file response immediately, so middleware registered after it never

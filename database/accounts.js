@@ -96,6 +96,7 @@ CREATE INDEX IF NOT EXISTS account_security_events_account_time
 
 CREATE TABLE IF NOT EXISTS account_session_metadata (
     sid TEXT PRIMARY KEY REFERENCES dashboard_sessions(sid) ON DELETE CASCADE,
+    public_id UUID NOT NULL UNIQUE,
     account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -106,6 +107,9 @@ CREATE TABLE IF NOT EXISTS account_session_metadata (
 );
 CREATE INDEX IF NOT EXISTS account_session_metadata_account
     ON account_session_metadata (account_id, last_seen_at DESC);
+ALTER TABLE account_session_metadata ADD COLUMN IF NOT EXISTS public_id UUID;
+CREATE UNIQUE INDEX IF NOT EXISTS account_session_metadata_public_id
+    ON account_session_metadata (public_id) WHERE public_id IS NOT NULL;
 
 ALTER TABLE accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE account_credentials ENABLE ROW LEVEL SECURITY;
@@ -305,6 +309,104 @@ class AccountStore {
             const account = await this.byId(accountId, client);
             await client.query('COMMIT');
             return account;
+        } catch (err) {
+            try { await client.query('ROLLBACK'); } catch { /* preserve original */ }
+            throw err;
+        } finally { client.release(); }
+    }
+
+    async recordSecurityEvent(accountId, eventType, requestId = null, metadata = {}) {
+        await this.ready();
+        await this.pool.query(`INSERT INTO account_security_events
+            (id, account_id, event_type, request_id, metadata) VALUES ($1, $2, $3, $4, $5::jsonb)`,
+        [crypto.randomUUID(), accountId, eventType, requestId, JSON.stringify(metadata)]);
+    }
+
+    async sessions(accountId, currentSid) {
+        await this.ready();
+        const result = await this.pool.query(`SELECT public_id, sid, created_at, last_seen_at,
+            absolute_expires_at, device_label
+            FROM account_session_metadata
+            WHERE account_id = $1 AND revoked_at IS NULL AND absolute_expires_at > NOW()
+              AND public_id IS NOT NULL
+            ORDER BY last_seen_at DESC`, [accountId]);
+        return result.rows.map(row => ({
+            id: row.public_id,
+            current: row.sid === currentSid,
+            createdAt: row.created_at,
+            lastActiveAt: row.last_seen_at,
+            expiresAt: row.absolute_expires_at,
+            device: row.device_label || 'Unknown browser',
+        }));
+    }
+
+    async revokeSession(accountId, publicId) {
+        await this.ready();
+        const result = await this.pool.query(`DELETE FROM dashboard_sessions
+            WHERE sid IN (SELECT sid FROM account_session_metadata
+                WHERE account_id = $1 AND public_id = $2)
+            RETURNING sid`, [accountId, publicId]);
+        return result.rowCount > 0;
+    }
+
+    async revokeOtherSessions(accountId, currentSid) {
+        await this.ready();
+        const result = await this.pool.query(`DELETE FROM dashboard_sessions
+            WHERE sid IN (SELECT sid FROM account_session_metadata
+                WHERE account_id = $1 AND sid <> $2)`, [accountId, currentSid]);
+        return result.rowCount;
+    }
+
+    async revokeAllSessions(accountId) {
+        await this.ready();
+        const result = await this.pool.query(`DELETE FROM dashboard_sessions
+            WHERE sid IN (SELECT sid FROM account_session_metadata WHERE account_id = $1)`, [accountId]);
+        return result.rowCount;
+    }
+
+    async activity(accountId, limit = 100) {
+        await this.ready();
+        const result = await this.pool.query(`SELECT event_type, occurred_at, metadata
+            FROM account_security_events WHERE account_id = $1
+            ORDER BY occurred_at DESC LIMIT $2`, [accountId, Math.min(100, Math.max(1, limit))]);
+        return result.rows.map(row => ({ event: row.event_type, at: row.occurred_at, metadata: row.metadata || {} }));
+    }
+
+    async changePassword(accountId, passwordHash, currentSid, revokeOthers, requestId = null) {
+        await this.ready();
+        const client = await this.pool.connect();
+        try {
+            await client.query('BEGIN');
+            await client.query('UPDATE account_credentials SET password_hash = $1, changed_at = NOW() WHERE account_id = $2', [passwordHash, accountId]);
+            let revoked = 0;
+            if (revokeOthers) {
+                const result = await client.query(`DELETE FROM dashboard_sessions
+                    WHERE sid IN (SELECT sid FROM account_session_metadata
+                        WHERE account_id = $1 AND sid <> $2)`, [accountId, currentSid]);
+                revoked = result.rowCount;
+            }
+            await client.query(`INSERT INTO account_security_events (id, account_id, event_type, request_id, metadata)
+                VALUES ($1, $2, 'password_changed', $3, $4::jsonb)`,
+            [crypto.randomUUID(), accountId, requestId, JSON.stringify({ otherSessionsRevoked: revoked })]);
+            await client.query('COMMIT');
+            return revoked;
+        } catch (err) {
+            try { await client.query('ROLLBACK'); } catch { /* preserve original */ }
+            throw err;
+        } finally { client.release(); }
+    }
+
+    async deactivateAccount(accountId, requestId = null) {
+        await this.ready();
+        const client = await this.pool.connect();
+        try {
+            await client.query('BEGIN');
+            await client.query(`UPDATE accounts SET status = 'deactivated', updated_at = NOW() WHERE id = $1`, [accountId]);
+            await client.query(`INSERT INTO account_security_events (id, account_id, event_type, request_id, metadata)
+                VALUES ($1, $2, 'account_deactivated', $3, '{}'::jsonb)`, [crypto.randomUUID(), accountId, requestId]);
+            await client.query(`DELETE FROM dashboard_sessions
+                WHERE sid IN (SELECT sid FROM account_session_metadata WHERE account_id = $1)`, [accountId]);
+            await client.query('COMMIT');
         } catch (err) {
             try { await client.query('ROLLBACK'); } catch { /* preserve original */ }
             throw err;

@@ -119,6 +119,7 @@ CREATE INDEX IF NOT EXISTS account_security_events_account_time
 
 CREATE TABLE IF NOT EXISTS public.account_session_metadata (
     sid TEXT PRIMARY KEY REFERENCES public.dashboard_sessions(sid) ON DELETE CASCADE,
+    public_id UUID NOT NULL UNIQUE,
     account_id UUID NOT NULL REFERENCES public.accounts(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -129,6 +130,9 @@ CREATE TABLE IF NOT EXISTS public.account_session_metadata (
 );
 CREATE INDEX IF NOT EXISTS account_session_metadata_account
     ON public.account_session_metadata (account_id, last_seen_at DESC);
+ALTER TABLE public.account_session_metadata ADD COLUMN IF NOT EXISTS public_id UUID;
+CREATE UNIQUE INDEX IF NOT EXISTS account_session_metadata_public_id
+    ON public.account_session_metadata (public_id) WHERE public_id IS NOT NULL;
 
 ALTER TABLE public.accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.account_credentials ENABLE ROW LEVEL SECURITY;

@@ -1,4 +1,5 @@
 const session = require('express-session');
+const crypto = require('crypto');
 const { getPool } = require('../../database/index');
 
 function expiresAt(sess) {
@@ -54,11 +55,27 @@ class PostgresSessionStore extends session.Store {
     get(sid, callback) { this._get(sid).then((v) => callback(null, v), callback); }
 
     set(sid, sess, callback = () => {}) {
-        this.ensureReady().then(() => this.pool.query(`
-            INSERT INTO dashboard_sessions (sid, sess, expires) VALUES ($1, $2::jsonb, $3)
-            ON CONFLICT (sid) DO UPDATE SET sess = EXCLUDED.sess, expires = EXCLUDED.expires
-        `, [sid, JSON.stringify(sess), new Date(expiresAt(sess))]))
-            .then(() => callback(null), callback);
+        this.ensureReady().then(async () => {
+            await this.pool.query(`
+                INSERT INTO dashboard_sessions (sid, sess, expires) VALUES ($1, $2::jsonb, $3)
+                ON CONFLICT (sid) DO UPDATE SET sess = EXCLUDED.sess, expires = EXCLUDED.expires
+            `, [sid, JSON.stringify(sess), new Date(expiresAt(sess))]);
+            const accountId = sess?.account?.id;
+            const security = sess?.security;
+            if (accountId && security?.absoluteExpiresAt) {
+                await this.pool.query(`
+                    INSERT INTO account_session_metadata
+                        (sid, public_id, account_id, created_at, last_seen_at, absolute_expires_at, device_label)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7)
+                    ON CONFLICT (sid) DO UPDATE SET
+                        public_id = COALESCE(account_session_metadata.public_id, EXCLUDED.public_id),
+                        last_seen_at = EXCLUDED.last_seen_at,
+                        absolute_expires_at = EXCLUDED.absolute_expires_at,
+                        device_label = EXCLUDED.device_label
+                `, [sid, crypto.randomUUID(), accountId, new Date(security.createdAt),
+                    new Date(security.lastSeenAt), new Date(security.absoluteExpiresAt), security.deviceLabel]);
+            }
+        }).then(() => callback(null), callback);
     }
 
     destroy(sid, callback = () => {}) {
@@ -67,10 +84,12 @@ class PostgresSessionStore extends session.Store {
     }
 
     touch(sid, sess, callback = () => {}) {
-        this.ensureReady().then(() => this.pool.query(
-            'UPDATE dashboard_sessions SET expires = $1 WHERE sid = $2',
-            [new Date(expiresAt(sess)), sid]
-        )).then(() => callback(null), callback);
+        this.ensureReady().then(() => Promise.all([
+            this.pool.query('UPDATE dashboard_sessions SET expires = $1 WHERE sid = $2',
+                [new Date(expiresAt(sess)), sid]),
+            this.pool.query('UPDATE account_session_metadata SET last_seen_at = $1 WHERE sid = $2',
+                [new Date(sess?.security?.lastSeenAt || Date.now()), sid]),
+        ])).then(() => callback(null), callback);
     }
 }
 

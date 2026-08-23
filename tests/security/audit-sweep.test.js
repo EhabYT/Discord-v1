@@ -189,7 +189,7 @@ const check = (label, ok, detail = '') => {
 
     // Pin the authoritative API inventory so a refactor cannot silently drop
     // (or accidentally duplicate) an endpoint while moving files.
-    check('route discovery found the full API surface', routes.length === 175, `${routes.length} routes`);
+    check('route discovery found the full API surface', routes.length === 183, `${routes.length} routes`);
 
     const leaks = [];
     for (const r of routes) {
