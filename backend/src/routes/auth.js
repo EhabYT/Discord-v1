@@ -3,7 +3,8 @@ const router = express.Router();
 const axios = require('axios');
 const crypto = require('crypto');
 const { requireAuth } = require('../middleware/auth');
-const { db } = require('../../../database/index');
+const { db, getPool } = require('../../../database/index');
+const { getAccountStore } = require('../../../database/accounts');
 
 function publicOrigin(req) {
     const xfHost = req.headers['x-forwarded-host'];
@@ -85,9 +86,10 @@ async function oauthRuntimeIssue() {
     }
 }
 
-function attachAuthenticatedSession(session, user, userGuilds) {
+function attachAuthenticatedSession(session, user, userGuilds, account = null) {
     session.user = user;
     session.userGuilds = userGuilds;
+    if (account) session.account = account;
     delete session.oauthRedirect;
 }
 
@@ -199,6 +201,14 @@ module.exports = (botClient) => {
                     ? `https://cdn.discordapp.com/avatars/${userResponse.data.id}/${userResponse.data.avatar}.png`
                     : `https://cdn.discordapp.com/embed/avatars/${parseInt(userResponse.data.id, 10) % 5}.png`
             };
+            // Provision the internal EB account without replacing the Discord
+            // snowflake used by every guild authorization path. Credential-free
+            // test/local diagnostics can run without PostgreSQL; production OAuth
+            // already refuses to start unless the database is available.
+            const account = getPool()
+                ? await getAccountStore().ensureDiscordAccount(user, req.requestId)
+                : null;
+
             // Session fixation: an attacker who plants a known session id in the
             // victim's browser before login would otherwise still hold a valid
             // authenticated session afterwards. Issue a fresh id at the moment
@@ -206,7 +216,7 @@ module.exports = (botClient) => {
             await new Promise((resolve, reject) => {
                 req.session.regenerate((sessionErr) => sessionErr ? reject(sessionErr) : resolve());
             });
-            attachAuthenticatedSession(req.session, user, guildsResponse.data);
+            attachAuthenticatedSession(req.session, user, guildsResponse.data, account);
             // The Discord access token is not needed after this point — the
             // dashboard authorises from session identity + the bot's own gateway
             // state — so it is deliberately not persisted into the session store.

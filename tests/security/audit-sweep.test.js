@@ -140,7 +140,7 @@ function discoverRoutes() {
 
     // Mounted routers: map the mount prefix to the file that implements it.
     const routerFiles = {
-        statsRouter: ['stats.js'], authRouter: ['auth.js'], devRouter: ['dev.js'],
+        statsRouter: ['stats.js'], authRouter: ['auth.js'], accountRouter: ['account.js'], devRouter: ['dev.js'],
         guildsRouter: ['guilds.js', 'guilds/analytics.js'], musicRouter: ['music.js'],
         permissionsRouter: ['permissions.js'],
     };
@@ -183,7 +183,7 @@ const check = (label, ok, detail = '') => {
 
     // Pin the authoritative API inventory so a refactor cannot silently drop
     // (or accidentally duplicate) an endpoint while moving files.
-    check('route discovery found the full API surface', routes.length === 159, `${routes.length} routes`);
+    check('route discovery found the full API surface', routes.length === 160, `${routes.length} routes`);
 
     const leaks = [];
     for (const r of routes) {

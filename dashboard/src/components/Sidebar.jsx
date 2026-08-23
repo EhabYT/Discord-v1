@@ -1,11 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { ChevronDown, ChevronLeft, ChevronRight, Crown, LogIn, LogOut, Menu, Search, X } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Crown, LogIn, LogOut, Menu, Search, UserRound, X } from 'lucide-react';
 import clsx from 'clsx';
 import { NAV, LEVEL_LABELS, LEVEL_COLORS } from '../nav.js';
 import { useI18n } from '../i18n.jsx';
 
 export default function Sidebar({
-  page, setPage, guilds, selectedGuild, setSelectedGuild, me,
+  page, setPage, guilds, selectedGuild, setSelectedGuild, me, account,
   permLevel = 0, auth = {}, developerAccess = {}, mobileOpen, setMobileOpen, collapsed, onToggleCollapsed,
 }) {
   const { t } = useI18n();
@@ -169,6 +169,14 @@ export default function Sidebar({
               </>
             )}
           </div>
+          {!compact && account && (
+            <a
+              href="/profile"
+              className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] text-zinc-400 hover:text-cyan-200 hover:bg-cyan-500/10 border border-transparent hover:border-cyan-500/20 transition-all"
+            >
+              <UserRound size={12} /> Profile
+            </a>
+          )}
           {!compact && (me.loggedIn ? (
             <button
               onClick={async () => { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); window.location.reload(); }}

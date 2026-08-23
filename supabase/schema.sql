@@ -25,3 +25,62 @@ CREATE INDEX IF NOT EXISTS dashboard_sessions_expires
 -- browser-side anon/authenticated API keys cannot read bot data or sessions.
 ALTER TABLE public.bot_kv ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.dashboard_sessions ENABLE ROW LEVEL SECURITY;
+
+-- Internal Dashboard accounts. Discord identities remain separate because
+-- Discord guild authorization must continue to use immutable Discord user IDs.
+CREATE TABLE IF NOT EXISTS public.accounts (
+    id UUID PRIMARY KEY,
+    display_name VARCHAR(64) NOT NULL,
+    username VARCHAR(24) NOT NULL,
+    email TEXT,
+    email_verified_at TIMESTAMPTZ,
+    avatar_url TEXT,
+    status VARCHAR(16) NOT NULL DEFAULT 'active'
+        CHECK (status IN ('active', 'deactivated', 'deleted')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS accounts_username_lower ON public.accounts (LOWER(username));
+CREATE UNIQUE INDEX IF NOT EXISTS accounts_email_lower ON public.accounts (LOWER(email)) WHERE email IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS public.account_identities (
+    account_id UUID NOT NULL REFERENCES public.accounts(id) ON DELETE CASCADE,
+    provider VARCHAR(24) NOT NULL,
+    provider_user_id TEXT NOT NULL,
+    provider_username TEXT,
+    provider_avatar_url TEXT,
+    linked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (provider, provider_user_id),
+    UNIQUE (account_id, provider)
+);
+CREATE INDEX IF NOT EXISTS account_identities_account ON public.account_identities (account_id);
+
+CREATE TABLE IF NOT EXISTS public.account_security_events (
+    id UUID PRIMARY KEY,
+    account_id UUID NOT NULL REFERENCES public.accounts(id) ON DELETE CASCADE,
+    event_type VARCHAR(64) NOT NULL,
+    occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    request_id VARCHAR(64),
+    metadata JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+CREATE INDEX IF NOT EXISTS account_security_events_account_time
+    ON public.account_security_events (account_id, occurred_at DESC);
+
+CREATE TABLE IF NOT EXISTS public.account_session_metadata (
+    sid TEXT PRIMARY KEY REFERENCES public.dashboard_sessions(sid) ON DELETE CASCADE,
+    account_id UUID NOT NULL REFERENCES public.accounts(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    absolute_expires_at TIMESTAMPTZ NOT NULL,
+    revoked_at TIMESTAMPTZ,
+    revoked_reason VARCHAR(64),
+    device_label VARCHAR(160)
+);
+CREATE INDEX IF NOT EXISTS account_session_metadata_account
+    ON public.account_session_metadata (account_id, last_seen_at DESC);
+
+ALTER TABLE public.accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.account_identities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.account_security_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.account_session_metadata ENABLE ROW LEVEL SECURITY;

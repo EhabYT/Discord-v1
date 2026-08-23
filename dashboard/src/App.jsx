@@ -36,7 +36,9 @@ const Polls = lazy(() => import('./pages/Polls.jsx'));
 const TagsPage = lazy(() => import('./pages/Tags.jsx'));
 const Confessions = lazy(() => import('./pages/Confessions.jsx'));
 const StaffBoard = lazy(() => import('./pages/StaffBoard.jsx'));
+const Profile = lazy(() => import('./pages/Profile.jsx'));
 import api from './api.js';
+import { useAuth } from './auth/AuthContext.jsx';
 import { PAGE_TITLES, PAGE_HINTS, DOCK_PAGES, SEARCHABLE_PAGES } from './nav.js';
 import { rememberRecentPage } from './lib/clipboard.js';
 import { useI18n } from './i18n.jsx';
@@ -71,11 +73,13 @@ const PAGES = {
   embedbuilder: EmbedBuilder,
   autoresponder: AutoResponder,
   developer: Developer,
+  profile: Profile,
 };
 
 export const PermContext = React.createContext({ level: 0, levelName: 'Viewer' });
 
 function getHashPage() {
+  if (window.location.pathname === '/profile') return 'profile';
   const h = window.location.hash.replace('#', '').trim();
   if (!h || h === 'home') return 'home';
   return PAGES[h] ? h : 'overview';
@@ -240,15 +244,14 @@ function MobileDock({ page, onNavigate, onSearch }) {
 
 export default function App() {
   const { locale, t, toggleLocale } = useI18n();
+  const { auth, account, discord, displayUser: me, loading: authLoading } = useAuth();
   const [page, setPage] = useState(getHashPage);
   const [guilds, setGuilds] = useState([]);
   const [selectedGuild, setSelectedGuild] = useState(null);
   const [guildData, setGuildData] = useState(null);
-  const [me, setMe] = useState(null);
   const [loading, setLoading] = useState(true);
   const [permLevel, setPermLevel] = useState(0);
   const [permLevelName, setPermLevelName] = useState('Viewer');
-  const [auth, setAuth] = useState({ oauthEnabled: false, loggedIn: false, authRequired: false });
   const [developerAccess, setDeveloperAccess] = useState({ role: 'NONE', baseRole: 'NONE', unlocked: false });
   const [health, setHealth] = useState(null);
   const [apiReachable, setApiReachable] = useState(null);
@@ -324,15 +327,11 @@ export default function App() {
   useEffect(() => {
     Promise.all([
       api.get('/api/guilds').catch(() => []),
-      api.get('/api/me').catch(() => null),
-      api.get('/api/auth/status').catch(() => ({ oauthEnabled: false, loggedIn: false, authRequired: false })),
       api.get('/api/health').catch(() => null),
       api.get('/api/developer/whoami').catch(() => ({ role: 'NONE', baseRole: 'NONE', unlocked: false })),
-    ]).then(([g, m, a, h, dev]) => {
+    ]).then(([g, h, dev]) => {
       const list = Array.isArray(g) ? g : [];
       setGuilds(list);
-      setMe(m);
-      setAuth(a || { oauthEnabled: false, loggedIn: false, authRequired: false });
       setDeveloperAccess(dev || { role: 'NONE', baseRole: 'NONE', unlocked: false });
       setHealth(h);
       setApiReachable(Boolean(h));
@@ -392,7 +391,7 @@ export default function App() {
   const systemPageDenied = (page === 'system' || page === 'developer') && !canSeeSystem;
   const publicUrl = health?.publicUrl || '';
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center animate-fade-in">
@@ -426,6 +425,7 @@ export default function App() {
             selectedGuild={selectedGuild}
             setSelectedGuild={setSelectedGuild}
             me={me}
+            account={account}
             permLevel={permLevel}
             auth={auth}
             developerAccess={developerAccess}
@@ -543,6 +543,14 @@ export default function App() {
                   <PageErrorBoundary key={page}>
                     <Suspense fallback={<PageLoading />}>
                       <PageComponent pageHint={PAGE_HINTS[page]} />
+                    </Suspense>
+                  </PageErrorBoundary>
+                </div>
+              ) : page === 'profile' ? (
+                <div className="h-full animate-fade-in">
+                  <PageErrorBoundary key={page}>
+                    <Suspense fallback={<PageLoading />}>
+                      <PageComponent account={account} discord={discord} auth={auth} />
                     </Suspense>
                   </PageErrorBoundary>
                 </div>

@@ -40,9 +40,10 @@ export const NAV = [
   { id: 'developer',     icon: Terminal,          label: 'Developer',      hint: 'Role-scoped backend control center', systemOnly: true, always: true, keywords: 'dev logs env token tunnel debug' },
 ];
 
-export const PAGE_TITLES = Object.fromEntries(
-  NAV.filter((item) => item.id).map((item) => [item.id, item.label])
-);
+export const PAGE_TITLES = {
+  ...Object.fromEntries(NAV.filter((item) => item.id).map((item) => [item.id, item.label])),
+  profile: 'Profile',
+};
 
 export const PAGE_HINTS = Object.fromEntries(
   NAV.filter((item) => item.id).map((item) => [item.id, item.hint || ''])

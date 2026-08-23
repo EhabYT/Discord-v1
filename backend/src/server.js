@@ -167,6 +167,7 @@ function startDashboard(botClient) {
     setupSocket(httpServer, sessionMiddleware, botClient);
 
     const authRouter = require('./routes/auth')(botClient);
+    const accountRouter = require('./routes/account')();
     const statsRouter = require('./routes/stats')(botClient);
     const guildsRouter = require('./routes/guilds')(botClient);
     const musicRouter = require('./routes/music')(botClient);
@@ -183,6 +184,7 @@ function startDashboard(botClient) {
     app.use('/api/auth/discord', rl.limit('oauth-start', 20, 5 * 60 * 1000));
     app.use('/api/stats', statsRouter);
     app.use('/api/auth', authRouter);
+    app.use('/api/account', accountRouter);
     // /api/developer is the canonical system-control namespace. The legacy
     // prefix redirects with 308 so methods/bodies are preserved without
     // mounting a duplicate privileged route tree.
