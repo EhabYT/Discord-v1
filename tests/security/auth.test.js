@@ -136,6 +136,18 @@ const MUST_401 = [
     if (!dashboardHeaders) failures++;
     console.log(`  ${dashboardHeaders ? 'PASS' : 'FAIL'}  static Dashboard security headers and CSP are present`);
 
+    const unknownApi = await req('/api/__unknown_probe__');
+    let unknownBody = null;
+    try { unknownBody = JSON.parse(unknownApi.body); } catch { /* asserted below */ }
+    const unknownSafe = unknownApi.status === 404
+        && unknownApi.headers['content-type']?.includes('application/json')
+        && unknownBody?.error === 'API route not found'
+        && unknownBody?.code === 'API_NOT_FOUND'
+        && typeof unknownBody?.requestId === 'string'
+        && !unknownApi.body.includes('__unknown_probe__');
+    if (!unknownSafe) failures++;
+    console.log(`  ${unknownSafe ? 'PASS' : 'FAIL'}  unknown API returns safe non-reflective JSON 404`);
+
     console.log('\nForged proxy headers must not unlock the localhost bypass:\n');
     for (const h of [{ 'X-Forwarded-For': '1.2.3.4' }, { 'X-Forwarded-Host': 'evil.com' }]) {
         const res = await req('/api/guilds', { headers: h });

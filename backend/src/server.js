@@ -479,7 +479,14 @@ function startDashboard(botClient) {
     });
 
     app.use('/api', (req, res) => {
-        res.status(404).json({ error: `Unknown API route ${req.method} ${req.originalUrl}` });
+        // Keep unknown API responses deterministic and non-reflective. Echoing
+        // attacker-controlled paths complicates clients and can leak probes into
+        // logs/UI; the request ID is sufficient for correlation.
+        res.status(404).type('json').json({
+            error: 'API route not found',
+            code: 'API_NOT_FOUND',
+            requestId: req.requestId,
+        });
     });
 
     const dashboardIndex = path.join(__dirname, '..', '..', 'dashboard', 'public', 'index.html');
