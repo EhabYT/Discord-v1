@@ -255,7 +255,9 @@ module.exports = (botClient) => {
                 ? 'Supabase PostgreSQL is unreachable. Verify DATABASE_URL and the Session Pooler settings.'
                 : null);
         res.json({
-            loggedIn: !!req.session.user,
+            loggedIn: !!(req.session.account || req.session.user),
+            accountAuthenticated: !!req.session.account,
+            discordLinked: !!req.session.user,
             oauthEnabled: !oauthError,
             oauthError,
             databaseOnline,

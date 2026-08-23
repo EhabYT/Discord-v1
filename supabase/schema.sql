@@ -43,6 +43,19 @@ CREATE TABLE IF NOT EXISTS public.accounts (
 CREATE UNIQUE INDEX IF NOT EXISTS accounts_username_lower ON public.accounts (LOWER(username));
 CREATE UNIQUE INDEX IF NOT EXISTS accounts_email_lower ON public.accounts (LOWER(email)) WHERE email IS NOT NULL;
 
+CREATE TABLE IF NOT EXISTS public.account_credentials (
+    account_id UUID PRIMARY KEY REFERENCES public.accounts(id) ON DELETE CASCADE,
+    password_hash TEXT NOT NULL,
+    changed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.account_auth_limits (
+    bucket_key TEXT PRIMARY KEY,
+    window_started_at TIMESTAMPTZ NOT NULL,
+    attempt_count INTEGER NOT NULL,
+    blocked_until TIMESTAMPTZ
+);
+
 CREATE TABLE IF NOT EXISTS public.account_identities (
     account_id UUID NOT NULL REFERENCES public.accounts(id) ON DELETE CASCADE,
     provider VARCHAR(24) NOT NULL,
@@ -81,6 +94,8 @@ CREATE INDEX IF NOT EXISTS account_session_metadata_account
     ON public.account_session_metadata (account_id, last_seen_at DESC);
 
 ALTER TABLE public.accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.account_credentials ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.account_auth_limits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.account_identities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.account_security_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.account_session_metadata ENABLE ROW LEVEL SECURITY;

@@ -85,6 +85,16 @@ function requireAuth(req, res, next) {
     return res.status(401).json({ error: 'Not authenticated', code: 'AUTH_REQUIRED' });
 }
 
+/** Require an internal EB account; Discord linking is not required here. */
+function requireAccount(req, res, next) {
+    const accountId = req.session?.account?.id;
+    if (!accountId) {
+        return res.status(401).json({ error: 'Not authenticated', code: 'ACCOUNT_AUTH_REQUIRED' });
+    }
+    req.accountId = accountId;
+    return next();
+}
+
 /** Startup banner so a dangerous configuration is never silent. */
 function logAuthMode() {
     if (anonymousOptIn()) {
@@ -100,4 +110,4 @@ function logAuthMode() {
     }
 }
 
-module.exports = { requireAuth, allowAnonymous, sessionUserId, isLoopback, logAuthMode };
+module.exports = { requireAuth, requireAccount, allowAnonymous, sessionUserId, isLoopback, logAuthMode };

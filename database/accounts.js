@@ -19,6 +19,19 @@ CREATE UNIQUE INDEX IF NOT EXISTS accounts_username_lower
 CREATE UNIQUE INDEX IF NOT EXISTS accounts_email_lower
     ON accounts (LOWER(email)) WHERE email IS NOT NULL;
 
+CREATE TABLE IF NOT EXISTS account_credentials (
+    account_id UUID PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+    password_hash TEXT NOT NULL,
+    changed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS account_auth_limits (
+    bucket_key TEXT PRIMARY KEY,
+    window_started_at TIMESTAMPTZ NOT NULL,
+    attempt_count INTEGER NOT NULL,
+    blocked_until TIMESTAMPTZ
+);
+
 CREATE TABLE IF NOT EXISTS account_identities (
     account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     provider VARCHAR(24) NOT NULL,
@@ -58,6 +71,8 @@ CREATE INDEX IF NOT EXISTS account_session_metadata_account
     ON account_session_metadata (account_id, last_seen_at DESC);
 
 ALTER TABLE accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE account_credentials ENABLE ROW LEVEL SECURITY;
+ALTER TABLE account_auth_limits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE account_identities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE account_security_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE account_session_metadata ENABLE ROW LEVEL SECURITY;
@@ -137,6 +152,80 @@ class AccountStore {
             if (!exists.rows.length) return candidate;
         }
         return `user_${crypto.randomBytes(6).toString('hex')}`.slice(0, 24);
+    }
+
+    async consumeAuthLimit(bucketKey, { max, windowMs, blockMs }) {
+        await this.ready();
+        const client = await this.pool.connect();
+        const now = Date.now();
+        try {
+            await client.query('BEGIN');
+            await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`auth-limit:${bucketKey}`]);
+            const result = await client.query('SELECT * FROM account_auth_limits WHERE bucket_key = $1', [bucketKey]);
+            const row = result.rows[0];
+            if (row?.blocked_until && new Date(row.blocked_until).getTime() > now) {
+                await client.query('COMMIT');
+                return { allowed: false, retryAfter: Math.ceil((new Date(row.blocked_until).getTime() - now) / 1000) };
+            }
+            const expired = !row || new Date(row.window_started_at).getTime() + windowMs <= now;
+            const count = expired ? 1 : Number(row.attempt_count) + 1;
+            const blockedUntil = count > max ? new Date(now + blockMs) : null;
+            await client.query(`
+                INSERT INTO account_auth_limits (bucket_key, window_started_at, attempt_count, blocked_until)
+                VALUES ($1, $2, $3, $4)
+                ON CONFLICT (bucket_key) DO UPDATE SET
+                    window_started_at = EXCLUDED.window_started_at,
+                    attempt_count = EXCLUDED.attempt_count,
+                    blocked_until = EXCLUDED.blocked_until
+            `, [bucketKey, new Date(expired ? now : new Date(row.window_started_at).getTime()), count, blockedUntil]);
+            await client.query('COMMIT');
+            return { allowed: count <= max, retryAfter: blockedUntil ? Math.ceil(blockMs / 1000) : 0 };
+        } catch (err) {
+            try { await client.query('ROLLBACK'); } catch { /* preserve original */ }
+            throw err;
+        } finally {
+            client.release();
+        }
+    }
+
+    async createLocalAccount({ displayName, username, email, passwordHash }, requestId = null) {
+        await this.ready();
+        const client = await this.pool.connect();
+        const accountId = crypto.randomUUID();
+        try {
+            await client.query('BEGIN');
+            await client.query(`
+                INSERT INTO accounts (id, display_name, username, email)
+                VALUES ($1, $2, $3, $4)
+            `, [accountId, displayName, username, email]);
+            await client.query('INSERT INTO account_credentials (account_id, password_hash) VALUES ($1, $2)', [accountId, passwordHash]);
+            await client.query(`
+                INSERT INTO account_security_events (id, account_id, event_type, request_id, metadata)
+                VALUES ($1, $2, 'account_registered', $3, '{}'::jsonb)
+            `, [crypto.randomUUID(), accountId, requestId]);
+            const account = await this.byId(accountId, client);
+            await client.query('COMMIT');
+            return account;
+        } catch (err) {
+            try { await client.query('ROLLBACK'); } catch { /* preserve original */ }
+            throw err;
+        } finally {
+            client.release();
+        }
+    }
+
+    async credentialByLogin(identifier) {
+        await this.ready();
+        const result = await this.pool.query(`
+            SELECT a.*, c.password_hash, i.provider_user_id, i.provider_username, i.provider_avatar_url
+            FROM accounts a
+            JOIN account_credentials c ON c.account_id = a.id
+            LEFT JOIN account_identities i ON i.account_id = a.id AND i.provider = 'discord'
+            WHERE LOWER(a.email) = LOWER($1) OR LOWER(a.username) = LOWER($1)
+            LIMIT 1
+        `, [identifier]);
+        const row = result.rows[0];
+        return row ? { account: safeAccount(row), passwordHash: row.password_hash } : null;
     }
 
     async ensureDiscordAccount(discordUser, requestId = null) {

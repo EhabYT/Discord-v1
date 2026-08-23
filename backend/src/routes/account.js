@@ -1,5 +1,4 @@
 const express = require('express');
-const { requireAuth } = require('../middleware/auth');
 const { getAccountStore } = require('../../../database/accounts');
 const { getPool } = require('../../../database/index');
 
@@ -18,8 +17,11 @@ module.exports = () => {
 
     // Stage A exposes one read-only projection. Existing Discord sessions are
     // lazily upgraded so a deployment does not force every operator to log out.
-    router.get('/', requireAuth, async (req, res, next) => {
+    router.get('/', async (req, res, next) => {
         try {
+            if (!req.session.account && !req.session.user) {
+                return res.status(401).json({ error: 'Not authenticated', code: 'ACCOUNT_AUTH_REQUIRED' });
+            }
             if (!req.session.account) {
                 if (!getPool()) {
                     return res.status(503).json({

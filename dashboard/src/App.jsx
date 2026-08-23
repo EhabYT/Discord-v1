@@ -37,6 +37,8 @@ const TagsPage = lazy(() => import('./pages/Tags.jsx'));
 const Confessions = lazy(() => import('./pages/Confessions.jsx'));
 const StaffBoard = lazy(() => import('./pages/StaffBoard.jsx'));
 const Profile = lazy(() => import('./pages/Profile.jsx'));
+const Login = lazy(() => import('./pages/Login.jsx'));
+const Register = lazy(() => import('./pages/Register.jsx'));
 import api from './api.js';
 import { useAuth } from './auth/AuthContext.jsx';
 import { PAGE_TITLES, PAGE_HINTS, DOCK_PAGES, SEARCHABLE_PAGES } from './nav.js';
@@ -74,12 +76,15 @@ const PAGES = {
   autoresponder: AutoResponder,
   developer: Developer,
   profile: Profile,
+  login: Login,
+  register: Register,
 };
 
 export const PermContext = React.createContext({ level: 0, levelName: 'Viewer' });
 
 function getHashPage() {
-  if (window.location.pathname === '/profile') return 'profile';
+  const pathRoutes = { '/profile': 'profile', '/login': 'login', '/register': 'register' };
+  if (pathRoutes[window.location.pathname]) return pathRoutes[window.location.pathname];
   const h = window.location.hash.replace('#', '').trim();
   if (!h || h === 'home') return 'home';
   return PAGES[h] ? h : 'overview';
@@ -404,6 +409,16 @@ export default function App() {
           <p className="text-zinc-500 text-xs mt-1">Connecting to the bot…</p>
         </div>
       </div>
+    );
+  }
+
+  if (page === 'login' || page === 'register') {
+    return (
+      <ToastProvider>
+        <PageErrorBoundary key={page}>
+          <Suspense fallback={<PageLoading />}><PageComponent /></Suspense>
+        </PageErrorBoundary>
+      </ToastProvider>
     );
   }
 

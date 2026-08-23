@@ -31,8 +31,26 @@ export function AuthProvider({ children }) {
     refresh().finally(() => setLoading(false));
   }, [refresh]);
 
+  const login = useCallback(async (credentials) => {
+    const result = await api.post('/api/auth/login', credentials);
+    setAccount(result.account);
+    setDiscord(null);
+    setMe(null);
+    setAuth(current => ({ ...current, loggedIn: true, accountAuthenticated: true, discordLinked: false }));
+    return result;
+  }, []);
+
+  const register = useCallback(async (details) => {
+    const result = await api.post('/api/auth/register', details);
+    setAccount(result.account);
+    setDiscord(null);
+    setMe(null);
+    setAuth(current => ({ ...current, loggedIn: true, accountAuthenticated: true, discordLinked: false }));
+    return result;
+  }, []);
+
   const value = useMemo(() => ({
-    auth, account, discord, me, loading, refresh,
+    auth, account, discord, me, loading, refresh, login, register,
     displayUser: account ? {
       ...me,
       username: account.displayName || account.username,
@@ -40,7 +58,7 @@ export function AuthProvider({ children }) {
       avatar: account.avatarUrl || discord?.avatar || me?.avatar,
       loggedIn: true,
     } : me,
-  }), [auth, account, discord, me, loading, refresh]);
+  }), [auth, account, discord, me, loading, refresh, login, register]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
