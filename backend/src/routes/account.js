@@ -7,6 +7,9 @@ const { normalizeDisplayName, normalizeLocalUsername, normalizeEmail } = require
 const { verifyPassword } = require('../../../shared/services/passwords');
 const { sendEmailChangeVerification } = require('../../../shared/services/account-mail');
 const { normalizeAvatar, uploadAvatar, deleteAvatar } = require('../../../shared/services/account-avatars');
+const {
+    enrollmentPayload, decryptSecret, verifyTotp, generateRecoveryCodes, recoveryHash,
+} = require('../../../shared/services/account-mfa');
 const logger = require('../../../shared/lib/logger');
 
 const avatarUpload = multer({
@@ -23,6 +26,20 @@ function saveSession(session) {
 
 function attachAccount(session, account) {
     session.account = account;
+}
+function attachEnrollment(session, encrypted) {
+    session.mfaEnrollment = { ...encrypted, expiresAt: Date.now() + 10 * 60 * 1000 };
+}
+function clearEnrollment(session) {
+    delete session.mfaEnrollment;
+}
+
+async function verifyCurrentFactor(store, accountId, factor) {
+    if (/^EB-/i.test(factor)) return store.consumeRecoveryCode(accountId, recoveryHash(factor));
+    const record = await store.mfaRecord(accountId);
+    if (!record) return false;
+    const step = verifyTotp(decryptSecret(record), factor);
+    return step != null && store.claimTotpStep(accountId, step);
 }
 
 module.exports = () => {
@@ -109,6 +126,81 @@ module.exports = () => {
             const delivery = await sendEmailChangeVerification(current, newEmail, token);
             return res.json({ success: true, verificationEmailSent: delivery.sent, message: 'Verify the new address before it replaces your current email.' });
         } catch (err) { return next(err); }
+    });
+
+    router.post('/mfa/enroll', requireAccount, async (req, res, next) => {
+        try {
+            const store = getAccountStore();
+            const account = await store.byId(req.accountId);
+            if (account.mfaEnabled) return res.status(409).json({ error: 'MFA is already enabled', code: 'MFA_ALREADY_ENABLED' });
+            const passwordHash = await store.credentialByAccount(req.accountId);
+            if (!passwordHash || !await verifyPassword(passwordHash, String(req.body?.currentPassword || ''))) {
+                return res.status(401).json({ error: 'Reauthentication failed', code: 'REAUTH_FAILED' });
+            }
+            const enrollment = await enrollmentPayload(account);
+            attachEnrollment(req.session, enrollment.encrypted);
+            await saveSession(req.session);
+            return res.json({ secret: enrollment.secret, otpauthUri: enrollment.uri, qrDataUrl: enrollment.qrDataUrl, expiresIn: 600 });
+        } catch (err) {
+            if (err.code === 'MFA_UNAVAILABLE') return res.status(503).json({ error: err.message, code: err.code });
+            return next(err);
+        }
+    });
+
+    router.post('/mfa/confirm', requireAccount, async (req, res, next) => {
+        try {
+            const enrollment = req.session?.mfaEnrollment;
+            if (!enrollment || enrollment.expiresAt <= Date.now()) return res.status(400).json({ error: 'MFA enrollment expired', code: 'MFA_ENROLLMENT_EXPIRED' });
+            const encrypted = { ciphertext: enrollment.ciphertext, iv: enrollment.iv, tag: enrollment.tag };
+            const step = verifyTotp(decryptSecret(encrypted), req.body?.code);
+            if (step == null) return res.status(400).json({ error: 'Invalid authentication code', code: 'INVALID_MFA_CODE' });
+            const recoveryCodes = generateRecoveryCodes();
+            const account = await getAccountStore().enableMfa(
+                req.accountId, encrypted, recoveryCodes.map(recoveryHash), req.requestId
+            );
+            clearEnrollment(req.session);
+            attachAccount(req.session, account);
+            await saveSession(req.session);
+            return res.json({ account, recoveryCodes });
+        } catch (err) {
+            if (err.code === 'MFA_UNAVAILABLE') return res.status(503).json({ error: err.message, code: err.code });
+            return next(err);
+        }
+    });
+
+    router.post('/mfa/disable', requireAccount, async (req, res, next) => {
+        try {
+            const store = getAccountStore();
+            const passwordHash = await store.credentialByAccount(req.accountId);
+            const passwordOk = passwordHash && await verifyPassword(passwordHash, String(req.body?.currentPassword || ''));
+            const factorOk = passwordOk && await verifyCurrentFactor(store, req.accountId, String(req.body?.code || ''));
+            if (!factorOk) return res.status(401).json({ error: 'Password and current authentication factor are required', code: 'REAUTH_FAILED' });
+            const account = await store.disableMfa(req.accountId, req.requestId);
+            attachAccount(req.session, account);
+            await saveSession(req.session);
+            return res.json({ account });
+        } catch (err) {
+            if (err.code === 'MFA_UNAVAILABLE') return res.status(503).json({ error: err.message, code: err.code });
+            return next(err);
+        }
+    });
+
+    router.post('/recovery-codes/regenerate', requireAccount, async (req, res, next) => {
+        try {
+            const store = getAccountStore();
+            const account = await store.byId(req.accountId);
+            if (!account.mfaEnabled) return res.status(409).json({ error: 'MFA is not enabled', code: 'MFA_NOT_ENABLED' });
+            const passwordHash = await store.credentialByAccount(req.accountId);
+            const passwordOk = passwordHash && await verifyPassword(passwordHash, String(req.body?.currentPassword || ''));
+            const factorOk = passwordOk && await verifyCurrentFactor(store, req.accountId, String(req.body?.code || ''));
+            if (!factorOk) return res.status(401).json({ error: 'Password and current authentication factor are required', code: 'REAUTH_FAILED' });
+            const recoveryCodes = generateRecoveryCodes();
+            await store.replaceRecoveryCodes(req.accountId, recoveryCodes.map(recoveryHash), req.requestId);
+            return res.json({ recoveryCodes });
+        } catch (err) {
+            if (err.code === 'MFA_UNAVAILABLE') return res.status(503).json({ error: err.message, code: err.code });
+            return next(err);
+        }
     });
 
     router.post('/avatar', requireAccount, (req, res, next) => {

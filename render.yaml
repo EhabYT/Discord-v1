@@ -54,3 +54,5 @@ services:
         sync: false
       - key: SUPABASE_AVATAR_BUCKET
         value: avatars
+      - key: ACCOUNT_ENCRYPTION_KEY
+        sync: false

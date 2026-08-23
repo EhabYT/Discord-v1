@@ -41,6 +41,7 @@ async function login(id) { return cookieOf(await req(`/__dev_login/${id}`)); }
     const srv = require('../../backend/src/server');
     srv.app.get('/__dev_login/:id', (r, s) => {
         r.session.user = { id: r.params.id };
+        r.session.account = { id: `account-${r.params.id}`, mfaEnabled: true };
         r.session.userGuilds = [];
         r.session.save(() => s.json({ ok: true }));
     });

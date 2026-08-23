@@ -43,6 +43,7 @@ export const NAV = [
 export const PAGE_TITLES = {
   ...Object.fromEntries(NAV.filter((item) => item.id).map((item) => [item.id, item.label])),
   profile: 'Profile',
+  accountSecurity: 'Account Security',
 };
 
 export const PAGE_HINTS = Object.fromEntries(

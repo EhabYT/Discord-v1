@@ -16,8 +16,8 @@ process.env.SUPPORT_IDS = '333333333333333333';
 process.env.DEV_TOKEN = 'a'.repeat(64);
 process.env.DATABASE_URL = 'postgresql://user:private@host:5432/db';
 
-const req = (id, unlocked = false) => ({
-    session: { user: id ? { id } : null, devUnlocked: unlocked },
+const req = (id, unlocked = false, mfaEnabled = true) => ({
+    session: { user: id ? { id } : null, account: id ? { id: `account-${id}`, mfaEnabled } : null, devUnlocked: unlocked },
     headers: {}, socket: { remoteAddress: '127.0.0.1' }, originalUrl: '/api/developer/db',
 });
 let fails = 0;
@@ -33,6 +33,7 @@ check('listed developer requires second-factor unlock',
     && systemRole(req('222222222222222222'), null) === SYSTEM_ROLES.NONE
     && systemRole(req('222222222222222222', true), null) === SYSTEM_ROLES.DEVELOPER);
 check('support receives read-only SUPPORT role', systemRole(req('333333333333333333'), null) === SYSTEM_ROLES.SUPPORT);
+check('support receives no system role without account MFA', systemRole(req('333333333333333333', false, false), null) === SYSTEM_ROLES.NONE);
 check('ordinary Discord user has no system role', systemRole(req('444444444444444444'), null) === SYSTEM_ROLES.NONE);
 
 let denied = null;

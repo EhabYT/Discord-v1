@@ -53,6 +53,25 @@ CREATE TABLE IF NOT EXISTS public.account_credentials (
     changed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS public.account_mfa_totp (
+    account_id UUID PRIMARY KEY REFERENCES public.accounts(id) ON DELETE CASCADE,
+    secret_ciphertext TEXT NOT NULL,
+    secret_iv TEXT NOT NULL,
+    secret_tag TEXT NOT NULL,
+    enabled_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_used_step BIGINT
+);
+
+CREATE TABLE IF NOT EXISTS public.account_recovery_codes (
+    id UUID PRIMARY KEY,
+    account_id UUID NOT NULL REFERENCES public.accounts(id) ON DELETE CASCADE,
+    code_hash CHAR(64) NOT NULL UNIQUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    used_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS account_recovery_codes_account
+    ON public.account_recovery_codes (account_id, used_at);
+
 CREATE TABLE IF NOT EXISTS public.account_auth_limits (
     bucket_key TEXT PRIMARY KEY,
     window_started_at TIMESTAMPTZ NOT NULL,
@@ -113,6 +132,8 @@ CREATE INDEX IF NOT EXISTS account_session_metadata_account
 
 ALTER TABLE public.accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.account_credentials ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.account_mfa_totp ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.account_recovery_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.account_auth_limits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.account_email_tokens ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.account_identities ENABLE ROW LEVEL SECURITY;

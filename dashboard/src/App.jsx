@@ -42,6 +42,7 @@ const Register = lazy(() => import('./pages/Register.jsx'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword.jsx'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword.jsx'));
 const VerifyEmail = lazy(() => import('./pages/VerifyEmail.jsx'));
+const AccountSecurity = lazy(() => import('./pages/AccountSecurity.jsx'));
 import api from './api.js';
 import { useAuth } from './auth/AuthContext.jsx';
 import { PAGE_TITLES, PAGE_HINTS, DOCK_PAGES, SEARCHABLE_PAGES } from './nav.js';
@@ -84,6 +85,7 @@ const PAGES = {
   forgotPassword: ForgotPassword,
   resetPassword: ResetPassword,
   verifyEmail: VerifyEmail,
+  accountSecurity: AccountSecurity,
 };
 
 export const PermContext = React.createContext({ level: 0, levelName: 'Viewer' });
@@ -92,7 +94,7 @@ function getHashPage() {
   const pathRoutes = {
     '/profile': 'profile', '/login': 'login', '/register': 'register',
     '/forgot-password': 'forgotPassword', '/reset-password': 'resetPassword',
-    '/verify-email': 'verifyEmail',
+    '/verify-email': 'verifyEmail', '/settings/security': 'accountSecurity',
   };
   if (pathRoutes[window.location.pathname]) return pathRoutes[window.location.pathname];
   const h = window.location.hash.replace('#', '').trim();
@@ -571,7 +573,7 @@ export default function App() {
                     </Suspense>
                   </PageErrorBoundary>
                 </div>
-              ) : page === 'profile' ? (
+              ) : page === 'profile' || page === 'accountSecurity' ? (
                 <div className="h-full animate-fade-in">
                   <PageErrorBoundary key={page}>
                     <Suspense fallback={<PageLoading />}>

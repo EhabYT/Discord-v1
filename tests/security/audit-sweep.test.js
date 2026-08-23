@@ -43,6 +43,7 @@ const PUBLIC_ALLOWLIST = new Set([
     'POST /api/auth/logout',      // must work even with a dead session
     'POST /api/auth/register',    // public credential entry; independently rate limited
     'POST /api/auth/login',
+    'POST /api/auth/mfa/verify',
     'POST /api/auth/verify-email',
     'POST /api/auth/forgot-password',
     'POST /api/auth/reset-password',
@@ -188,7 +189,7 @@ const check = (label, ok, detail = '') => {
 
     // Pin the authoritative API inventory so a refactor cannot silently drop
     // (or accidentally duplicate) an endpoint while moving files.
-    check('route discovery found the full API surface', routes.length === 170, `${routes.length} routes`);
+    check('route discovery found the full API surface', routes.length === 175, `${routes.length} routes`);
 
     const leaks = [];
     for (const r of routes) {

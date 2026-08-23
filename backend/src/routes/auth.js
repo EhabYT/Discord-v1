@@ -86,6 +86,15 @@ async function oauthRuntimeIssue() {
     }
 }
 
+function attachMfaChallenge(session, accountId, pendingDiscord) {
+    session.mfaChallenge = {
+        accountId,
+        expiresAt: Date.now() + 5 * 60 * 1000,
+        attempts: 0,
+        pendingDiscord,
+    };
+}
+
 function attachAuthenticatedSession(session, user, userGuilds, account = null) {
     session.user = user;
     session.userGuilds = userGuilds;
@@ -216,7 +225,11 @@ module.exports = (botClient) => {
             await new Promise((resolve, reject) => {
                 req.session.regenerate((sessionErr) => sessionErr ? reject(sessionErr) : resolve());
             });
-            attachAuthenticatedSession(req.session, user, guildsResponse.data, account);
+            if (account?.mfaEnabled) {
+                attachMfaChallenge(req.session, account.id, { user, userGuilds: guildsResponse.data });
+            } else {
+                attachAuthenticatedSession(req.session, user, guildsResponse.data, account);
+            }
             // The Discord access token is not needed after this point — the
             // dashboard authorises from session identity + the bot's own gateway
             // state — so it is deliberately not persisted into the session store.
@@ -227,7 +240,9 @@ module.exports = (botClient) => {
             // Use the configured public dashboard origin rather than a relative
             // redirect. This is deterministic behind Render's proxy and avoids
             // landing on an internal/alias host after a successful login.
-            res.redirect(303, loginResultUrl(req, 'success'));
+            res.redirect(303, account?.mfaEnabled
+                ? `${dashboardHomeFor(req)}/login?mfa=1`
+                : loginResultUrl(req, 'success'));
         } catch (err) {
             const data = err.response?.data;
             const desc = data?.error_description || data?.error || '';

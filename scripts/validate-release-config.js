@@ -61,7 +61,7 @@ for (const [key, expected] of Object.entries(expectedValues)) {
 
 const externalSecrets = [
     'DATABASE_URL', 'DISCORD_TOKEN', 'CLIENT_ID', 'DISCORD_CLIENT_SECRET',
-    'OWNER_ID', 'DEVELOPER_IDS', 'SUPPORT_IDS', 'DEV_TOKEN', 'EMAIL_FROM', 'RESEND_API_KEY', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY',
+    'OWNER_ID', 'DEVELOPER_IDS', 'SUPPORT_IDS', 'DEV_TOKEN', 'EMAIL_FROM', 'RESEND_API_KEY', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'ACCOUNT_ENCRYPTION_KEY',
 ];
 for (const key of externalSecrets) {
     const entry = env.get(key);

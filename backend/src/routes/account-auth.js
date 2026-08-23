@@ -7,6 +7,7 @@ const {
     sendVerificationEmail, sendEmailChangedNotice, sendPasswordResetEmail,
 } = require('../../../shared/services/account-mail');
 const logger = require('../../../shared/lib/logger');
+const { decryptSecret, verifyTotp, recoveryHash } = require('../../../shared/services/account-mfa');
 const { normalizeDisplayName, normalizeLocalUsername, normalizeEmail } = require('../../../shared/services/account-validation');
 // Unknown accounts still perform one Argon2 verification to reduce timing-based
 // account enumeration. This value is never an account credential.
@@ -43,6 +44,18 @@ function save(req) {
 }
 function attachAccount(session, account) {
     session.account = account;
+}
+function attachMfaChallenge(session, accountId) {
+    session.mfaChallenge = { accountId, expiresAt: Date.now() + 5 * 60 * 1000, attempts: 0 };
+}
+function incrementMfaAttempts(challenge) {
+    challenge.attempts = Number(challenge.attempts || 0) + 1;
+}
+function attachDiscordAccount(session, account, pendingDiscord) {
+    attachAccount(session, account);
+    session.user = pendingDiscord.user;
+    session.userGuilds = pendingDiscord.userGuilds;
+    delete session.devUnlocked;
 }
 function attachLocalAccount(session, account) {
     attachAccount(session, account);
@@ -116,10 +129,55 @@ module.exports = () => {
                 return res.status(401).json({ error: 'Invalid email/username or password', code: 'INVALID_CREDENTIALS' });
             }
             await regenerate(req);
+            if (credential.account.mfaEnabled) {
+                attachMfaChallenge(req.session, credential.account.id);
+                await save(req);
+                return res.status(202).json({ mfaRequired: true, challengeExpiresIn: 300 });
+            }
             attachLocalAccount(req.session, credential.account);
             await save(req);
             return res.json({ account: credential.account, verificationRequired: !credential.account.emailVerified });
         } catch (err) { return next(err); }
+    });
+
+    router.post('/mfa/verify', async (req, res, next) => {
+        try {
+            const challenge = req.session?.mfaChallenge;
+            if (!challenge || challenge.expiresAt <= Date.now() || challenge.attempts >= 5) {
+                return res.status(401).json({ error: 'MFA challenge expired', code: 'MFA_CHALLENGE_EXPIRED' });
+            }
+            const factor = String(req.body?.code || '').trim();
+            const store = getAccountStore();
+            const rate = await store.consumeAuthLimit(`mfa-login:${challenge.accountId}`, {
+                max: 8, windowMs: 5 * 60 * 1000, blockMs: 15 * 60 * 1000,
+            });
+            if (!rate.allowed) return res.status(429).json({ error: 'Too many MFA attempts', code: 'RATE_LIMITED' });
+            let valid = false;
+            if (/^EB-/i.test(factor)) {
+                valid = await store.consumeRecoveryCode(challenge.accountId, recoveryHash(factor));
+            } else {
+                const record = await store.mfaRecord(challenge.accountId);
+                if (record) {
+                    const step = verifyTotp(decryptSecret(record), factor);
+                    valid = step != null && await store.claimTotpStep(challenge.accountId, step);
+                }
+            }
+            if (!valid) {
+                incrementMfaAttempts(challenge);
+                await save(req);
+                return res.status(401).json({ error: 'Invalid authentication code', code: 'INVALID_MFA_CODE' });
+            }
+            const account = await store.byId(challenge.accountId);
+            const pendingDiscord = challenge.pendingDiscord || null;
+            await regenerate(req);
+            if (pendingDiscord) attachDiscordAccount(req.session, account, pendingDiscord);
+            else attachLocalAccount(req.session, account);
+            await save(req);
+            return res.json({ account, verificationRequired: !account.emailVerified });
+        } catch (err) {
+            if (err.code === 'MFA_UNAVAILABLE') return res.status(503).json({ error: 'MFA verification is unavailable', code: err.code });
+            return next(err);
+        }
     });
 
     router.post('/resend-verification', async (req, res, next) => {

@@ -40,7 +40,7 @@ const check = (label, ok) => {
     check('health endpoint remains available', health.passed === true);
     const support = await run({
         originalUrl: '/api/guilds',
-        session: { user: { id: '333333333333333333' } },
+        session: { user: { id: '333333333333333333' }, account: { id: 'support-account', mfaEnabled: true } },
         socket: { remoteAddress: '127.0.0.1' }, headers: {},
     });
     check('system SUPPORT role bypasses maintenance for diagnostics', support.passed === true);

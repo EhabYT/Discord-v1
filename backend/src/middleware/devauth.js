@@ -46,6 +46,12 @@ function tokenOk(raw) {
 
 function systemRole(req, botClient) {
     const base = baseSystemRole(req, botClient);
+    // System identities require the account-level second factor in addition to
+    // Discord identity. Local development token bootstrap remains available
+    // below and is never accepted remotely in production.
+    if (base !== SYSTEM_ROLES.NONE && req.session?.account?.mfaEnabled !== true) {
+        return SYSTEM_ROLES.NONE;
+    }
     if (base === SYSTEM_ROLES.SUPER_ADMIN || base === SYSTEM_ROLES.SUPPORT) return base;
     if (base === SYSTEM_ROLES.DEVELOPER && req.session?.devUnlocked === true) return base;
     // Local development can bootstrap with DEV_TOKEN without Discord OAuth.

@@ -1,0 +1,65 @@
+import React, { useState } from 'react';
+import { KeyRound, ShieldCheck } from 'lucide-react';
+import PageHeader from '../components/PageHeader.jsx';
+import PasswordField from '../auth/PasswordField.jsx';
+import CopyButton from '../components/CopyButton.jsx';
+import { useAuth } from '../auth/AuthContext.jsx';
+import { useToast } from '../components/Toast.jsx';
+import api from '../api.js';
+
+export default function AccountSecurity() {
+  const { account, applyAccount } = useAuth();
+  const toast = useToast();
+  const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
+  const [enrollment, setEnrollment] = useState(null);
+  const [recoveryCodes, setRecoveryCodes] = useState([]);
+  const [busy, setBusy] = useState('');
+  if (!account) return <div className="page-shell-sm"><div className="cyber-warning">Sign in to manage account security.</div></div>;
+
+  const enroll = async event => {
+    event.preventDefault(); setBusy('enroll');
+    try { setEnrollment(await api.post('/api/account/mfa/enroll', { currentPassword: password })); setPassword(''); }
+    catch (err) { toast.error(err.message); }
+    finally { setBusy(''); }
+  };
+  const confirm = async event => {
+    event.preventDefault(); setBusy('confirm');
+    try { const result = await api.post('/api/account/mfa/confirm', { code }); applyAccount(result.account); setRecoveryCodes(result.recoveryCodes); setEnrollment(null); setCode(''); toast.success('Two-factor authentication enabled'); }
+    catch (err) { toast.error(err.message); }
+    finally { setBusy(''); }
+  };
+  const sensitive = action => async event => {
+    event.preventDefault(); setBusy(action);
+    try {
+      const path = action === 'disable' ? '/api/account/mfa/disable' : '/api/account/recovery-codes/regenerate';
+      const result = await api.post(path, { currentPassword: password, code });
+      if (result.account) applyAccount(result.account);
+      if (result.recoveryCodes) setRecoveryCodes(result.recoveryCodes);
+      setPassword(''); setCode(''); toast.success(action === 'disable' ? 'MFA disabled' : 'Recovery codes regenerated');
+    } catch (err) { toast.error(err.message); }
+    finally { setBusy(''); }
+  };
+  const download = () => {
+    const blob = new Blob([`${recoveryCodes.join('\n')}\n`], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob); const link = document.createElement('a');
+    link.href = url; link.download = 'eb-recovery-codes.txt'; link.click(); window.URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="page-shell-sm animate-fade-in">
+      <PageHeader title="Account Security" description="Two-factor authentication and one-time recovery codes." icon={ShieldCheck} />
+      <section className="cyber-card p-5">
+        <div className="flex items-center justify-between gap-3"><div><p className="font-semibold text-white">Authenticator app</p><p className="text-xs text-zinc-500 mt-1">TOTP codes are required after your password.</p></div><span className={account.mfaEnabled ? 'cyber-badge-green' : 'cyber-badge-yellow'}>{account.mfaEnabled ? 'Enabled' : 'Disabled'}</span></div>
+      </section>
+
+      {!account.mfaEnabled && !enrollment && <form onSubmit={enroll} className="cyber-card p-5 space-y-4"><p className="text-sm text-zinc-400">Re-enter your password to begin enrollment.</p><PasswordField label="Current password" required value={password} onChange={event => setPassword(event.target.value)} /><button disabled={busy === 'enroll'} className="cyber-button-solid">Enable two-factor authentication</button></form>}
+
+      {enrollment && <form onSubmit={confirm} className="cyber-card p-5 space-y-4"><div className="flex justify-center"><img src={enrollment.qrDataUrl} alt="Authenticator QR code" className="w-60 h-60 rounded-2xl bg-white p-2" /></div><div><p className="cyber-label">Manual setup key</p><code className="block mt-1 p-3 rounded-xl bg-black/30 text-cyan-200 break-all text-xs">{enrollment.secret}</code></div><label className="block"><span className="cyber-label">First 6-digit code</span><input required inputMode="numeric" autoComplete="one-time-code" value={code} onChange={event => setCode(event.target.value)} className="cyber-input mt-1.5 font-mono tracking-widest" /></label><button disabled={busy === 'confirm'} className="cyber-button-solid w-full">Confirm and enable MFA</button></form>}
+
+      {recoveryCodes.length > 0 && <section className="cyber-card-accent p-5 space-y-4"><div><p className="font-semibold text-white">Save your recovery codes now</p><p className="text-xs text-zinc-500 mt-1">They are displayed once. Each code works once.</p></div><div className="grid sm:grid-cols-2 gap-2">{recoveryCodes.map(item => <code key={item} className="p-2 rounded-lg bg-black/30 text-cyan-100 text-xs text-center">{item}</code>)}</div><div className="flex gap-2 flex-wrap"><CopyButton value={recoveryCodes.join('\n')} label="Copy all" /><button onClick={download} className="cyber-button">Download</button><button onClick={() => setRecoveryCodes([])} className="cyber-button">I saved them</button></div></section>}
+
+      {account.mfaEnabled && <form onSubmit={sensitive('regenerate')} className="cyber-card p-5 space-y-4"><div><p className="font-semibold text-white flex items-center gap-2"><KeyRound size={16} className="text-cyan-300" /> Recovery and factor management</p><p className="text-xs text-zinc-500 mt-1">Enter your password and a current authenticator or recovery code.</p></div><PasswordField label="Current password" required value={password} onChange={event => setPassword(event.target.value)} /><label className="block"><span className="cyber-label">Current code</span><input required value={code} onChange={event => setCode(event.target.value)} className="cyber-input mt-1.5 font-mono" /></label><div className="flex flex-wrap gap-2"><button disabled={!!busy} className="cyber-button">Regenerate recovery codes</button><button type="button" onClick={sensitive('disable')} disabled={!!busy} className="cyber-button-danger">Disable MFA</button></div></form>}
+    </div>
+  );
+}

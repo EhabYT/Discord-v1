@@ -33,6 +33,16 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (credentials) => {
     const result = await api.post('/api/auth/login', credentials);
+    if (result.mfaRequired) return result;
+    setAccount(result.account);
+    setDiscord(null);
+    setMe(null);
+    setAuth(current => ({ ...current, loggedIn: true, accountAuthenticated: true, discordLinked: false }));
+    return result;
+  }, []);
+
+  const verifyMfa = useCallback(async (code) => {
+    const result = await api.post('/api/auth/mfa/verify', { code });
     setAccount(result.account);
     setDiscord(null);
     setMe(null);
@@ -52,7 +62,7 @@ export function AuthProvider({ children }) {
   const applyAccount = useCallback(nextAccount => setAccount(nextAccount), []);
 
   const value = useMemo(() => ({
-    auth, account, discord, me, loading, refresh, login, register, applyAccount,
+    auth, account, discord, me, loading, refresh, login, verifyMfa, register, applyAccount,
     displayUser: account ? {
       ...me,
       username: account.displayName || account.username,
@@ -60,7 +70,7 @@ export function AuthProvider({ children }) {
       avatar: account.avatarUrl || discord?.avatar || me?.avatar,
       loggedIn: true,
     } : me,
-  }), [auth, account, discord, me, loading, refresh, login, register, applyAccount]);
+  }), [auth, account, discord, me, loading, refresh, login, verifyMfa, register, applyAccount]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -29,6 +29,25 @@ CREATE TABLE IF NOT EXISTS account_credentials (
     changed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS account_mfa_totp (
+    account_id UUID PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+    secret_ciphertext TEXT NOT NULL,
+    secret_iv TEXT NOT NULL,
+    secret_tag TEXT NOT NULL,
+    enabled_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_used_step BIGINT
+);
+
+CREATE TABLE IF NOT EXISTS account_recovery_codes (
+    id UUID PRIMARY KEY,
+    account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    code_hash CHAR(64) NOT NULL UNIQUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    used_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS account_recovery_codes_account
+    ON account_recovery_codes (account_id, used_at);
+
 CREATE TABLE IF NOT EXISTS account_auth_limits (
     bucket_key TEXT PRIMARY KEY,
     window_started_at TIMESTAMPTZ NOT NULL,
@@ -90,6 +109,8 @@ CREATE INDEX IF NOT EXISTS account_session_metadata_account
 
 ALTER TABLE accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE account_credentials ENABLE ROW LEVEL SECURITY;
+ALTER TABLE account_mfa_totp ENABLE ROW LEVEL SECURITY;
+ALTER TABLE account_recovery_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE account_auth_limits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE account_email_tokens ENABLE ROW LEVEL SECURITY;
 ALTER TABLE account_identities ENABLE ROW LEVEL SECURITY;
@@ -117,6 +138,7 @@ function safeAccount(row) {
         username: row.username,
         email: row.email || null,
         emailVerified: !!row.email_verified_at,
+        mfaEnabled: !!row.mfa_enabled,
         avatarUrl: row.avatar_url || row.provider_avatar_url || null,
         status: row.status,
         createdAt: row.created_at,
@@ -147,7 +169,8 @@ class AccountStore {
 
     async byDiscordId(discordId, executor = this.pool) {
         const result = await executor.query(`
-            SELECT a.*, i.provider_user_id, i.provider_username, i.provider_avatar_url
+            SELECT a.*, EXISTS(SELECT 1 FROM account_mfa_totp m WHERE m.account_id = a.id) AS mfa_enabled,
+                   i.provider_user_id, i.provider_username, i.provider_avatar_url
             FROM accounts a
             JOIN account_identities i ON i.account_id = a.id
             WHERE i.provider = 'discord' AND i.provider_user_id = $1
@@ -157,7 +180,8 @@ class AccountStore {
 
     async byId(accountId, executor = this.pool) {
         const result = await executor.query(`
-            SELECT a.*, i.provider_user_id, i.provider_username, i.provider_avatar_url
+            SELECT a.*, EXISTS(SELECT 1 FROM account_mfa_totp m WHERE m.account_id = a.id) AS mfa_enabled,
+                   i.provider_user_id, i.provider_username, i.provider_avatar_url
             FROM accounts a
             LEFT JOIN account_identities i
               ON i.account_id = a.id AND i.provider = 'discord'
@@ -201,6 +225,92 @@ class AccountStore {
         return result.rows[0]?.password_hash || null;
     }
 
+    async mfaRecord(accountId) {
+        await this.ready();
+        const result = await this.pool.query(`SELECT secret_ciphertext AS ciphertext,
+            secret_iv AS iv, secret_tag AS tag, last_used_step
+            FROM account_mfa_totp WHERE account_id = $1`, [accountId]);
+        return result.rows[0] || null;
+    }
+
+    async enableMfa(accountId, encrypted, recoveryHashes, requestId = null) {
+        await this.ready();
+        const client = await this.pool.connect();
+        try {
+            await client.query('BEGIN');
+            await client.query(`INSERT INTO account_mfa_totp
+                (account_id, secret_ciphertext, secret_iv, secret_tag, enabled_at, last_used_step)
+                VALUES ($1, $2, $3, $4, NOW(), NULL)
+                ON CONFLICT (account_id) DO UPDATE SET secret_ciphertext = EXCLUDED.secret_ciphertext,
+                    secret_iv = EXCLUDED.secret_iv, secret_tag = EXCLUDED.secret_tag,
+                    enabled_at = NOW(), last_used_step = NULL`,
+            [accountId, encrypted.ciphertext, encrypted.iv, encrypted.tag]);
+            await client.query('DELETE FROM account_recovery_codes WHERE account_id = $1', [accountId]);
+            for (const hash of recoveryHashes) {
+                await client.query(`INSERT INTO account_recovery_codes (id, account_id, code_hash)
+                    VALUES ($1, $2, $3)`, [crypto.randomUUID(), accountId, hash]);
+            }
+            await client.query(`INSERT INTO account_security_events (id, account_id, event_type, request_id, metadata)
+                VALUES ($1, $2, 'mfa_enabled', $3, '{}'::jsonb)`, [crypto.randomUUID(), accountId, requestId]);
+            const account = await this.byId(accountId, client);
+            await client.query('COMMIT');
+            return account;
+        } catch (err) {
+            try { await client.query('ROLLBACK'); } catch { /* preserve original */ }
+            throw err;
+        } finally { client.release(); }
+    }
+
+    async claimTotpStep(accountId, step) {
+        await this.ready();
+        const result = await this.pool.query(`UPDATE account_mfa_totp SET last_used_step = $1
+            WHERE account_id = $2 AND (last_used_step IS NULL OR last_used_step < $1)
+            RETURNING account_id`, [step, accountId]);
+        return result.rows.length === 1;
+    }
+
+    async consumeRecoveryCode(accountId, codeHash) {
+        await this.ready();
+        const result = await this.pool.query(`UPDATE account_recovery_codes SET used_at = NOW()
+            WHERE account_id = $1 AND code_hash = $2 AND used_at IS NULL
+            RETURNING id`, [accountId, codeHash]);
+        return result.rows.length === 1;
+    }
+
+    async replaceRecoveryCodes(accountId, hashes, requestId = null) {
+        await this.ready();
+        const client = await this.pool.connect();
+        try {
+            await client.query('BEGIN');
+            await client.query('DELETE FROM account_recovery_codes WHERE account_id = $1', [accountId]);
+            for (const hash of hashes) await client.query('INSERT INTO account_recovery_codes (id, account_id, code_hash) VALUES ($1, $2, $3)', [crypto.randomUUID(), accountId, hash]);
+            await client.query(`INSERT INTO account_security_events (id, account_id, event_type, request_id, metadata)
+                VALUES ($1, $2, 'recovery_codes_regenerated', $3, '{}'::jsonb)`, [crypto.randomUUID(), accountId, requestId]);
+            await client.query('COMMIT');
+        } catch (err) {
+            try { await client.query('ROLLBACK'); } catch { /* preserve original */ }
+            throw err;
+        } finally { client.release(); }
+    }
+
+    async disableMfa(accountId, requestId = null) {
+        await this.ready();
+        const client = await this.pool.connect();
+        try {
+            await client.query('BEGIN');
+            await client.query('DELETE FROM account_recovery_codes WHERE account_id = $1', [accountId]);
+            await client.query('DELETE FROM account_mfa_totp WHERE account_id = $1', [accountId]);
+            await client.query(`INSERT INTO account_security_events (id, account_id, event_type, request_id, metadata)
+                VALUES ($1, $2, 'mfa_disabled', $3, '{}'::jsonb)`, [crypto.randomUUID(), accountId, requestId]);
+            const account = await this.byId(accountId, client);
+            await client.query('COMMIT');
+            return account;
+        } catch (err) {
+            try { await client.query('ROLLBACK'); } catch { /* preserve original */ }
+            throw err;
+        } finally { client.release(); }
+    }
+
     async avatarKey(accountId) {
         await this.ready();
         const result = await this.pool.query('SELECT avatar_key FROM accounts WHERE id = $1', [accountId]);
@@ -216,7 +326,8 @@ class AccountStore {
     async byEmail(email) {
         await this.ready();
         const result = await this.pool.query(`
-            SELECT a.*, i.provider_user_id, i.provider_username, i.provider_avatar_url
+            SELECT a.*, EXISTS(SELECT 1 FROM account_mfa_totp m WHERE m.account_id = a.id) AS mfa_enabled,
+                   i.provider_user_id, i.provider_username, i.provider_avatar_url
             FROM accounts a
             LEFT JOIN account_identities i ON i.account_id = a.id AND i.provider = 'discord'
             WHERE LOWER(a.email) = LOWER($1)
@@ -375,7 +486,9 @@ class AccountStore {
     async credentialByLogin(identifier) {
         await this.ready();
         const result = await this.pool.query(`
-            SELECT a.*, c.password_hash, i.provider_user_id, i.provider_username, i.provider_avatar_url
+            SELECT a.*, c.password_hash,
+                   EXISTS(SELECT 1 FROM account_mfa_totp m WHERE m.account_id = a.id) AS mfa_enabled,
+                   i.provider_user_id, i.provider_username, i.provider_avatar_url
             FROM accounts a
             JOIN account_credentials c ON c.account_id = a.id
             LEFT JOIN account_identities i ON i.account_id = a.id AND i.provider = 'discord'

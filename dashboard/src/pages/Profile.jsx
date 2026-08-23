@@ -85,7 +85,7 @@ export default function Profile({ account, discord, auth }) {
       <section className="grid sm:grid-cols-2 gap-3">
         <div className="cyber-card p-4"><p className="cyber-label flex items-center gap-1.5"><CalendarDays size={12} /> Account created</p><p className="text-sm text-zinc-200 mt-2">{account.createdAt ? new Date(account.createdAt).toLocaleString() : '—'}</p></div>
         <div className="cyber-card p-4"><p className="cyber-label flex items-center gap-1.5"><Link2 size={12} /> Linked Discord</p><p className="text-sm text-zinc-200 mt-2 truncate">{discord?.username || 'Not linked'}</p>{discord?.id && <p className="text-[11px] font-mono text-zinc-600 mt-1">{discord.id}</p>}</div>
-        <div className="cyber-card p-4 sm:col-span-2"><p className="cyber-label flex items-center gap-1.5"><ShieldCheck size={12} /> Account security</p><p className="text-sm text-zinc-200 mt-2 inline-flex items-center gap-1.5"><BadgeCheck size={14} className="text-cyan-300" /> Password and verified-email recovery active</p></div>
+        <div className="cyber-card p-4 sm:col-span-2"><p className="cyber-label flex items-center gap-1.5"><ShieldCheck size={12} /> Account security</p><p className="text-sm text-zinc-200 mt-2 inline-flex items-center gap-1.5"><BadgeCheck size={14} className="text-cyan-300" /> Password and verified-email recovery active</p><a href="/settings/security" className="cyber-button inline-flex mt-3 text-xs">Manage two-factor authentication</a></div>
       </section>
     </div>
   );
