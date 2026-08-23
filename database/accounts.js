@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS accounts (
     email TEXT,
     email_verified_at TIMESTAMPTZ,
     avatar_url TEXT,
+    avatar_key TEXT,
+    username_changed_at TIMESTAMPTZ,
     status VARCHAR(16) NOT NULL DEFAULT 'active'
         CHECK (status IN ('active', 'deactivated', 'deleted')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -18,6 +20,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS accounts_username_lower
     ON accounts (LOWER(username));
 CREATE UNIQUE INDEX IF NOT EXISTS accounts_email_lower
     ON accounts (LOWER(email)) WHERE email IS NOT NULL;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS username_changed_at TIMESTAMPTZ;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS avatar_key TEXT;
 
 CREATE TABLE IF NOT EXISTS account_credentials (
     account_id UUID PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
@@ -37,12 +41,14 @@ CREATE TABLE IF NOT EXISTS account_email_tokens (
     account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     purpose VARCHAR(32) NOT NULL CHECK (purpose IN ('verify_email', 'reset_password')),
     token_hash CHAR(64) NOT NULL UNIQUE,
+    pending_email TEXT,
     expires_at TIMESTAMPTZ NOT NULL,
     used_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS account_email_tokens_account_purpose
     ON account_email_tokens (account_id, purpose, created_at DESC);
+ALTER TABLE account_email_tokens ADD COLUMN IF NOT EXISTS pending_email TEXT;
 
 CREATE TABLE IF NOT EXISTS account_identities (
     account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
@@ -171,6 +177,42 @@ class AccountStore {
         return `user_${crypto.randomBytes(6).toString('hex')}`.slice(0, 24);
     }
 
+    async updateProfile(accountId, { displayName, username }) {
+        await this.ready();
+        const current = await this.byId(accountId);
+        if (!current) return { account: null, usernameCooldown: false };
+        const usernameChanged = current.username !== username;
+        if (usernameChanged) {
+            const raw = await this.pool.query('SELECT username_changed_at FROM accounts WHERE id = $1', [accountId]);
+            const changedAt = raw.rows[0]?.username_changed_at;
+            if (changedAt && new Date(changedAt).getTime() > Date.now() - 30 * 24 * 60 * 60 * 1000) {
+                return { account: current, usernameCooldown: true };
+            }
+        }
+        await this.pool.query(`UPDATE accounts SET display_name = $1, username = $2,
+            username_changed_at = CASE WHEN username <> $2 THEN NOW() ELSE username_changed_at END,
+            updated_at = NOW() WHERE id = $3`, [displayName, username, accountId]);
+        return { account: await this.byId(accountId), usernameCooldown: false };
+    }
+
+    async credentialByAccount(accountId) {
+        await this.ready();
+        const result = await this.pool.query('SELECT password_hash FROM account_credentials WHERE account_id = $1', [accountId]);
+        return result.rows[0]?.password_hash || null;
+    }
+
+    async avatarKey(accountId) {
+        await this.ready();
+        const result = await this.pool.query('SELECT avatar_key FROM accounts WHERE id = $1', [accountId]);
+        return result.rows[0]?.avatar_key || null;
+    }
+
+    async setAvatar(accountId, avatarKey, avatarUrl) {
+        await this.ready();
+        await this.pool.query('UPDATE accounts SET avatar_key = $1, avatar_url = $2, updated_at = NOW() WHERE id = $3', [avatarKey, avatarUrl, accountId]);
+        return this.byId(accountId);
+    }
+
     async byEmail(email) {
         await this.ready();
         const result = await this.pool.query(`
@@ -183,7 +225,7 @@ class AccountStore {
         return safeAccount(result.rows[0]);
     }
 
-    async issueEmailToken(accountId, purpose, ttlMs) {
+    async issueEmailToken(accountId, purpose, ttlMs, pendingEmail = null) {
         await this.ready();
         const token = crypto.randomBytes(32).toString('base64url');
         const tokenHash = hashAccountToken(token);
@@ -195,9 +237,9 @@ class AccountStore {
                 WHERE account_id = $1 AND purpose = $2 AND used_at IS NULL
             `, [accountId, purpose]);
             await client.query(`
-                INSERT INTO account_email_tokens (id, account_id, purpose, token_hash, expires_at)
-                VALUES ($1, $2, $3, $4, $5)
-            `, [crypto.randomUUID(), accountId, purpose, tokenHash, new Date(Date.now() + ttlMs)]);
+                INSERT INTO account_email_tokens (id, account_id, purpose, token_hash, pending_email, expires_at)
+                VALUES ($1, $2, $3, $4, $5, $6)
+            `, [crypto.randomUUID(), accountId, purpose, tokenHash, pendingEmail, new Date(Date.now() + ttlMs)]);
             await client.query('COMMIT');
             return token;
         } catch (err) {
@@ -212,20 +254,29 @@ class AccountStore {
         try {
             await client.query('BEGIN');
             const found = await client.query(`
-                SELECT account_id FROM account_email_tokens
-                WHERE token_hash = $1 AND purpose = 'verify_email'
+                SELECT t.account_id, t.pending_email, a.email AS old_email
+                FROM account_email_tokens t JOIN accounts a ON a.id = t.account_id
+                WHERE t.token_hash = $1 AND purpose = 'verify_email'
                   AND used_at IS NULL AND expires_at > NOW()
                 FOR UPDATE
             `, [hashAccountToken(token)]);
             const accountId = found.rows[0]?.account_id;
+            const pendingEmail = found.rows[0]?.pending_email || null;
+            const oldEmail = found.rows[0]?.old_email || null;
             if (!accountId) { await client.query('ROLLBACK'); return null; }
             await client.query('UPDATE account_email_tokens SET used_at = NOW() WHERE token_hash = $1', [hashAccountToken(token)]);
-            await client.query('UPDATE accounts SET email_verified_at = NOW(), updated_at = NOW() WHERE id = $1', [accountId]);
+            if (pendingEmail) {
+                await client.query(`UPDATE accounts SET email = $1, email_verified_at = NOW(), updated_at = NOW()
+                    WHERE id = $2`, [pendingEmail, accountId]);
+            } else {
+                await client.query('UPDATE accounts SET email_verified_at = NOW(), updated_at = NOW() WHERE id = $1', [accountId]);
+            }
             await client.query(`INSERT INTO account_security_events (id, account_id, event_type, request_id, metadata)
-                VALUES ($1, $2, 'email_verified', $3, '{}'::jsonb)`, [crypto.randomUUID(), accountId, requestId]);
+                VALUES ($1, $2, $3, $4, '{}'::jsonb)`,
+            [crypto.randomUUID(), accountId, pendingEmail ? 'email_changed' : 'email_verified', requestId]);
             const account = await this.byId(accountId, client);
             await client.query('COMMIT');
-            return account;
+            return { account, emailChanged: !!pendingEmail, oldEmail };
         } catch (err) {
             try { await client.query('ROLLBACK'); } catch { /* preserve original */ }
             throw err;

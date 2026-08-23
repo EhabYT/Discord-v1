@@ -54,6 +54,28 @@ function sendVerificationEmail(account, token) {
     });
 }
 
+function sendEmailChangeVerification(account, newEmail, token) {
+    return sendAccountEmail({
+        to: newEmail,
+        subject: 'Confirm your new EB account email',
+        title: 'Confirm new email',
+        message: `Confirm this address to replace the current email on @${account.username}. This single-use link expires in 24 hours.`,
+        actionLabel: 'Confirm new email',
+        actionPath: `/verify-email?token=${encodeURIComponent(token)}`,
+    });
+}
+
+function sendEmailChangedNotice(oldEmail, account) {
+    return sendAccountEmail({
+        to: oldEmail,
+        subject: 'Your EB account email changed',
+        title: 'Email address changed',
+        message: `The email address for @${account.username} was changed. If this was not you, contact support immediately and secure your account.`,
+        actionLabel: 'Open EB Dashboard',
+        actionPath: '/login',
+    });
+}
+
 function sendPasswordResetEmail(account, token) {
     return sendAccountEmail({
         to: account.email,
@@ -65,4 +87,7 @@ function sendPasswordResetEmail(account, token) {
     });
 }
 
-module.exports = { dashboardOrigin, escapeHtml, sendAccountEmail, sendVerificationEmail, sendPasswordResetEmail };
+module.exports = {
+    dashboardOrigin, escapeHtml, sendAccountEmail, sendVerificationEmail,
+    sendEmailChangeVerification, sendEmailChangedNotice, sendPasswordResetEmail,
+};

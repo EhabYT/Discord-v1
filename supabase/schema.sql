@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS public.accounts (
     email TEXT,
     email_verified_at TIMESTAMPTZ,
     avatar_url TEXT,
+    avatar_key TEXT,
+    username_changed_at TIMESTAMPTZ,
     status VARCHAR(16) NOT NULL DEFAULT 'active'
         CHECK (status IN ('active', 'deactivated', 'deleted')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -42,6 +44,8 @@ CREATE TABLE IF NOT EXISTS public.accounts (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS accounts_username_lower ON public.accounts (LOWER(username));
 CREATE UNIQUE INDEX IF NOT EXISTS accounts_email_lower ON public.accounts (LOWER(email)) WHERE email IS NOT NULL;
+ALTER TABLE public.accounts ADD COLUMN IF NOT EXISTS avatar_key TEXT;
+ALTER TABLE public.accounts ADD COLUMN IF NOT EXISTS username_changed_at TIMESTAMPTZ;
 
 CREATE TABLE IF NOT EXISTS public.account_credentials (
     account_id UUID PRIMARY KEY REFERENCES public.accounts(id) ON DELETE CASCADE,
@@ -61,12 +65,14 @@ CREATE TABLE IF NOT EXISTS public.account_email_tokens (
     account_id UUID NOT NULL REFERENCES public.accounts(id) ON DELETE CASCADE,
     purpose VARCHAR(32) NOT NULL CHECK (purpose IN ('verify_email', 'reset_password')),
     token_hash CHAR(64) NOT NULL UNIQUE,
+    pending_email TEXT,
     expires_at TIMESTAMPTZ NOT NULL,
     used_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS account_email_tokens_account_purpose
     ON public.account_email_tokens (account_id, purpose, created_at DESC);
+ALTER TABLE public.account_email_tokens ADD COLUMN IF NOT EXISTS pending_email TEXT;
 
 CREATE TABLE IF NOT EXISTS public.account_identities (
     account_id UUID NOT NULL REFERENCES public.accounts(id) ON DELETE CASCADE,

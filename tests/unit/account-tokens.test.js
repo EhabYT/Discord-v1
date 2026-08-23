@@ -16,15 +16,16 @@ class TokenPool {
             return { rows: [] };
         }
         if (/INSERT INTO account_email_tokens/.test(sql)) {
-            this.tokens.set(params[3], { account_id: params[1], purpose: params[2], expires_at: params[4], used_at: null });
+            this.tokens.set(params[3], { account_id: params[1], purpose: params[2], pending_email: params[4], expires_at: params[5], used_at: null });
             return { rows: [] };
         }
-        if (/SELECT account_id FROM account_email_tokens/.test(sql)) {
+        if (/SELECT (?:t\.)?account_id/.test(sql)) {
             const row = this.tokens.get(params[0]);
             const purpose = sql.includes("'verify_email'") ? 'verify_email' : 'reset_password';
-            return { rows: row && row.purpose === purpose && !row.used_at && row.expires_at > new Date() ? [{ account_id: row.account_id }] : [] };
+            return { rows: row && row.purpose === purpose && !row.used_at && row.expires_at > new Date() ? [{ account_id: row.account_id, pending_email: row.pending_email || null, old_email: this.account.email }] : [] };
         }
         if (/UPDATE account_email_tokens SET used_at = NOW\(\) WHERE token_hash/.test(sql)) { this.tokens.get(params[0]).used_at = new Date(); return { rows: [] }; }
+        if (/UPDATE accounts SET email =/.test(sql)) { this.account.email = params[0]; this.account.email_verified_at = new Date(); return { rows: [] }; }
         if (/UPDATE accounts SET email_verified_at/.test(sql)) { this.account.email_verified_at = new Date(); return { rows: [] }; }
         if (/LEFT JOIN account_identities/.test(sql)) return { rows: [{ ...this.account }] };
         if (/UPDATE account_credentials SET password_hash/.test(sql)) { this.passwordHash = params[0]; return { rows: [] }; }
@@ -42,8 +43,13 @@ class TokenPool {
     assert(!pool.tokens.has(verifyToken), 'plaintext token must never be stored');
     assert(pool.tokens.has(hashAccountToken(verifyToken)));
     const verified = await store.verifyEmailToken(verifyToken, 'req-1');
-    assert.strictEqual(verified.emailVerified, true);
+    assert.strictEqual(verified.account.emailVerified, true);
     assert.strictEqual(await store.verifyEmailToken(verifyToken, 'req-2'), null, 'verification token must be single-use');
+    const changeToken = await store.issueEmailToken(pool.account.id, 'verify_email', 60_000, 'new@example.com');
+    const changed = await store.verifyEmailToken(changeToken, 'req-change');
+    assert.strictEqual(changed.emailChanged, true);
+    assert.strictEqual(changed.oldEmail, 'test@example.com');
+    assert.strictEqual(changed.account.email, 'new@example.com');
 
     const resetToken = await store.issueEmailToken(pool.account.id, 'reset_password', 60_000);
     assert.strictEqual(await store.resetPasswordWithToken(resetToken, 'new-hash', 'req-3'), true);

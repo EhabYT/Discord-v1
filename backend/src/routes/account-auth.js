@@ -1,12 +1,13 @@
 const express = require('express');
 const crypto = require('crypto');
-const { getAccountStore, normalizeUsername } = require('../../../database/accounts');
+const { getAccountStore } = require('../../../database/accounts');
 const { getPool } = require('../../../database/index');
 const { validatePassword, hashPassword, verifyPassword } = require('../../../shared/services/passwords');
-const { sendVerificationEmail, sendPasswordResetEmail } = require('../../../shared/services/account-mail');
+const {
+    sendVerificationEmail, sendEmailChangedNotice, sendPasswordResetEmail,
+} = require('../../../shared/services/account-mail');
 const logger = require('../../../shared/lib/logger');
-
-const RESERVED = new Set(['admin', 'administrator', 'support', 'system', 'discord', 'ebbot', 'root', 'login', 'register', 'security']);
+const { normalizeDisplayName, normalizeLocalUsername, normalizeEmail } = require('../../../shared/services/account-validation');
 // Unknown accounts still perform one Argon2 verification to reduce timing-based
 // account enumeration. This value is never an account credential.
 const dummyHashPromise = hashPassword('not a real account password value');
@@ -22,17 +23,16 @@ function clientIp(req) {
 }
 
 function validateRegistration(body) {
-    const displayName = String(body?.displayName || '').normalize('NFKC').trim();
-    const username = String(body?.username || '').normalize('NFKC').trim().toLowerCase();
-    const email = String(body?.email || '').normalize('NFKC').trim().toLowerCase();
-    if (displayName.length < 1 || displayName.length > 64) return { error: 'Display name must be 1–64 characters' };
-    if (!/^[a-z][a-z0-9_]{2,23}$/.test(username)) return { error: 'Username must be 3–24 letters, numbers, or underscores and start with a letter' };
-    if (RESERVED.has(username)) return { error: 'That username is reserved' };
-    if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: 'Enter a valid email address' };
+    const displayName = normalizeDisplayName(body?.displayName);
+    const username = normalizeLocalUsername(body?.username);
+    const email = normalizeEmail(body?.email);
+    if (!displayName) return { error: 'Display name must be 1–64 characters' };
+    if (!username) return { error: 'Username must be 3–24 letters, numbers, or underscores, start with a letter, and not be reserved' };
+    if (!email) return { error: 'Enter a valid email address' };
     const passwordIssue = validatePassword(body?.password);
     if (passwordIssue) return { error: passwordIssue };
     if (body.password !== body.confirmPassword) return { error: 'Passwords do not match' };
-    return { displayName, username: normalizeUsername(username), email };
+    return { displayName, username, email };
 }
 
 function regenerate(req) {
@@ -147,13 +147,18 @@ module.exports = () => {
         try {
             const token = String(req.body?.token || '');
             if (token.length < 32 || token.length > 200) return res.status(400).json({ error: 'Invalid or expired verification link', code: 'INVALID_TOKEN' });
-            const account = await getAccountStore().verifyEmailToken(token, req.requestId);
-            if (!account) return res.status(400).json({ error: 'Invalid or expired verification link', code: 'INVALID_TOKEN' });
-            if (req.session?.account?.id === account.id) {
-                attachAccount(req.session, account);
+            const verified = await getAccountStore().verifyEmailToken(token, req.requestId);
+            if (!verified) return res.status(400).json({ error: 'Invalid or expired verification link', code: 'INVALID_TOKEN' });
+            if (req.session?.account?.id === verified.account.id) {
+                attachAccount(req.session, verified.account);
                 await save(req);
             }
-            return res.json({ success: true, account });
+            if (verified.emailChanged && verified.oldEmail) {
+                sendEmailChangedNotice(verified.oldEmail, verified.account).catch(err => {
+                    logger.warn('Old-address email change notice failed', { error: err.message, requestId: req.requestId });
+                });
+            }
+            return res.json({ success: true, account: verified.account, emailChanged: verified.emailChanged });
         } catch (err) { return next(err); }
     });
 

@@ -49,8 +49,10 @@ export function AuthProvider({ children }) {
     return result;
   }, []);
 
+  const applyAccount = useCallback(nextAccount => setAccount(nextAccount), []);
+
   const value = useMemo(() => ({
-    auth, account, discord, me, loading, refresh, login, register,
+    auth, account, discord, me, loading, refresh, login, register, applyAccount,
     displayUser: account ? {
       ...me,
       username: account.displayName || account.username,
@@ -58,7 +60,7 @@ export function AuthProvider({ children }) {
       avatar: account.avatarUrl || discord?.avatar || me?.avatar,
       loggedIn: true,
     } : me,
-  }), [auth, account, discord, me, loading, refresh, login, register]);
+  }), [auth, account, discord, me, loading, refresh, login, register, applyAccount]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

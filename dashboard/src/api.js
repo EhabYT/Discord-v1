@@ -34,7 +34,8 @@ async function apiFetch(path, options = {}, attempt = 0) {
   const timer = setTimeout(() => ctrl.abort(), options.timeout || TIMEOUT_MS);
   const method = (options.method || 'GET').toUpperCase();
   const headers = { Accept: 'application/json', ...options.headers };
-  if (options.body != null && method !== 'GET' && method !== 'HEAD') {
+  const isFormData = options.body instanceof FormData;
+  if (options.body != null && !isFormData && method !== 'GET' && method !== 'HEAD') {
     headers['Content-Type'] = 'application/json';
   }
 
@@ -44,7 +45,7 @@ async function apiFetch(path, options = {}, attempt = 0) {
       ...options,
       method,
       headers,
-      body: options.body != null ? JSON.stringify(options.body) : undefined,
+      body: options.body != null ? (isFormData ? options.body : JSON.stringify(options.body)) : undefined,
       signal: options.signal || ctrl.signal,
     });
     const text = await res.text();
@@ -85,6 +86,7 @@ export const api = {
   put: (path, body) => apiFetch(path, { method: 'PUT', body }),
   patch: (path, body) => apiFetch(path, { method: 'PATCH', body }),
   delete: (path) => apiFetch(path, { method: 'DELETE' }),
+  upload: (path, formData) => apiFetch(path, { method: 'POST', body: formData, timeout: 30000 }),
 };
 
 export default api;
