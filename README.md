@@ -482,13 +482,14 @@ npm run lint:gate
 npm run audit:prod
 npm run build:dashboard
 npm run verify
+npm run smoke:live -- --url https://your-service.onrender.com --expect-release 2.0.0
 ```
 
 Current verification scope:
 
 - 100 Discord commands
 - Bot Config schema and AutoMod normalization
-- 20 security suites
+- 22 security suites
 - 159 API routes
 - OAuth, sessions, CSRF, and guild isolation
 - Discord hierarchy and privacy redaction
@@ -527,7 +528,7 @@ Warnings about missing credentials are expected in credential-free CI.
 `render.yaml` defines:
 
 ```text
-Build:  npm ci && npm run build:dashboard
+Build:  npm ci
 Start:  npm start
 Health: /api/health
 Node:   22.12.0
@@ -540,6 +541,19 @@ loops.
 
 For an always-connected Discord gateway, use an always-on Render plan. Free
 instances can sleep even when the gateway connection is healthy.
+
+Run the credential-free deployment acceptance after each release:
+
+```bash
+# Contract/security preflight; permits offline integrations.
+npm run smoke:live -- --url https://your-service.onrender.com --allow-degraded --expect-release 2.0.0
+
+# Final acceptance; requires PostgreSQL, Discord, OAuth, Dashboard, and bot ready.
+npm run smoke:live -- --url https://your-service.onrender.com --expect-release 2.0.0
+```
+
+The full operator checklist and rollback procedure are in
+`docs/deployment-live-runbook.md`.
 
 ### Graceful shutdown
 

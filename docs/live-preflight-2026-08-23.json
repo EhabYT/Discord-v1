@@ -1,0 +1,197 @@
+{
+  "target": "https://discord-v1-jrip.onrender.com",
+  "mode": "allow-degraded",
+  "expectedRelease": "2.0.0",
+  "startedAt": "2026-08-23T17:20:30.620Z",
+  "finishedAt": "2026-08-23T17:20:33.188Z",
+  "success": false,
+  "summary": {
+    "passed": 18,
+    "failed": 15
+  },
+  "observed": {
+    "health": {
+      "status": 200,
+      "durationMs": 300
+    },
+    "status": {
+      "release": null,
+      "apiVersion": null,
+      "status": null,
+      "checks": null
+    },
+    "readiness": {
+      "release": null,
+      "apiVersion": null,
+      "status": null,
+      "checks": null
+    }
+  },
+  "checks": [
+    {
+      "name": "liveness",
+      "pass": true,
+      "detail": "HTTP 200 in 300ms"
+    },
+    {
+      "name": "health body contains no secret-like value",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "health header x-content-type-options",
+      "pass": true,
+      "detail": "present"
+    },
+    {
+      "name": "health header x-frame-options",
+      "pass": true,
+      "detail": "present"
+    },
+    {
+      "name": "health header referrer-policy",
+      "pass": false,
+      "detail": "missing"
+    },
+    {
+      "name": "health header permissions-policy",
+      "pass": false,
+      "detail": "missing"
+    },
+    {
+      "name": "health header content-security-policy",
+      "pass": false,
+      "detail": "missing"
+    },
+    {
+      "name": "health header strict-transport-security",
+      "pass": false,
+      "detail": "missing"
+    },
+    {
+      "name": "V2 status HTTP contract",
+      "pass": false,
+      "detail": "HTTP 404"
+    },
+    {
+      "name": "V2 status schema",
+      "pass": false,
+      "detail": "{\"release\":null,\"apiVersion\":null,\"status\":null,\"checks\":null}"
+    },
+    {
+      "name": "expected V2 release",
+      "pass": false,
+      "detail": "expected 2.0.0, received null"
+    },
+    {
+      "name": "V2 status contains no secret-like value",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "strict readiness HTTP contract",
+      "pass": false,
+      "detail": "HTTP 404"
+    },
+    {
+      "name": "readiness schema in degraded-allowed mode",
+      "pass": false,
+      "detail": "{\"release\":null,\"apiVersion\":null,\"status\":null,\"checks\":null}"
+    },
+    {
+      "name": "readiness body contains no secret-like value",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "auth status HTTP contract",
+      "pass": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "name": "auth status contains no secret-like value",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "auth status schema",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "OAuth redirect uses deployment origin",
+      "pass": true,
+      "detail": "https://discord-v1-jrip.onrender.com"
+    },
+    {
+      "name": "Dashboard HTML",
+      "pass": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "name": "Dashboard header x-content-type-options",
+      "pass": false,
+      "detail": "missing"
+    },
+    {
+      "name": "Dashboard header x-frame-options",
+      "pass": false,
+      "detail": "missing"
+    },
+    {
+      "name": "Dashboard header referrer-policy",
+      "pass": false,
+      "detail": "missing"
+    },
+    {
+      "name": "Dashboard header permissions-policy",
+      "pass": false,
+      "detail": "missing"
+    },
+    {
+      "name": "Dashboard header content-security-policy",
+      "pass": false,
+      "detail": "missing"
+    },
+    {
+      "name": "Dashboard header strict-transport-security",
+      "pass": false,
+      "detail": "missing"
+    },
+    {
+      "name": "Dashboard references JS and CSS assets",
+      "pass": true,
+      "detail": "/assets/index-BrgoS8EU.js, /assets/index-Cepiakih.css"
+    },
+    {
+      "name": "asset remains same-origin: /assets/index-BrgoS8EU.js",
+      "pass": true,
+      "detail": "https://discord-v1-jrip.onrender.com"
+    },
+    {
+      "name": "asset loads: /assets/index-BrgoS8EU.js",
+      "pass": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "name": "asset remains same-origin: /assets/index-Cepiakih.css",
+      "pass": true,
+      "detail": "https://discord-v1-jrip.onrender.com"
+    },
+    {
+      "name": "asset loads: /assets/index-Cepiakih.css",
+      "pass": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "name": "unknown API route is JSON 404",
+      "pass": true,
+      "detail": "HTTP 404"
+    },
+    {
+      "name": "HTTP redirects to HTTPS",
+      "pass": true,
+      "detail": "HTTP 301"
+    }
+  ]
+}
