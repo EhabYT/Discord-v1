@@ -3,7 +3,8 @@ services:
     name: discord-v1-jrip
     runtime: node
     plan: free
-    buildCommand: npm ci && npm run build:dashboard
+    # Root postinstall installs and builds the Dashboard exactly once.
+    buildCommand: npm ci
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
