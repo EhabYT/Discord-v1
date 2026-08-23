@@ -9,6 +9,7 @@ const rl = require('../middleware/rate-limit');
 const { withKeyLock } = require('../../../database/lock');
 const logger = require('../../../shared/lib/logger');
 const { ENTRY_REACTION, finalizeGiveaway, rerollGiveaway } = require('../../../shared/services/giveaways');
+const registerAnalyticsRoutes = require('./guilds/analytics');
 
 module.exports = (botClient) => {
     // Guard implementations live in middleware/guildAccess.js so that EVERY
@@ -1697,22 +1698,9 @@ module.exports = (botClient) => {
     });
 
 
-    // Analytics routes
-    const _analytics = (() => { try { return require('../../../shared/services/analytics'); } catch(e) { return null; } })();
-    router.get('/analytics/chart', (req, res, next) => {
-        try {
-            const empty = Array.from({ length: 24 }, (_, i) => ({ hour: i, label: String(i).padStart(2,'0') + ':00', messages: 0, joins: 0, commands: 0 }));
-            res.json(_analytics ? _analytics.getChart(req.params.guildId) : empty);
-        } catch (err) { next(err); }
-    });
-    router.get('/analytics/commands', (req, res, next) => {
-        try { res.json(_analytics ? _analytics.getCommandUsage(req.params.guildId) : { commands: [], total: 0 }); }
-        catch (err) { next(err); }
-    });
-    router.get('/analytics/summary', (req, res, next) => {
-        try { res.json(_analytics ? _analytics.getSummary(req.params.guildId, req.guild) : { messages24h: 0, joins24h: 0, commands24h: 0, onlineCount: 0, totalCommands: 0 }); }
-        catch (err) { next(err); }
-    });
+    // Domain modules register on this already-protected router so the global
+    // guild access stack and route ordering remain authoritative.
+    registerAnalyticsRoutes(router);
 
     return router;
 };

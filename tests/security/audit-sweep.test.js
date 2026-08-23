@@ -140,18 +140,20 @@ function discoverRoutes() {
 
     // Mounted routers: map the mount prefix to the file that implements it.
     const routerFiles = {
-        statsRouter: 'stats.js', authRouter: 'auth.js', devRouter: 'dev.js',
-        guildsRouter: 'guilds.js', musicRouter: 'music.js',
-        permissionsRouter: 'permissions.js',
+        statsRouter: ['stats.js'], authRouter: ['auth.js'], devRouter: ['dev.js'],
+        guildsRouter: ['guilds.js', 'guilds/analytics.js'], musicRouter: ['music.js'],
+        permissionsRouter: ['permissions.js'],
     };
     for (const m of srv.matchAll(/app\.use\('(\/api[^']*)',\s*(\w+)\)/g)) {
         const [, prefix, varName] = m;
-        const file = routerFiles[varName];
-        if (!file) continue;
-        const src = fs.readFileSync(path.join(root, 'backend', 'src', 'routes', file), 'utf8');
-        for (const r of src.matchAll(/router\.(get|post|put|patch|delete)\('([^']*)'/g)) {
-            const sub = r[2] === '/' ? '' : r[2];
-            found.push({ method: r[1].toUpperCase(), path: prefix + sub });
+        const files = routerFiles[varName];
+        if (!files) continue;
+        for (const file of files) {
+            const src = fs.readFileSync(path.join(root, 'backend', 'src', 'routes', file), 'utf8');
+            for (const r of src.matchAll(/router\.(get|post|put|patch|delete)\('([^']*)'/g)) {
+                const sub = r[2] === '/' ? '' : r[2];
+                found.push({ method: r[1].toUpperCase(), path: prefix + sub });
+            }
         }
     }
     return found;
