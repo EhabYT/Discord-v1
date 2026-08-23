@@ -32,6 +32,18 @@ CREATE TABLE IF NOT EXISTS account_auth_limits (
     blocked_until TIMESTAMPTZ
 );
 
+CREATE TABLE IF NOT EXISTS account_email_tokens (
+    id UUID PRIMARY KEY,
+    account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    purpose VARCHAR(32) NOT NULL CHECK (purpose IN ('verify_email', 'reset_password')),
+    token_hash CHAR(64) NOT NULL UNIQUE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    used_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS account_email_tokens_account_purpose
+    ON account_email_tokens (account_id, purpose, created_at DESC);
+
 CREATE TABLE IF NOT EXISTS account_identities (
     account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     provider VARCHAR(24) NOT NULL,
@@ -73,6 +85,7 @@ CREATE INDEX IF NOT EXISTS account_session_metadata_account
 ALTER TABLE accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE account_credentials ENABLE ROW LEVEL SECURITY;
 ALTER TABLE account_auth_limits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE account_email_tokens ENABLE ROW LEVEL SECURITY;
 ALTER TABLE account_identities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE account_security_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE account_session_metadata ENABLE ROW LEVEL SECURITY;
@@ -84,6 +97,10 @@ function normalizeUsername(value) {
     if (!username) username = 'user';
     if (!/^[a-z]/.test(username)) username = `u_${username}`;
     return username.slice(0, 24).padEnd(3, '_');
+}
+
+function hashAccountToken(token) {
+    return crypto.createHash('sha256').update(String(token || '')).digest('hex');
 }
 
 function safeAccount(row) {
@@ -152,6 +169,96 @@ class AccountStore {
             if (!exists.rows.length) return candidate;
         }
         return `user_${crypto.randomBytes(6).toString('hex')}`.slice(0, 24);
+    }
+
+    async byEmail(email) {
+        await this.ready();
+        const result = await this.pool.query(`
+            SELECT a.*, i.provider_user_id, i.provider_username, i.provider_avatar_url
+            FROM accounts a
+            LEFT JOIN account_identities i ON i.account_id = a.id AND i.provider = 'discord'
+            WHERE LOWER(a.email) = LOWER($1)
+            LIMIT 1
+        `, [String(email)]);
+        return safeAccount(result.rows[0]);
+    }
+
+    async issueEmailToken(accountId, purpose, ttlMs) {
+        await this.ready();
+        const token = crypto.randomBytes(32).toString('base64url');
+        const tokenHash = hashAccountToken(token);
+        const client = await this.pool.connect();
+        try {
+            await client.query('BEGIN');
+            await client.query(`
+                UPDATE account_email_tokens SET used_at = NOW()
+                WHERE account_id = $1 AND purpose = $2 AND used_at IS NULL
+            `, [accountId, purpose]);
+            await client.query(`
+                INSERT INTO account_email_tokens (id, account_id, purpose, token_hash, expires_at)
+                VALUES ($1, $2, $3, $4, $5)
+            `, [crypto.randomUUID(), accountId, purpose, tokenHash, new Date(Date.now() + ttlMs)]);
+            await client.query('COMMIT');
+            return token;
+        } catch (err) {
+            try { await client.query('ROLLBACK'); } catch { /* preserve original */ }
+            throw err;
+        } finally { client.release(); }
+    }
+
+    async verifyEmailToken(token, requestId = null) {
+        await this.ready();
+        const client = await this.pool.connect();
+        try {
+            await client.query('BEGIN');
+            const found = await client.query(`
+                SELECT account_id FROM account_email_tokens
+                WHERE token_hash = $1 AND purpose = 'verify_email'
+                  AND used_at IS NULL AND expires_at > NOW()
+                FOR UPDATE
+            `, [hashAccountToken(token)]);
+            const accountId = found.rows[0]?.account_id;
+            if (!accountId) { await client.query('ROLLBACK'); return null; }
+            await client.query('UPDATE account_email_tokens SET used_at = NOW() WHERE token_hash = $1', [hashAccountToken(token)]);
+            await client.query('UPDATE accounts SET email_verified_at = NOW(), updated_at = NOW() WHERE id = $1', [accountId]);
+            await client.query(`INSERT INTO account_security_events (id, account_id, event_type, request_id, metadata)
+                VALUES ($1, $2, 'email_verified', $3, '{}'::jsonb)`, [crypto.randomUUID(), accountId, requestId]);
+            const account = await this.byId(accountId, client);
+            await client.query('COMMIT');
+            return account;
+        } catch (err) {
+            try { await client.query('ROLLBACK'); } catch { /* preserve original */ }
+            throw err;
+        } finally { client.release(); }
+    }
+
+    async resetPasswordWithToken(token, passwordHash, requestId = null) {
+        await this.ready();
+        const client = await this.pool.connect();
+        try {
+            await client.query('BEGIN');
+            const found = await client.query(`
+                SELECT account_id FROM account_email_tokens
+                WHERE token_hash = $1 AND purpose = 'reset_password'
+                  AND used_at IS NULL AND expires_at > NOW()
+                FOR UPDATE
+            `, [hashAccountToken(token)]);
+            const accountId = found.rows[0]?.account_id;
+            if (!accountId) { await client.query('ROLLBACK'); return false; }
+            await client.query('UPDATE account_email_tokens SET used_at = NOW() WHERE token_hash = $1', [hashAccountToken(token)]);
+            await client.query(`UPDATE account_credentials SET password_hash = $1, changed_at = NOW()
+                WHERE account_id = $2`, [passwordHash, accountId]);
+            await client.query(`DELETE FROM dashboard_sessions
+                WHERE sess #>> '{account,id}' = $1`, [String(accountId)]);
+            await client.query(`INSERT INTO account_security_events (id, account_id, event_type, request_id, metadata)
+                VALUES ($1, $2, 'password_reset_completed', $3, '{"sessionsRevoked":true}'::jsonb)`,
+            [crypto.randomUUID(), accountId, requestId]);
+            await client.query('COMMIT');
+            return true;
+        } catch (err) {
+            try { await client.query('ROLLBACK'); } catch { /* preserve original */ }
+            throw err;
+        } finally { client.release(); }
     }
 
     async consumeAuthLimit(bucketKey, { max, windowMs, blockMs }) {
@@ -283,4 +390,4 @@ function getAccountStore() {
     return sharedStore;
 }
 
-module.exports = { ACCOUNT_SCHEMA_SQL, normalizeUsername, safeAccount, AccountStore, getAccountStore };
+module.exports = { ACCOUNT_SCHEMA_SQL, normalizeUsername, hashAccountToken, safeAccount, AccountStore, getAccountStore };

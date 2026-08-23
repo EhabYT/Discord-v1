@@ -40,8 +40,9 @@ export default function Profile({ account, discord, auth }) {
             <span className={account.emailVerified ? 'cyber-badge-green' : 'cyber-badge-yellow'}>
               {account.emailVerified ? 'Email verified' : 'Email not added'}
             </span>
-            <span className="cyber-badge-cyan">Discord linked</span>
+            <span className="cyber-badge-cyan">{discord ? 'Discord linked' : 'Discord not linked'}</span>
           </div>
+          {!account.emailVerified && account.email && <a href="/verify-email" className="cyber-button inline-flex mt-4 text-xs">Verify email</a>}
         </div>
       </section>
 

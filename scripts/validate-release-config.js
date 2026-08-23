@@ -51,6 +51,7 @@ const expectedValues = {
     NODE_ENV: 'production',
     DASHBOARD_AUTH: 'true',
     DASHBOARD_SECURE: 'true',
+    EMAIL_PROVIDER: 'resend',
 };
 for (const [key, expected] of Object.entries(expectedValues)) {
     requireCondition(env.get(key)?.properties.get('value') === expected,
@@ -59,7 +60,7 @@ for (const [key, expected] of Object.entries(expectedValues)) {
 
 const externalSecrets = [
     'DATABASE_URL', 'DISCORD_TOKEN', 'CLIENT_ID', 'DISCORD_CLIENT_SECRET',
-    'OWNER_ID', 'DEVELOPER_IDS', 'SUPPORT_IDS', 'DEV_TOKEN',
+    'OWNER_ID', 'DEVELOPER_IDS', 'SUPPORT_IDS', 'DEV_TOKEN', 'EMAIL_FROM', 'RESEND_API_KEY',
 ];
 for (const key of externalSecrets) {
     const entry = env.get(key);

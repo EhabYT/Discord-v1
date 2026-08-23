@@ -56,6 +56,18 @@ CREATE TABLE IF NOT EXISTS public.account_auth_limits (
     blocked_until TIMESTAMPTZ
 );
 
+CREATE TABLE IF NOT EXISTS public.account_email_tokens (
+    id UUID PRIMARY KEY,
+    account_id UUID NOT NULL REFERENCES public.accounts(id) ON DELETE CASCADE,
+    purpose VARCHAR(32) NOT NULL CHECK (purpose IN ('verify_email', 'reset_password')),
+    token_hash CHAR(64) NOT NULL UNIQUE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    used_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS account_email_tokens_account_purpose
+    ON public.account_email_tokens (account_id, purpose, created_at DESC);
+
 CREATE TABLE IF NOT EXISTS public.account_identities (
     account_id UUID NOT NULL REFERENCES public.accounts(id) ON DELETE CASCADE,
     provider VARCHAR(24) NOT NULL,
@@ -96,6 +108,7 @@ CREATE INDEX IF NOT EXISTS account_session_metadata_account
 ALTER TABLE public.accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.account_credentials ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.account_auth_limits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.account_email_tokens ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.account_identities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.account_security_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.account_session_metadata ENABLE ROW LEVEL SECURITY;

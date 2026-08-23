@@ -39,6 +39,9 @@ const StaffBoard = lazy(() => import('./pages/StaffBoard.jsx'));
 const Profile = lazy(() => import('./pages/Profile.jsx'));
 const Login = lazy(() => import('./pages/Login.jsx'));
 const Register = lazy(() => import('./pages/Register.jsx'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword.jsx'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword.jsx'));
+const VerifyEmail = lazy(() => import('./pages/VerifyEmail.jsx'));
 import api from './api.js';
 import { useAuth } from './auth/AuthContext.jsx';
 import { PAGE_TITLES, PAGE_HINTS, DOCK_PAGES, SEARCHABLE_PAGES } from './nav.js';
@@ -78,12 +81,19 @@ const PAGES = {
   profile: Profile,
   login: Login,
   register: Register,
+  forgotPassword: ForgotPassword,
+  resetPassword: ResetPassword,
+  verifyEmail: VerifyEmail,
 };
 
 export const PermContext = React.createContext({ level: 0, levelName: 'Viewer' });
 
 function getHashPage() {
-  const pathRoutes = { '/profile': 'profile', '/login': 'login', '/register': 'register' };
+  const pathRoutes = {
+    '/profile': 'profile', '/login': 'login', '/register': 'register',
+    '/forgot-password': 'forgotPassword', '/reset-password': 'resetPassword',
+    '/verify-email': 'verifyEmail',
+  };
   if (pathRoutes[window.location.pathname]) return pathRoutes[window.location.pathname];
   const h = window.location.hash.replace('#', '').trim();
   if (!h || h === 'home') return 'home';
@@ -412,7 +422,7 @@ export default function App() {
     );
   }
 
-  if (page === 'login' || page === 'register') {
+  if (['login', 'register', 'forgotPassword', 'resetPassword', 'verifyEmail'].includes(page)) {
     return (
       <ToastProvider>
         <PageErrorBoundary key={page}>

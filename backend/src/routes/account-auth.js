@@ -3,6 +3,8 @@ const crypto = require('crypto');
 const { getAccountStore, normalizeUsername } = require('../../../database/accounts');
 const { getPool } = require('../../../database/index');
 const { validatePassword, hashPassword, verifyPassword } = require('../../../shared/services/passwords');
+const { sendVerificationEmail, sendPasswordResetEmail } = require('../../../shared/services/account-mail');
+const logger = require('../../../shared/lib/logger');
 
 const RESERVED = new Set(['admin', 'administrator', 'support', 'system', 'discord', 'ebbot', 'root', 'login', 'register', 'security']);
 // Unknown accounts still perform one Argon2 verification to reduce timing-based
@@ -39,8 +41,11 @@ function regenerate(req) {
 function save(req) {
     return new Promise((resolve, reject) => req.session.save(err => err ? reject(err) : resolve()));
 }
-function attachLocalAccount(session, account) {
+function attachAccount(session, account) {
     session.account = account;
+}
+function attachLocalAccount(session, account) {
+    attachAccount(session, account);
     delete session.user;
     delete session.userGuilds;
     delete session.devUnlocked;
@@ -78,7 +83,14 @@ module.exports = () => {
             await regenerate(req);
             attachLocalAccount(req.session, account);
             await save(req);
-            return res.status(201).json({ account, verificationRequired: true });
+            let verificationEmailSent = false;
+            try {
+                const token = await store.issueEmailToken(account.id, 'verify_email', 24 * 60 * 60 * 1000);
+                verificationEmailSent = (await sendVerificationEmail(account, token)).sent;
+            } catch (err) {
+                logger.warn('Account verification email could not be delivered', { error: err.message, requestId: req.requestId });
+            }
+            return res.status(201).json({ account, verificationRequired: true, verificationEmailSent });
         } catch (err) { return next(err); }
     });
 
@@ -107,6 +119,83 @@ module.exports = () => {
             attachLocalAccount(req.session, credential.account);
             await save(req);
             return res.json({ account: credential.account, verificationRequired: !credential.account.emailVerified });
+        } catch (err) { return next(err); }
+    });
+
+    router.post('/resend-verification', async (req, res, next) => {
+        try {
+            const accountId = req.session?.account?.id;
+            if (!accountId) return res.status(401).json({ error: 'Not authenticated', code: 'ACCOUNT_AUTH_REQUIRED' });
+            const store = getAccountStore();
+            const rate = await store.consumeAuthLimit(`verify-resend:${accountId}`, {
+                max: 3, windowMs: 60 * 60 * 1000, blockMs: 60 * 60 * 1000,
+            });
+            if (!rate.allowed) {
+                res.setHeader('Retry-After', String(rate.retryAfter));
+                return res.status(429).json({ error: 'Too many verification emails requested', code: 'RATE_LIMITED' });
+            }
+            const account = await store.byId(accountId);
+            if (account?.email && !account.emailVerified) {
+                const token = await store.issueEmailToken(account.id, 'verify_email', 24 * 60 * 60 * 1000);
+                await sendVerificationEmail(account, token);
+            }
+            return res.json({ success: true, message: 'If verification is still required, a new email has been requested.' });
+        } catch (err) { return next(err); }
+    });
+
+    router.post('/verify-email', async (req, res, next) => {
+        try {
+            const token = String(req.body?.token || '');
+            if (token.length < 32 || token.length > 200) return res.status(400).json({ error: 'Invalid or expired verification link', code: 'INVALID_TOKEN' });
+            const account = await getAccountStore().verifyEmailToken(token, req.requestId);
+            if (!account) return res.status(400).json({ error: 'Invalid or expired verification link', code: 'INVALID_TOKEN' });
+            if (req.session?.account?.id === account.id) {
+                attachAccount(req.session, account);
+                await save(req);
+            }
+            return res.json({ success: true, account });
+        } catch (err) { return next(err); }
+    });
+
+    router.post('/forgot-password', async (req, res, next) => {
+        const generic = { success: true, message: 'If that verified account exists, a password reset email has been requested.' };
+        try {
+            if (!getPool()) return res.json(generic);
+            const email = String(req.body?.email || '').normalize('NFKC').trim().toLowerCase().slice(0, 254);
+            const store = getAccountStore();
+            const limits = await Promise.all([
+                store.consumeAuthLimit(`forgot:ip:${bucket(clientIp(req))}`, { max: 10, windowMs: 60 * 60 * 1000, blockMs: 60 * 60 * 1000 }),
+                store.consumeAuthLimit(`forgot:id:${bucket(email)}`, { max: 3, windowMs: 60 * 60 * 1000, blockMs: 60 * 60 * 1000 }),
+            ]);
+            if (limits.some(result => !result.allowed)) return res.json(generic);
+            const account = email ? await store.byEmail(email) : null;
+            if (account?.emailVerified && account.status === 'active') {
+                const token = await store.issueEmailToken(account.id, 'reset_password', 30 * 60 * 1000);
+                await sendPasswordResetEmail(account, token);
+            }
+            return res.json(generic);
+        } catch (err) {
+            logger.warn('Password reset request could not be processed', { error: err.message, requestId: req.requestId });
+            return res.json(generic);
+        }
+    });
+
+    router.post('/reset-password', async (req, res, next) => {
+        try {
+            if (!getPool()) return res.status(503).json({ error: 'Account storage is unavailable', code: 'ACCOUNT_STORAGE_UNAVAILABLE' });
+            const token = String(req.body?.token || '');
+            if (token.length < 32 || token.length > 200) return res.status(400).json({ error: 'Invalid or expired reset link', code: 'INVALID_TOKEN' });
+            const issue = validatePassword(req.body?.password);
+            if (issue) return res.status(400).json({ error: issue, code: 'PASSWORD_POLICY' });
+            if (req.body.password !== req.body.confirmPassword) return res.status(400).json({ error: 'Passwords do not match', code: 'VALIDATION_ERROR' });
+            const rate = await getAccountStore().consumeAuthLimit(`reset:token:${bucket(token)}`, {
+                max: 8, windowMs: 30 * 60 * 1000, blockMs: 30 * 60 * 1000,
+            });
+            if (!rate.allowed) return res.status(400).json({ error: 'Invalid or expired reset link', code: 'INVALID_TOKEN' });
+            const passwordHash = await hashPassword(req.body.password);
+            const changed = await getAccountStore().resetPasswordWithToken(token, passwordHash, req.requestId);
+            if (!changed) return res.status(400).json({ error: 'Invalid or expired reset link', code: 'INVALID_TOKEN' });
+            req.session.destroy(() => res.json({ success: true, sessionsRevoked: true }));
         } catch (err) { return next(err); }
     });
 

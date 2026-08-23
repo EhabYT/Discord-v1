@@ -21,7 +21,7 @@ export default function Login() {
         {error && <div className="cyber-warning text-sm text-amber-200" role="alert">{error}</div>}
         <label className="block"><span className="cyber-label">Email or username</span><input autoComplete="username" required value={form.identifier} onChange={e => setForm({ ...form, identifier: e.target.value })} className="cyber-input mt-1.5" /></label>
         <PasswordField label="Password" autoComplete="current-password" required value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
-        <div className="flex justify-end"><span className="text-xs text-zinc-600">Password recovery arrives with verified email in Stage C</span></div>
+        <div className="flex justify-end"><a href="/forgot-password" className="text-xs text-cyan-300 hover:text-cyan-200">Forgot password?</a></div>
         <button disabled={busy} className="cyber-button-solid w-full">{busy ? 'Signing in…' : 'Sign in'}</button>
         {auth.oauthEnabled && <a href="/api/auth/discord" className="cyber-button w-full flex justify-center">Continue with Discord</a>}
       </form>
