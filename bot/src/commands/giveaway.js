@@ -6,6 +6,7 @@ const {
     MessageFlags
 } = require('discord.js');
 const { finalizeGiveaway, rerollGiveaway, ENTRY_REACTION } = require('../../../shared/services/giveaways');
+const { withKeyLock } = require('../../../database/lock');
 
 const MAX_DURATION = 30 * 24 * 60 * 60 * 1000;
 
@@ -130,9 +131,11 @@ module.exports = {
                 winnerIds: [],
                 createdAt: Date.now()
             };
-            const giveaways = await db.get(giveawaysKey) || [];
-            giveaways.push(giveaway);
-            await db.set(giveawaysKey, giveaways);
+            await withKeyLock(giveawaysKey, async (lockedDb) => {
+                const giveaways = await lockedDb.get(giveawaysKey) || [];
+                giveaways.push(giveaway);
+                await lockedDb.set(giveawaysKey, giveaways);
+            }, db);
 
             return safeReply(interaction, {
                 content: `✅ Giveaway started in ${channel}. It ends <t:${Math.floor(endsAt / 1000)}:R>.`,
@@ -141,16 +144,19 @@ module.exports = {
         }
 
         const messageId = interaction.options.getString('message_id');
-        const giveaways = await db.get(giveawaysKey) || [];
-        const giveaway = messageId ? giveaways.find(item => item.messageId === messageId) : null;
 
         if (subcommand === 'end') {
-            if (!giveaway?.active) {
+            const giveaway = await withKeyLock(giveawaysKey, async (lockedDb) => {
+                const giveaways = await lockedDb.get(giveawaysKey) || [];
+                const selected = giveaways.find(item => item.messageId === messageId && item.active);
+                if (!selected) return null;
+                await finalizeGiveaway(guild, selected);
+                await lockedDb.set(giveawaysKey, giveaways);
+                return selected;
+            }, db);
+            if (!giveaway) {
                 return safeReply(interaction, { content: '❌ Active giveaway not found.', flags: [MessageFlags.Ephemeral] });
             }
-
-            await finalizeGiveaway(guild, giveaway);
-            await db.set(giveawaysKey, giveaways);
             return safeReply(interaction, {
                 content: `✅ Giveaway ended. Winners: ${formatWinners(giveaway.winnerIds)}.`,
                 flags: [MessageFlags.Ephemeral]
@@ -158,13 +164,18 @@ module.exports = {
         }
 
         if (subcommand === 'reroll') {
-            if (!giveaway || giveaway.active) {
-                return safeReply(interaction, { content: '❌ Ended giveaway not found.', flags: [MessageFlags.Ephemeral] });
-            }
-
             try {
-                const winner = await rerollGiveaway(guild, giveaway);
-                await db.set(giveawaysKey, giveaways);
+                const winner = await withKeyLock(giveawaysKey, async (lockedDb) => {
+                    const giveaways = await lockedDb.get(giveawaysKey) || [];
+                    const giveaway = giveaways.find(item => item.messageId === messageId && !item.active);
+                    if (!giveaway) return null;
+                    const selectedWinner = await rerollGiveaway(guild, giveaway);
+                    await lockedDb.set(giveawaysKey, giveaways);
+                    return selectedWinner;
+                }, db);
+                if (!winner) {
+                    return safeReply(interaction, { content: '❌ Ended giveaway not found.', flags: [MessageFlags.Ephemeral] });
+                }
                 return safeReply(interaction, {
                     content: `✅ New winner: <@${winner}>.`,
                     flags: [MessageFlags.Ephemeral]
@@ -173,6 +184,26 @@ module.exports = {
                 return safeReply(interaction, { content: `❌ ${err.message}.`, flags: [MessageFlags.Ephemeral] });
             }
         }
+
+        if (subcommand === 'delete') {
+            const deleted = await withKeyLock(giveawaysKey, async (lockedDb) => {
+                const current = await lockedDb.get(giveawaysKey) || [];
+                const selected = current.find(item => item.messageId === messageId);
+                if (!selected) return false;
+                const channel = await guild.channels.fetch(selected.channelId).catch(() => null);
+                const message = channel ? await channel.messages.fetch(selected.messageId).catch(() => null) : null;
+                if (message) await message.delete().catch(() => {});
+                await lockedDb.set(giveawaysKey, current.filter(item => item.messageId !== messageId));
+                return true;
+            }, db);
+            if (!deleted) {
+                return safeReply(interaction, { content: '❌ Giveaway not found.', flags: [MessageFlags.Ephemeral] });
+            }
+            return safeReply(interaction, { content: '✅ Giveaway deleted.', flags: [MessageFlags.Ephemeral] });
+        }
+
+        const giveaways = await db.get(giveawaysKey) || [];
+        const giveaway = messageId ? giveaways.find(item => item.messageId === messageId) : null;
 
         if (subcommand === 'info') {
             if (!giveaway) {
@@ -194,18 +225,6 @@ module.exports = {
                 );
             if (giveaway.requiredRoleId) info.addFields({ name: 'Required role', value: `<@&${giveaway.requiredRoleId}>`, inline: true });
             return safeReply(interaction, { embeds: [info], flags: [MessageFlags.Ephemeral] });
-        }
-
-        if (subcommand === 'delete') {
-            if (!giveaway) {
-                return safeReply(interaction, { content: '❌ Giveaway not found.', flags: [MessageFlags.Ephemeral] });
-            }
-
-            const channel = await guild.channels.fetch(giveaway.channelId).catch(() => null);
-            const message = channel ? await channel.messages.fetch(giveaway.messageId).catch(() => null) : null;
-            if (message) await message.delete().catch(() => {});
-            await db.set(giveawaysKey, giveaways.filter(item => item.messageId !== messageId));
-            return safeReply(interaction, { content: '✅ Giveaway deleted.', flags: [MessageFlags.Ephemeral] });
         }
 
         if (subcommand === 'list') {

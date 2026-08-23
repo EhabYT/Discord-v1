@@ -4,13 +4,14 @@ const { EmbedBuilder } = require('discord.js');
  * eslint-disable require-atomic-updates
  *
  * finalizeGiveaway/rerollGiveaway mutate the `giveaway` object across awaits.
- * ESLint cannot see that BOTH callers — utils/scheduler_jobs.js ('giveaways'
- * job) and the dashboard end/reroll routes — now wrap the whole read-modify-
- * write in withKeyLock(`giveaways_<guildId>`), so the sequence is serialised.
+ * ESLint cannot see that every scheduler, Dashboard, and Discord command caller
+ * wraps the complete read-modify-write in withKeyLock(`giveaways_<guildId>`)
+ * and uses its transaction-bound database adapter. The sequence is serialized
+ * in-process and across PostgreSQL-backed instances.
  *
- * The race the rule warns about was real and is covered by a regression test in
- * tests/security/concurrency.test.js ("unlocked giveaway race IS reproducible"), which
- * fails if the locking is ever removed. The disable is scoped to this file only.
+ * The race the rule warns about was real and is covered by regression tests in
+ * tests/security/concurrency.test.js and transaction-locks.test.js. The disable
+ * is scoped to this file only.
  */
 /* eslint-disable require-atomic-updates */
 

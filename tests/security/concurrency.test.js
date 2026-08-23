@@ -32,14 +32,14 @@ const check = (label, ok, detail = '') => {
 
 /** The /pay logic, with the lock — mirrors commands/pay.js. */
 async function payLocked(from, to, amount) {
-    return withKeyLocks([key(from), key(to)], async () => {
-        const balance = Number(await db.get(key(from))) || 0;
+    return withKeyLocks([key(from), key(to)], async (lockedDb) => {
+        const balance = Number(await lockedDb.get(key(from))) || 0;
         if (balance < amount) return { ok: false };
-        await db.set(key(from), balance - amount);
+        await lockedDb.set(key(from), balance - amount);
         await new Promise((r) => setTimeout(r, 5));          // simulate I/O
-        await db.set(key(to), (Number(await db.get(key(to))) || 0) + amount);
+        await lockedDb.set(key(to), (Number(await lockedDb.get(key(to))) || 0) + amount);
         return { ok: true };
-    });
+    }, db);
 }
 
 /** The original, unlocked logic — kept to prove the bug is real. */
@@ -118,12 +118,12 @@ async function total() {
         `still active: ${JSON.stringify(unlockedLeft)}`);
 
     await seed();
-    const lockedFinalise = (id, delay) => withKeyLock(GKEY, async () => {
-        const gs = await db.get(GKEY);
+    const lockedFinalise = (id, delay) => withKeyLock(GKEY, async (lockedDb) => {
+        const gs = await lockedDb.get(GKEY);
         await new Promise((r) => setTimeout(r, delay));
         gs.find((g) => g.messageId === id).active = false;
-        await db.set(GKEY, gs);
-    });
+        await lockedDb.set(GKEY, gs);
+    }, db);
     await Promise.all([lockedFinalise('m1', 20), lockedFinalise('m2', 10)]);
     const lockedLeft = (await db.get(GKEY)).filter((g) => g.active).map((g) => g.messageId);
     check('locked finalisation loses no update', lockedLeft.length === 0,
@@ -133,12 +133,12 @@ async function total() {
     console.log('\nLock semantics:\n');
 
     await db.set('conc_counter', { n: 0 });
-    const bump = () => withKeyLock('conc_counter', async () => {
-        const v = await db.get('conc_counter');
+    const bump = () => withKeyLock('conc_counter', async (lockedDb) => {
+        const v = await lockedDb.get('conc_counter');
         await new Promise((r) => setTimeout(r, 4));
         v.n += 1;
-        await db.set('conc_counter', v);
-    });
+        await lockedDb.set('conc_counter', v);
+    }, db);
     await Promise.all(Array.from({ length: 10 }, bump));
     const counter = await db.get('conc_counter');
     check('10 concurrent increments all land', counter.n === 10, `n=${counter.n}`);

@@ -16,6 +16,9 @@ function normalizePrefixOptions(prefix, options = {}) {
 class MemoryDatabase {
     constructor() { this.data = new Map(); }
     ready() { return Promise.resolve(true); }
+    withAdvisoryLocks(keys, fn) {
+        return fn(this);
+    }
     get(key) {
         return Promise.resolve(this.data.has(String(key)) ? structuredClone(this.data.get(String(key))) : null);
     }
@@ -125,9 +128,9 @@ async function collectPrefixRows(database, prefix, { pageSize = 1000, maxRows = 
 }
 
 class PostgresDatabase {
-    constructor(pool = getPool()) {
+    constructor(pool = getPool(), { initialized = false } = {}) {
         this.pool = pool;
-        this.initializing = null;
+        this.initializing = initialized ? Promise.resolve(true) : null;
     }
 
     ready() {
@@ -151,6 +154,32 @@ class PostgresDatabase {
             });
         }
         return this.initializing;
+    }
+
+    async withAdvisoryLocks(keys, fn) {
+        await this.ready();
+        const ordered = [...new Set(keys.map(String))].sort();
+        const client = await this.pool.connect();
+        try {
+            await client.query('BEGIN');
+            for (const key of ordered) {
+                await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [key]);
+            }
+            const transactionDb = new PostgresDatabase(client, { initialized: true });
+            const result = await fn(transactionDb);
+            await client.query('COMMIT');
+            return result;
+        } catch (err) {
+            try {
+                await client.query('ROLLBACK');
+            } catch {
+                // Preserve the operation error; a broken connection is discarded
+                // by pg when released below.
+            }
+            throw err;
+        } finally {
+            client.release();
+        }
     }
 
     async get(key) {

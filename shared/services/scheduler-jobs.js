@@ -37,8 +37,9 @@ function registerJobs(client, scheduler) {
           // Serialised against the dashboard's end/reroll routes, which perform
           // the same read-modify-write. Without this a concurrent finalise loses
           // one side's update and the giveaway is drawn twice.
-          await withKeyLock(`giveaways_${guildId}`, async () => {
-            const giveaways = await db.get(`giveaways_${guildId}`) || [];
+          const giveawaysKey = `giveaways_${guildId}`;
+          await withKeyLock(giveawaysKey, async (lockedDb) => {
+            const giveaways = await lockedDb.get(giveawaysKey) || [];
             const now = Date.now();
             const updatedGiveaways = [];
             let changed = false;
@@ -61,9 +62,9 @@ function registerJobs(client, scheduler) {
             }
 
             if (changed) {
-                await db.set(`giveaways_${guildId}`, updatedGiveaways);
+                await lockedDb.set(giveawaysKey, updatedGiveaways);
             }
-          });
+          }, db);
         }
     });
 

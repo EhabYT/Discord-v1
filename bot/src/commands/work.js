@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { withKeyLocks } = require('../../../database/lock');
 
 const JOBS = [
     ['delivered pizza', 40, 90],
@@ -16,22 +17,29 @@ module.exports = {
 
     async execute(interaction, client, db) {
         const cdKey = `work_cd_${interaction.guild.id}_${interaction.user.id}`;
-        const last = Number(await db.get(cdKey)) || 0;
         const wait = 30 * 60 * 1000;
-        if (Date.now() - last < wait) {
-            const left = Math.ceil((wait - (Date.now() - last)) / 60000);
-            return client.helpers.safeReply(interaction, { content: `⏳ You can work again in **${left}m**.`, flags: [MessageFlags.Ephemeral] });
-        }
-        const [job, min, max] = JOBS[Math.floor(Math.random() * JOBS.length)];
-        const pay = Math.floor(Math.random() * (max - min + 1)) + min;
         const key = `points_${interaction.guild.id}_${interaction.user.id}`;
-        const total = (Number(await db.get(key)) || 0) + pay;
-        await db.set(key, total);
-        await db.set(cdKey, Date.now());
+        const result = await withKeyLocks([cdKey, key], async (lockedDb) => {
+            const now = Date.now();
+            const last = Number(await lockedDb.get(cdKey)) || 0;
+            if (now - last < wait) {
+                return { ok: false, left: Math.ceil((wait - (now - last)) / 60000) };
+            }
+            const [job, min, max] = JOBS[Math.floor(Math.random() * JOBS.length)];
+            const pay = Math.floor(Math.random() * (max - min + 1)) + min;
+            const total = (Number(await lockedDb.get(key)) || 0) + pay;
+            await lockedDb.set(key, total);
+            await lockedDb.set(cdKey, now);
+            return { ok: true, job, pay, total };
+        }, db);
+
+        if (!result.ok) {
+            return client.helpers.safeReply(interaction, { content: `⏳ You can work again in **${result.left}m**.`, flags: [MessageFlags.Ephemeral] });
+        }
         const embed = new EmbedBuilder()
             .setColor('#00fbff')
             .setTitle('💼 Shift complete')
-            .setDescription(`You ${job} and earned **${pay}** points.\nBalance: **${total}**`)
+            .setDescription(`You ${result.job} and earned **${result.pay}** points.\nBalance: **${result.total}**`)
             .setTimestamp();
         await client.helpers.safeReply(interaction, { embeds: [embed] });
     }

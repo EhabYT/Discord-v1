@@ -989,9 +989,12 @@ module.exports = (botClient) => {
                 winnerIds: [],
                 createdAt: Date.now()
             };
-            const giveaways = (await db.get(`giveaways_${guild.id}`)) || [];
-            giveaways.push(giveaway);
-            await db.set(`giveaways_${guild.id}`, giveaways);
+            const giveawaysKey = `giveaways_${guild.id}`;
+            await withKeyLock(giveawaysKey, async (lockedDb) => {
+                const giveaways = (await lockedDb.get(giveawaysKey)) || [];
+                giveaways.push(giveaway);
+                await lockedDb.set(giveawaysKey, giveaways);
+            }, db);
             res.json({ success: true, giveaway: { ...giveaway, id: giveaway.messageId } });
         } catch (err) { next(err); }
     });
@@ -1003,14 +1006,15 @@ module.exports = (botClient) => {
             // sequence every 10s, so without the lock one side's write is lost and
             // a finalised giveaway stays active — it is then drawn a second time
             // and the prize is awarded twice.
-            const result = await withKeyLock(`giveaways_${guildId}`, async () => {
-                const giveaways = await db.get(`giveaways_${guildId}`) || [];
+            const giveawaysKey = `giveaways_${guildId}`;
+            const result = await withKeyLock(giveawaysKey, async (lockedDb) => {
+                const giveaways = await lockedDb.get(giveawaysKey) || [];
                 const giveaway = giveaways.find(g => g.messageId === id && g.active);
                 if (!giveaway) return null;
                 await finalizeGiveaway(req.guild, giveaway, logger);
-                await db.set(`giveaways_${guildId}`, giveaways);
+                await lockedDb.set(giveawaysKey, giveaways);
                 return giveaway;
-            });
+            }, db);
             if (!result) return res.status(404).json({ error: 'Active giveaway not found' });
             res.json({ success: true, giveaway: { ...result, id: result.messageId } });
         } catch (err) { next(err); }
@@ -1018,29 +1022,36 @@ module.exports = (botClient) => {
 
     router.post('/giveaways/:id/reroll', requirePerm(2), async (req, res, next) => {
         try {
-            const { id } = req.params;
-            const giveaways = await db.get(`giveaways_${req.params.guildId}`) || [];
-            const giveaway = giveaways.find(g => g.messageId === id && !g.active);
-            if (!giveaway) return res.status(404).json({ error: 'Giveaway not found' });
-
-            const winner = await rerollGiveaway(req.guild, giveaway);
-            await db.set(`giveaways_${req.params.guildId}`, giveaways);
-            res.json({ success: true, winnerId: winner, giveaway: { ...giveaway, id: giveaway.messageId } });
+            const { guildId, id } = req.params;
+            const giveawaysKey = `giveaways_${guildId}`;
+            const result = await withKeyLock(giveawaysKey, async (lockedDb) => {
+                const giveaways = await lockedDb.get(giveawaysKey) || [];
+                const giveaway = giveaways.find(g => g.messageId === id && !g.active);
+                if (!giveaway) return null;
+                const winner = await rerollGiveaway(req.guild, giveaway);
+                await lockedDb.set(giveawaysKey, giveaways);
+                return { winner, giveaway };
+            }, db);
+            if (!result) return res.status(404).json({ error: 'Giveaway not found' });
+            res.json({ success: true, winnerId: result.winner, giveaway: { ...result.giveaway, id: result.giveaway.messageId } });
         } catch (err) { next(err); }
     });
 
     router.delete('/giveaways/:id', requirePerm(2), async (req, res, next) => {
         try {
             const { guildId, id } = req.params;
-            const giveaways = await db.get(`giveaways_${guildId}`) || [];
-            const giveaway = giveaways.find(g => g.messageId === id);
-            if (!giveaway) return res.status(404).json({ error: 'Giveaway not found' });
-
-            const channel = await req.guild.channels.fetch(giveaway.channelId).catch(() => null);
-            const message = channel ? await channel.messages.fetch(id).catch(() => null) : null;
-            if (message) await message.delete().catch(() => {});
-
-            await db.set(`giveaways_${guildId}`, giveaways.filter(g => g.messageId !== id));
+            const giveawaysKey = `giveaways_${guildId}`;
+            const deleted = await withKeyLock(giveawaysKey, async (lockedDb) => {
+                const giveaways = await lockedDb.get(giveawaysKey) || [];
+                const giveaway = giveaways.find(g => g.messageId === id);
+                if (!giveaway) return false;
+                const channel = await req.guild.channels.fetch(giveaway.channelId).catch(() => null);
+                const message = channel ? await channel.messages.fetch(id).catch(() => null) : null;
+                if (message) await message.delete().catch(() => {});
+                await lockedDb.set(giveawaysKey, giveaways.filter(g => g.messageId !== id));
+                return true;
+            }, db);
+            if (!deleted) return res.status(404).json({ error: 'Giveaway not found' });
             res.json({ success: true });
         } catch (err) { next(err); }
     });

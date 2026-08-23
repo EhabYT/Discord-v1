@@ -1,8 +1,25 @@
 const { PostgresDatabase, normalizeDatabaseUrl, databaseConfigIssue } = require('../../database/index');
 
 class FakePool {
-    constructor() { this.data = new Map(); }
+    constructor() {
+        this.data = new Map();
+        this.queries = [];
+        this.releaseCount = 0;
+    }
     async query(sql, params = []) {
+        return this.runQuery('pool', sql, params);
+    }
+    async connect() {
+        return {
+            query: (sql, params = []) => this.runQuery('client', sql, params),
+            release: () => { this.releaseCount++; },
+        };
+    }
+    async runQuery(source, sql, params = []) {
+        const statement = String(sql).trim();
+        this.queries.push({ source, statement, params });
+        if (/^(BEGIN|COMMIT|ROLLBACK)$/.test(statement)) return { rows: [], rowCount: 0 };
+        if (/pg_advisory_xact_lock/.test(statement)) return { rows: [{ pg_advisory_xact_lock: null }], rowCount: 1 };
         if (/CREATE TABLE/.test(sql)) return { rows: [], rowCount: 0 };
         if (/INSERT INTO bot_kv/.test(sql)) {
             this.data.set(params[0], JSON.parse(params[1]));
@@ -87,6 +104,42 @@ const check = (label, ok) => {
         all.some((row) => row.id === 'config_1' && row.value.enabled === true));
     check('delete reports an existing key', await db.delete('config_1') === true);
     check('missing keys return null', await db.get('config_1') === null);
+
+    const lockPool = new FakePool();
+    const lockDb = new PostgresDatabase(lockPool);
+    const transactionResult = await lockDb.withAdvisoryLocks(['points_z', 'points_a', 'points_z'], async (transactionDb) => {
+        await transactionDb.set('points_a', 7);
+        return transactionDb.get('points_a');
+    });
+    const clientQueries = lockPool.queries.filter(query => query.source === 'client');
+    const lockKeys = clientQueries
+        .filter(query => /pg_advisory_xact_lock/.test(query.statement))
+        .map(query => query.params[0]);
+    check('advisory lock keys are sorted and deduplicated',
+        JSON.stringify(lockKeys) === JSON.stringify(['points_a', 'points_z']));
+    check('transaction callback returns its value after commit', transactionResult === 7);
+    check('protected reads and writes use the dedicated transaction client',
+        clientQueries.some(query => /INSERT INTO bot_kv/.test(query.statement))
+        && clientQueries.some(query => /SELECT value FROM bot_kv/.test(query.statement))
+        && !lockPool.queries.some(query => query.source === 'pool' && /(?:INSERT INTO bot_kv|SELECT value FROM bot_kv)/.test(query.statement)));
+    check('successful operation begins, commits, and releases its client',
+        clientQueries[0].statement === 'BEGIN'
+        && clientQueries.at(-1).statement === 'COMMIT'
+        && lockPool.releaseCount === 1);
+
+    const expected = new Error('transaction callback failed');
+    let received;
+    try {
+        await lockDb.withAdvisoryLocks(['points_a'], async () => { throw expected; });
+    } catch (err) {
+        received = err;
+    }
+    const lastClientStatements = lockPool.queries
+        .filter(query => query.source === 'client')
+        .map(query => query.statement);
+    check('callback failure preserves the original error', received === expected);
+    check('callback failure rolls back and releases its client',
+        lastClientStatements.at(-1) === 'ROLLBACK' && lockPool.releaseCount === 2);
 
     console.log(fails === 0 ? '\nAll PostgreSQL adapter checks passed.\n' : `\n${fails} CHECK(S) FAILED.\n`);
     process.exit(fails === 0 ? 0 : 1);

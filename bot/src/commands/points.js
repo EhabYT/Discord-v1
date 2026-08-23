@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { withKeyLock } = require('../../../database/lock');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -13,13 +14,19 @@ module.exports = {
     const key = `points_${interaction.guild.id}_${user.id}`;
     if (value) {
       if (!client.helpers.hasModPerms(interaction.member)) return interaction.reply({ content: '❌ Mods only.', flags: [MessageFlags.Ephemeral] });
-      if (value.toLowerCase() === 'reset') { await db.set(key, 0); return interaction.reply({ embeds: [new EmbedBuilder().setColor('#FFA500').setDescription(`🔄 ${user}'s points reset to 0.`).setTimestamp()] }); }
+      if (value.toLowerCase() === 'reset') {
+        await withKeyLock(key, lockedDb => lockedDb.set(key, 0), db);
+        return interaction.reply({ embeds: [new EmbedBuilder().setColor('#FFA500').setDescription(`🔄 ${user}'s points reset to 0.`).setTimestamp()] });
+      }
       const change = parseInt(value);
       if (isNaN(change)) return interaction.reply({ content: '❌ Invalid value.', flags: [MessageFlags.Ephemeral] });
-      const current = (await db.get(key)) || 0;
-      await db.set(key, current + change);
+      const total = await withKeyLock(key, async (lockedDb) => {
+        const current = (await lockedDb.get(key)) || 0;
+        await lockedDb.set(key, current + change);
+        return current + change;
+      }, db);
       const embed = new EmbedBuilder().setColor('#0099FF').setTitle('📊 Points Updated')
-        .addFields({ name: 'User', value: `${user}`, inline: true }, { name: 'Change', value: `${change > 0 ? '+' : ''}${change}`, inline: true }, { name: 'Total', value: `${current + change}`, inline: true }).setTimestamp();
+        .addFields({ name: 'User', value: `${user}`, inline: true }, { name: 'Change', value: `${change > 0 ? '+' : ''}${change}`, inline: true }, { name: 'Total', value: `${total}`, inline: true }).setTimestamp();
       return interaction.reply({ embeds: [embed] });
     }
     const points = (await db.get(key)) || 0;

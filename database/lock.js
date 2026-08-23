@@ -1,58 +1,70 @@
 /**
  * Per-key serialisation for read-modify-write sequences.
  *
- * The key/value adapter uses separate read and write queries. Node is single-threaded, but
- * every `await` is a yield point, so the common pattern
+ * Promise chains provide deterministic in-process ordering and keep the memory
+ * database safe in tests. PostgreSQL operations additionally acquire
+ * transaction-scoped advisory locks, so the same logical operation is also
+ * exclusive across multiple bot/backend instances.
  *
- *     const v = await db.get(key);   // ← other handlers run here
- *     await db.set(key, v + 1);
- *
- * loses updates under concurrency. Measured on this project's own wrapper:
- * five concurrent "+1" increments produced a final value of **1**.
- *
- * That is a correctness bug for XP and streaks, and a security bug for the
- * points economy: two /pay invocations racing past the same balance check both
- * succeed, letting a user spend the same points twice (value duplication).
- *
- * withKeyLock() serialises callbacks that touch the same logical key while
- * leaving unrelated keys fully concurrent. Locks are dropped as soon as the
- * queue for a key drains, so the map cannot grow without bound.
+ * Callbacks receive a database adapter. On PostgreSQL it is bound to the same
+ * dedicated client and transaction that owns the advisory locks. Critical
+ * callers must use that adapter rather than the shared pool-backed instance.
  */
+
+const { db: defaultDb } = require('./index');
 
 const chains = new Map();
 
 /**
- * Run `fn` with exclusive access to `key`.
+ * Run `fn` under the process-local queues for all sorted keys.
  * @template T
- * @param {string} key
+ * @param {string[]} orderedKeys
  * @param {() => Promise<T>} fn
  * @returns {Promise<T>}
  */
-function withKeyLock(key, fn) {
-    const previous = chains.get(key) || Promise.resolve();
-
-    // Chain onto any in-flight work for this key. `.catch` keeps one failed
-    // caller from poisoning the queue for everyone behind it.
-    const run = previous.then(fn, fn);
-
-    const settled = run.catch(() => {});
-    chains.set(key, settled);
-
-    // Release once nothing further has queued behind us.
-    settled.then(() => {
-        if (chains.get(key) === settled) chains.delete(key);
-    });
-
-    return run;
+function withLocalKeyLocks(orderedKeys, fn) {
+    return orderedKeys.reduceRight((next, key) => {
+        return () => {
+            const previous = chains.get(key) || Promise.resolve();
+            const run = previous.then(next, next);
+            const settled = run.catch(() => {});
+            chains.set(key, settled);
+            settled.then(() => {
+                if (chains.get(key) === settled) chains.delete(key);
+            });
+            return run;
+        };
+    }, fn)();
 }
 
-/** Serialise a multi-key operation deterministically to avoid deadlock. */
-function withKeyLocks(keys, fn) {
+/**
+ * Run `fn` with exclusive access to one logical key.
+ * @template T
+ * @param {string} key
+ * @param {(lockedDb: object) => Promise<T>} fn
+ * @param {object} database
+ * @returns {Promise<T>}
+ */
+function withKeyLock(key, fn, database = defaultDb) {
+    return withKeyLocks([key], fn, database);
+}
+
+/**
+ * Lock multiple logical keys in deterministic order to avoid deadlocks.
+ * @template T
+ * @param {string[]} keys
+ * @param {(lockedDb: object) => Promise<T>} fn
+ * @param {object} database
+ * @returns {Promise<T>}
+ */
+function withKeyLocks(keys, fn, database = defaultDb) {
     const ordered = [...new Set(keys.map(String))].sort();
-    return ordered.reduceRight(
-        (next, key) => () => withKeyLock(key, next),
-        fn,
-    )();
+    return withLocalKeyLocks(ordered, () => {
+        if (typeof database.withAdvisoryLocks === 'function') {
+            return database.withAdvisoryLocks(ordered, fn);
+        }
+        return fn(database);
+    });
 }
 
 module.exports = { withKeyLock, withKeyLocks, _chains: chains };

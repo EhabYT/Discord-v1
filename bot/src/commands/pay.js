@@ -20,13 +20,13 @@ module.exports = {
         // Read-check-write must be atomic. Without the lock two concurrent /pay
         // calls both read the same balance, both pass the check, and both debit
         // it — letting the sender spend the same points twice.
-        const result = await withKeyLocks([fromKey, toKey], async () => {
-            const balance = Number(await db.get(fromKey)) || 0;
+        const result = await withKeyLocks([fromKey, toKey], async (lockedDb) => {
+            const balance = Number(await lockedDb.get(fromKey)) || 0;
             if (balance < amount) return { ok: false, balance };
-            await db.set(fromKey, balance - amount);
-            await db.set(toKey, (Number(await db.get(toKey)) || 0) + amount);
+            await lockedDb.set(fromKey, balance - amount);
+            await lockedDb.set(toKey, (Number(await lockedDb.get(toKey)) || 0) + amount);
             return { ok: true, balance };
-        });
+        }, db);
 
         if (!result.ok) {
             return client.helpers.safeReply(interaction, { content: `❌ You only have **${result.balance}** points.`, flags: [MessageFlags.Ephemeral] });
