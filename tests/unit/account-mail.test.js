@@ -16,9 +16,9 @@ const { hashAccountToken, ACCOUNT_SCHEMA_SQL } = require('../../database/account
         actionLabel: 'go', actionPath: '/verify-email?token=not-a-real-token',
     });
     assert.deepStrictEqual(result, { sent: false, reason: 'not_configured' });
-    assert.strictEqual(hashAccountToken('token'), hashAccountToken('token'));
-    assert.notStrictEqual(hashAccountToken('token'), hashAccountToken('other'));
-    assert.strictEqual(hashAccountToken('token').length, 64);
+    assert.strictEqual(await hashAccountToken('token'), await hashAccountToken('token'));
+    assert.notStrictEqual(await hashAccountToken('token'), await hashAccountToken('other'));
+    assert((await hashAccountToken('token')).startsWith('$argon2id$'));
     assert.match(ACCOUNT_SCHEMA_SQL, /account_email_tokens/);
     assert.match(ACCOUNT_SCHEMA_SQL, /purpose IN \('verify_email', 'reset_password'\)/);
     for (const key of Object.keys(process.env)) if (!(key in previous)) delete process.env[key];

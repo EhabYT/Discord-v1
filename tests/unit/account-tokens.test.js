@@ -41,7 +41,7 @@ class TokenPool {
     const verifyToken = await store.issueEmailToken(pool.account.id, 'verify_email', 60_000);
     assert(verifyToken.length >= 43);
     assert(!pool.tokens.has(verifyToken), 'plaintext token must never be stored');
-    assert(pool.tokens.has(hashAccountToken(verifyToken)));
+    assert(pool.tokens.has(await hashAccountToken(verifyToken)));
     const verified = await store.verifyEmailToken(verifyToken, 'req-1');
     assert.strictEqual(verified.account.emailVerified, true);
     assert.strictEqual(await store.verifyEmailToken(verifyToken, 'req-2'), null, 'verification token must be single-use');

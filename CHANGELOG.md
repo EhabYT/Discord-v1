@@ -20,6 +20,7 @@
 - Added `.editorconfig`, `.prettierrc`, `SECURITY.md`, `CONTRIBUTING.md`
 - Removed `vendor/` directory
 - Updated `eslint.config.js` to remove stale `vendor/**` ignore pattern
+- Replaced SHA-256 token hashing with argon2id in `database/accounts.js`
 
 ## [3.0.0] - Initial V2 Release
 

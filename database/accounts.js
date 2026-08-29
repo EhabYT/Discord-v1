@@ -1,3 +1,4 @@
+const argon2 = require('argon2');
 const crypto = require('crypto');
 const { getPool } = require('./index');
 
@@ -41,7 +42,7 @@ CREATE TABLE IF NOT EXISTS account_mfa_totp (
 CREATE TABLE IF NOT EXISTS account_recovery_codes (
     id UUID PRIMARY KEY,
     account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-    code_hash CHAR(64) NOT NULL UNIQUE,
+    code_hash TEXT NOT NULL UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     used_at TIMESTAMPTZ
 );
@@ -59,7 +60,7 @@ CREATE TABLE IF NOT EXISTS account_email_tokens (
     id UUID PRIMARY KEY,
     account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     purpose VARCHAR(32) NOT NULL CHECK (purpose IN ('verify_email', 'reset_password')),
-    token_hash CHAR(64) NOT NULL UNIQUE,
+    token_hash TEXT NOT NULL UNIQUE,
     pending_email TEXT,
     expires_at TIMESTAMPTZ NOT NULL,
     used_at TIMESTAMPTZ,
@@ -119,7 +120,9 @@ ALTER TABLE account_auth_limits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE account_email_tokens ENABLE ROW LEVEL SECURITY;
 ALTER TABLE account_identities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE account_security_events ENABLE ROW LEVEL SECURITY;
-ALTER TABLE account_session_metadata ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE account_session_metadata ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE account_email_tokens ALTER COLUMN token_hash TYPE TEXT;
+    ALTER TABLE account_recovery_codes ALTER COLUMN code_hash TYPE TEXT;
 `;
 
 function normalizeUsername(value) {
@@ -130,8 +133,9 @@ function normalizeUsername(value) {
     return username.slice(0, 24).padEnd(3, '_');
 }
 
-function hashAccountToken(token) {
-    return crypto.createHash('sha256').update(String(token || '')).digest('hex');
+async function hashAccountToken(token) {
+    const salt = crypto.createHash('sha256').update(process.env.ACCOUNT_ENCRYPTION_KEY || 'eb-bot-token-salt-v1').digest('hex').slice(0, 16);
+    return argon2.hash(String(token || ''), { type: argon2.argon2id, salt });
 }
 
 function safeAccount(row) {
@@ -441,7 +445,7 @@ class AccountStore {
     async issueEmailToken(accountId, purpose, ttlMs, pendingEmail = null) {
         await this.ready();
         const token = crypto.randomBytes(32).toString('base64url');
-        const tokenHash = hashAccountToken(token);
+        const tokenHash = await hashAccountToken(token);
         const client = await this.pool.connect();
         try {
             await client.query('BEGIN');
@@ -472,12 +476,12 @@ class AccountStore {
                 WHERE t.token_hash = $1 AND purpose = 'verify_email'
                   AND used_at IS NULL AND expires_at > NOW()
                 FOR UPDATE
-            `, [hashAccountToken(token)]);
+            `, [await hashAccountToken(token)]);
             const accountId = found.rows[0]?.account_id;
             const pendingEmail = found.rows[0]?.pending_email || null;
             const oldEmail = found.rows[0]?.old_email || null;
             if (!accountId) { await client.query('ROLLBACK'); return null; }
-            await client.query('UPDATE account_email_tokens SET used_at = NOW() WHERE token_hash = $1', [hashAccountToken(token)]);
+            await client.query('UPDATE account_email_tokens SET used_at = NOW() WHERE token_hash = $1', [await hashAccountToken(token)]);
             if (pendingEmail) {
                 await client.query(`UPDATE accounts SET email = $1, email_verified_at = NOW(), updated_at = NOW()
                     WHERE id = $2`, [pendingEmail, accountId]);
@@ -506,10 +510,10 @@ class AccountStore {
                 WHERE token_hash = $1 AND purpose = 'reset_password'
                   AND used_at IS NULL AND expires_at > NOW()
                 FOR UPDATE
-            `, [hashAccountToken(token)]);
+            `, [await hashAccountToken(token)]);
             const accountId = found.rows[0]?.account_id;
             if (!accountId) { await client.query('ROLLBACK'); return false; }
-            await client.query('UPDATE account_email_tokens SET used_at = NOW() WHERE token_hash = $1', [hashAccountToken(token)]);
+            await client.query('UPDATE account_email_tokens SET used_at = NOW() WHERE token_hash = $1', [await hashAccountToken(token)]);
             await client.query(`UPDATE account_credentials SET password_hash = $1, changed_at = NOW()
                 WHERE account_id = $2`, [passwordHash, accountId]);
             await client.query(`DELETE FROM dashboard_sessions
