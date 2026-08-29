@@ -2,6 +2,9 @@ const http = require('http');
 
 const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:3000';
 const GID = process.env.GUILD_ID || '1062084713860309072';
+const ALLOW_DEGRADED = process.env.ALLOW_DEGRADED === 'true';
+const protectedOk = (response, predicate) => predicate(response)
+    || (ALLOW_DEGRADED && response.status === 401);
 
 function req(path, { method = 'GET', body } = {}) {
     return new Promise((resolve, reject) => {
@@ -47,14 +50,15 @@ function req(path, { method = 'GET', body } = {}) {
         }
     }
 
-    await expect('health', '/api/health', r => r.status === 200 && r.json?.ok === true && r.json.botOnline === true);
-    await expect('stats', '/api/stats', r => r.status === 200 && r.json?.commands >= 90 && r.json.guilds >= 1);
-    await expect('guilds', '/api/guilds', r => r.status === 200 && Array.isArray(r.json) && r.json.length >= 1);
-    await expect('me', '/api/me', r => r.status === 200 && r.json?.username);
+    await expect('health', '/api/health', r => r.status === 200 && r.json?.ok === true
+        && (r.json.botOnline === true || (ALLOW_DEGRADED && r.json.botOnline === false)));
+    await expect('stats', '/api/stats', r => protectedOk(r, x => x.status === 200 && x.json?.commands >= 90 && x.json.guilds >= 1));
+    await expect('guilds', '/api/guilds', r => protectedOk(r, x => x.status === 200 && Array.isArray(x.json) && x.json.length >= 1));
+    await expect('me', '/api/me', r => protectedOk(r, x => x.status === 200 && x.json?.username));
     await expect('auth-status', '/api/auth/status', r => r.status === 200 && typeof r.json?.loggedIn === 'boolean');
-    await expect('presence', '/api/bot/presence', r => r.status === 200 && r.json?.tag);
-    await expect('analytics-global', '/api/analytics/global', r => r.status === 200 && typeof r.json?.totalCommands === 'number');
-    await expect('performance', '/api/performance', r => r.status === 200 && typeof r.json?.ping === 'number');
+    await expect('presence', '/api/bot/presence', r => protectedOk(r, x => x.status === 200 && x.json?.tag));
+    await expect('analytics-global', '/api/analytics/global', r => protectedOk(r, x => x.status === 200 && typeof x.json?.totalCommands === 'number'));
+    await expect('performance', '/api/performance', r => protectedOk(r, x => x.status === 200 && typeof x.json?.ping === 'number'));
     await expect('spa', '/', r => r.status === 200 && /EB Dashboard|EB-BOT/.test(r.raw));
     const spa = await req('/');
     const js = (spa.raw.match(/src="(\/assets\/[^"]+\.js)"/) || [])[1];
@@ -75,11 +79,11 @@ function req(path, { method = 'GET', body } = {}) {
         '/commands', '/security'
     ];
     for (const p of guildGets) {
-        await expect('guild' + (p || '/'), `/api/guild/${GID}${p}`, r => r.status === 200);
+        await expect('guild' + (p || '/'), `/api/guild/${GID}${p}`, r => protectedOk(r, x => x.status === 200));
     }
-    await expect('guild-404', '/api/guild/0', r => r.status === 404);
-    await expect('music', `/api/music/${GID}`, r => r.status === 200 && r.json && 'playing' in r.json);
-    await expect('perms', `/api/guild/${GID}/permissions`, r => r.status === 200 && Array.isArray(r.json?.levelAccess));
+    await expect('guild-404', '/api/guild/0', r => r.status === 404 || (ALLOW_DEGRADED && r.status === 401));
+    await expect('music', `/api/music/${GID}`, r => protectedOk(r, x => x.status === 200 && x.json && 'playing' in x.json));
+    await expect('perms', `/api/guild/${GID}/permissions`, r => protectedOk(r, x => x.status === 200 && Array.isArray(x.json?.levelAccess)));
 
     console.log(JSON.stringify({ ok: ok.length, fails, paths: ok }, null, 2));
     process.exit(fails.length ? 1 : 0);

@@ -6,6 +6,7 @@ const { requireAuth } = require('../middleware/auth');
 const { db, getPool } = require('../../../database/index');
 const { getAccountStore } = require('../../../database/accounts');
 const { attachSessionSecurity } = require('../../../shared/services/account-sessions');
+const logger = require('../../../shared/lib/logger');
 
 function publicOrigin(req) {
     const xfHost = req.headers['x-forwarded-host'];
@@ -32,7 +33,7 @@ function redirectUriFor(req) {
         } catch {
             // Fall through to the request-derived URL; startup logs identify
             // malformed deployment configuration without breaking local use.
-            console.error('DISCORD_REDIRECT_URI is not a valid HTTP(S) URL');
+            logger.warn('DISCORD_REDIRECT_URI is not a valid HTTP(S) URL');
         }
     }
 
@@ -50,7 +51,7 @@ function dashboardHomeFor(req) {
                 return url.origin;
             }
         } catch {
-            console.error('DASHBOARD_URL is not a valid HTTP(S) URL');
+            logger.warn('DASHBOARD_URL is not a valid HTTP(S) URL');
         }
     }
     return publicOrigin(req) || '';
@@ -263,7 +264,11 @@ module.exports = (botClient) => {
             }
             const data = err.response?.data;
             const desc = data?.error_description || data?.error || '';
-            console.error('OAuth2 Error:', data || err.message);
+            logger.error('Discord OAuth request failed', {
+                requestId: req.requestId,
+                status: err.response?.status || null,
+                discordError: String(data?.error || 'oauth_request_failed').slice(0, 80),
+            });
             const detail = desc === 'invalid_client'
                 ? 'Discord rejected the OAuth client credentials. Verify that CLIENT_ID and DISCORD_CLIENT_SECRET come from the same application, then restart the service. The client secret is not the bot token.'
                 : desc === 'invalid_grant' || String(desc).toLowerCase().includes('redirect')

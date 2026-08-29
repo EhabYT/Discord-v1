@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const root = path.join(__dirname, '..', '..');
+const { config: botConfig } = require('../../shared/config/bot-config');
 
 function mockUser(id, extras = {}) {
     return {
@@ -222,7 +223,17 @@ const db = {
     get: async (k) => mem.has(k) ? mem.get(k) : null,
     set: async (k, v) => { mem.set(k, v); return v; },
     delete: async (k) => { mem.delete(k); },
-    all: async () => [...mem.entries()].map(([id, value]) => ({ id, value }))
+    all: async () => [...mem.entries()].map(([id, value]) => ({ id, value })),
+    allByPrefix: async (prefix) => [...mem.entries()]
+        .filter(([id]) => id.startsWith(prefix))
+        .map(([id, value]) => ({ id, value })),
+    deletePrefix: async (prefix) => {
+        let deleted = 0;
+        for (const key of [...mem.keys()]) {
+            if (key.startsWith(prefix)) { mem.delete(key); deleted++; }
+        }
+        return deleted;
+    },
 };
 
 const helpers = require(path.join(root, 'shared/utils/discord'));
@@ -236,6 +247,7 @@ const client = {
     ws: { ping: 42 },
     uptime: 5000,
     db,
+    config: botConfig,
     player: {
         nodes: { get: () => null },
         play: async () => { throw new Error('no voice'); },

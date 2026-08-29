@@ -40,3 +40,7 @@ _*.js
 !_app.js
 *.bak
 *.orig
+
+# Python bytecode/cache
+__pycache__/
+*.py[cod]
