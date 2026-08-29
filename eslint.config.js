@@ -139,7 +139,6 @@ module.exports = [
             'node_modules/**',
             'dashboard/node_modules/**',
             'dashboard/public/**',        // build output, hashed assets
-            'vendor/**',                  // reviewed third-party compatibility source
             'logs/**',
             '*.sqlite',
         ],

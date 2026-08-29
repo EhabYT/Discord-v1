@@ -26,14 +26,15 @@ echo $$ >"$LOCK"
 trap 'rm -f "$LOCK"' EXIT
 
 find_cf() {
-  if [[ -x /home/user/.npm/_npx/8a26fc3a61fe4212/node_modules/cloudflared/bin/cloudflared ]]; then
-    echo /home/user/.npm/_npx/8a26fc3a61fe4212/node_modules/cloudflared/bin/cloudflared
+  local cf_path
+  cf_path="$(command -v cloudflared 2>/dev/null)"
+  if [[ -n "$cf_path" && -x "$cf_path" ]]; then
+    echo "$cf_path"
     return
   fi
-  local found
-  found="$(find /home/user/.npm/_npx -name cloudflared -type f 2>/dev/null | head -1)"
-  if [[ -n "$found" && -x "$found" ]]; then
-    echo "$found"
+  cf_path="$(find /home/user/.npm/_npx -name cloudflared -type f -executable 2>/dev/null | head -1)"
+  if [[ -n "$cf_path" && -x "$cf_path" ]]; then
+    echo "$cf_path"
     return
   fi
   echo cloudflared

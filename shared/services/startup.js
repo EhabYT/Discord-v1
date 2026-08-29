@@ -11,18 +11,24 @@ async function deployCommands(token, clientId, guildId = null, extraGuildIds = [
         return logger.error('Commands directory not found');
     }
 
-    const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
-
-    for (const file of commandFiles) {
-        try {
-            const command = require(path.join(commandsPath, file));
-            if (command.data) {
-                commands.push(command.data.toJSON());
+    function collectCommands(dir) {
+        const entries = fs.readdirSync(dir);
+        for (const entry of entries) {
+            const fullPath = path.join(dir, entry);
+            const stat = fs.statSync(fullPath);
+            if (stat.isDirectory()) {
+                collectCommands(fullPath);
+            } else if (entry.endsWith('.js')) {
+                try {
+                    const command = require(fullPath);
+                    if (command.data) commands.push(command.data.toJSON());
+                } catch (err) {
+                    logger.error(`Failed to load command ${fullPath}`, { error: err.message });
+                }
             }
-        } catch (err) {
-            logger.error(`Failed to load command ${file}`, { error: err.message });
         }
     }
+    collectCommands(commandsPath);
 
     const rest = new REST({ version: '10' }).setToken(token);
     const extras = Array.isArray(extraGuildIds) ? extraGuildIds : [];

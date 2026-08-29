@@ -53,21 +53,30 @@ const player = new Player(client, {
 
 client.player = player;
 
-// Load Commands
+// Load Commands recursively from categorized subdirectories
 const commandsPath = path.join(__dirname, 'commands');
 if (fs.existsSync(commandsPath)) {
-  const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
-  for (const file of commandFiles) {
-    try {
-      const command = require(path.join(commandsPath, file));
-      if (command.data && command.execute) {
-        client.commands.set(command.data.name, command);
-        logger.debug(`Loaded command: ${command.data.name}`);
+  function loadCommands(dir) {
+    const entries = fs.readdirSync(dir);
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry);
+      const stat = fs.statSync(fullPath);
+      if (stat.isDirectory()) {
+        loadCommands(fullPath);
+      } else if (entry.endsWith('.js')) {
+        try {
+          const command = require(fullPath);
+          if (command.data && command.execute) {
+            client.commands.set(command.data.name, command);
+            logger.debug(`Loaded command: ${command.data.name}`);
+          }
+        } catch (err) {
+          logger.error(`Load error for ${fullPath}`, { error: err.message });
+        }
       }
-    } catch (err) {
-      logger.error(`Load error for command ${file}`, { error: err.message });
     }
   }
+  loadCommands(commandsPath);
 }
 
 // Global error handling is installed before diagnostics so a failed bootstrap
