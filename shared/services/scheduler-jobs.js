@@ -184,12 +184,12 @@ function registerJobs(client, scheduler) {
     // Performance jobs: Cleanup Maps
     scheduler.addJob('map-cleanup', 3600000, () => {
         try {
-            const voiceEvents = require('../../bot/src/events/voiceEvents');
+            const voiceEvents = require('eb-bot');
             if (voiceEvents && typeof voiceEvents.cleanup === 'function') {
                 voiceEvents.cleanup();
             }
 
-            const messageCreate = require('../../bot/src/events/messageCreate');
+            const messageCreate = require('eb-bot');
             if (messageCreate && typeof messageCreate.cleanup === 'function') {
                 messageCreate.cleanup();
             }

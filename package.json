@@ -42,6 +42,8 @@
     "express-session": "^1.19.0",
     "ffmpeg-static": "^5.3.0",
     "file-type": "^18.0.0",
+    "eb-bot": "file:bot",
+    "eb-bot-backend": "file:backend",
     "genius-lyrics": "^4.4.7",
     "mediaplex": "^1.0.0",
     "multer": "^2.3.0",

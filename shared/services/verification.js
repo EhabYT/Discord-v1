@@ -313,7 +313,7 @@ async function applyVerification(member, cfg, { db, method = 'button', actor = n
     }
 
     try {
-        require('../../backend/src/websocket/socket').emitLog(guild.id, {
+        require('eb-bot-backend').emitLog(guild.id, {
             type: 'member_verified',
             category: 'members',
             icon: '✅',

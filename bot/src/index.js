@@ -11,7 +11,7 @@ const scheduler = require('./scheduler.js');
 const { loadEvents } = require('./events');
 const { registerJobs } = require('../../shared/services/scheduler-jobs');
 const { deployCommands, runDiagnostics } = require('../../shared/services/startup');
-const { startDashboard, stopDashboard } = require('../../backend/src/server');
+const { startDashboard, stopDashboard } = require('eb-bot-backend');
 
 // Initialize Client
 const client = new Client({

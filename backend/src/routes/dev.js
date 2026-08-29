@@ -14,7 +14,7 @@ const { recordDeveloperAction, readDeveloperAudit } = require('../../../shared/s
 const { metricsSnapshot } = require('../metrics');
 const { invalidateMaintenanceCache } = require('../middleware/maintenance');
 const { config: botConfig } = require('../../../shared/config/bot-config');
-const scheduler = require('../../../bot/src/scheduler');
+const scheduler = require('eb-bot');
 const { systemSnapshot } = require('./v2');
 
 const ROOT = path.join(__dirname, '..', '..', '..');
