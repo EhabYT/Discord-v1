@@ -24,7 +24,10 @@ node_modules/
 dashboard/node_modules/
 
 # Build output — uncomment if you build the SPA during deploy
-# dashboard/public/assets/
+dashboard/public/assets/
+dashboard/public/eb_logo.png
+dashboard/public/eb_logo.svg
+dashboard/public/fonts/
 
 # OS / editor
 .DS_Store
