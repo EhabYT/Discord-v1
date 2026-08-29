@@ -12,7 +12,7 @@ database keys, response payloads, permissions, and UI behavior.
 The required baseline was captured and committed before production changes:
 
 ```text
-docs/phase4-transaction-lock-manifest.md
+docs/optimization/phase4-transaction-lock-manifest.md
 commit d1488a7
 ```
 

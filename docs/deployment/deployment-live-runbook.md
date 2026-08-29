@@ -22,7 +22,7 @@ Target: `https://discord-v1-jrip.onrender.com`
 The sanitized preflight report is:
 
 ```text
-docs/live-preflight-2026-08-23.json
+docs/deployment/live-preflight-2026-08-23.json
 ```
 
 At the time of capture, liveness and the old Dashboard worked, but the live

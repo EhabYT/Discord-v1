@@ -55,7 +55,7 @@ The repository now has:
 ### Operator runbook
 
 ```text
-docs/deployment-live-runbook.md
+docs/deployment/deployment-live-runbook.md
 ```
 
 It covers:
@@ -75,7 +75,7 @@ It covers:
 ### Sanitized current-live report
 
 ```text
-docs/live-preflight-2026-08-23.json
+docs/deployment/live-preflight-2026-08-23.json
 ```
 
 ## Current Render result
@@ -88,7 +88,7 @@ npm run smoke:live -- \
   --allow-degraded \
   --expect-release 2.0.0 \
   --wake-timeout 180000 \
-  --json docs/live-preflight-2026-08-23.json
+  --json docs/deployment/live-preflight-2026-08-23.json
 ```
 
 Result:

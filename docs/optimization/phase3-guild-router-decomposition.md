@@ -13,7 +13,7 @@ Dashboard behavior.
 The required pre-change baseline was captured and committed first in:
 
 ```text
-docs/phase3-guild-router-manifest.md
+docs/optimization/phase3-guild-router-manifest.md
 commit 2c39a33
 ```
 

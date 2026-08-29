@@ -588,7 +588,7 @@ npm run smoke:live -- --url https://your-service.onrender.com --expect-release 2
 ```
 
 The full operator checklist and rollback procedure are in
-`docs/deployment-live-runbook.md`.
+`docs/deployment/deployment-live-runbook.md`.
 
 ### Graceful shutdown
 
@@ -714,8 +714,8 @@ Set an independent `SESSION_SECRET`. A stable key is derived from
 ## Documentation
 
 - [V2 architecture and security audit](docs/v2-architecture-audit.md)
-- [Phase 1 optimization audit and manifest](docs/phase1-optimization-audit.md)
-- [Phase 2 indexed prefix-query optimization](docs/phase2-prefix-query-optimization.md)
+- [Phase 1 optimization audit and manifest](docs/optimization/phase1-optimization-audit.md)
+- [Phase 2 indexed prefix-query optimization](docs/optimization/phase2-prefix-query-optimization.md)
 - [Complete V2 test report](docs/v2-test-report.md)
 - [Engineering lessons](docs/engineering-lessons.md)
 - [Supabase schema](supabase/schema.sql)

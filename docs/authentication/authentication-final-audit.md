@@ -243,7 +243,7 @@ rotated credentials:
 4. Render deployment and strict live smoke test;
 5. visual checks on physical iPhone/Android/tablet devices.
 
-Use `docs/deployment-live-runbook.md` and rerun strict deployment acceptance
+Use `docs/deployment/deployment-live-runbook.md` and rerun strict deployment acceptance
 after provider configuration.
 
 ## Stage status

@@ -12,7 +12,7 @@ confirmed deployment build duplication without changing runtime behavior.
 The required pre-change baseline was committed first:
 
 ```text
-docs/phase5-cicd-manifest.md
+docs/optimization/phase5-cicd-manifest.md
 commit e3762e6
 ```
 
