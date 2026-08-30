@@ -6,7 +6,7 @@ const { createSessionStore } = require('./session-store');
 const path = require('path');
 const compression = require('compression');
 const logger = require('../../shared/lib/logger');
-const { setupSocket, closeSocket } = require('./websocket/socket');
+const { setupSocket, closeSocket, emitLog } = require('./websocket/socket');
 const { addClient, broadcast, clientCount, send, closeAll: closeSseClients } = require('./utils/sse');
 const { requireAuth, logAuthMode } = require('./middleware/auth');
 const { csrfGuard } = require('./middleware/csrf');
@@ -536,4 +536,4 @@ async function stopDashboard() {
 
 if (require.main === module) startDashboard(null);
 
-module.exports = { startDashboard, stopDashboard, app, httpServer, sessionMiddleware };
+module.exports = { startDashboard, stopDashboard, app, httpServer, sessionMiddleware, emitLog };
