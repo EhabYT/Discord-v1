@@ -22,7 +22,7 @@ const httpServer = http.createServer(app);
 // listener. Prefer it over the local DASHBOARD_PORT override; ignoring PORT can
 // leave the platform proxy pointing at a different service and returning a
 // plain "Not Found" after OAuth redirects.
-const PORT = process.env.PORT || process.env.DASHBOARD_PORT || 3000;
+let PORT = process.env.PORT || process.env.DASHBOARD_PORT || 3000;
 
 const rateLimits = new Map();
 const RATE_LIMIT_WINDOW = 60 * 1000;
@@ -513,7 +513,11 @@ function startDashboard(botClient) {
 
     httpServer.on('error', (err) => {
         if (err.code === 'EADDRINUSE') {
-            logger.error(`Dashboard port ${PORT} is already in use — bot will keep running without a second dashboard`);
+            PORT++;
+            logger.warn(`Dashboard port ${PORT - 1} is already in use — trying port ${PORT}`);
+            httpServer.listen(PORT, '0.0.0.0', () => {
+                logger.info(`✨ Dashboard active at http://0.0.0.0:${PORT}`);
+            });
             return;
         }
         logger.error('Dashboard server error', { error: err.message });

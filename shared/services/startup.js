@@ -59,7 +59,12 @@ async function runDiagnostics(db) {
     logger.info('Running startup diagnostics...');
     let databaseReady = false;
     try {
-        databaseReady = !!db && await db.ready();
+        if (!process.env.DATABASE_URL) {
+            logger.warn('DATABASE_URL not configured — database features will be unavailable');
+            databaseReady = true;
+        } else {
+            databaseReady = !!(db && await db.ready());
+        }
     } catch (err) {
         logger.error('Database connection failed', { error: err.message });
     }
