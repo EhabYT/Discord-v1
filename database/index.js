@@ -262,6 +262,7 @@ class PostgresDatabase {
 }
 
 const db = isTestProcess ? new MemoryDatabase() : new PostgresDatabase();
+db.allByPrefix = function(prefix, options) { return this.scanPrefix(prefix, options).then(r => r.rows); };
 
 function getCached(key) { return db.get(key); }
 async function setCached(key, value) { await db.set(key, value); }

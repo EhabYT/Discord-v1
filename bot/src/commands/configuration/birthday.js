@@ -128,7 +128,7 @@ flags: [MessageFlags.Ephemeral]
             await interaction.deferReply();
 
             const prefix = `birthday_${guildId}_`;
-            const all = await db.allByPrefix(prefix);
+            const { rows: all } = await db.scanPrefix(prefix);
             const entries = all
                 .filter(e => e.value && e.value.month)
                 .map(e => ({ userId: e.id.replace(prefix, ''), ...e.value }))
