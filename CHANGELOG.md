@@ -23,6 +23,7 @@
 - Replaced SHA-256 token hashing with argon2id in `database/accounts.js`
 - Exported `emitLog` from `backend/server.js` and replaced cross-package relative imports with package names (`eb-bot`, `eb-bot-backend`)
 - Added `bot/package.json` and `backend/package.json` for proper package resolution
+- Replaced hardcoded `/home/user/.npm/_npx/` path in `scripts/keep-tunnel.sh` with `npm root -g`
 
 ## [3.0.0] - Initial V2 Release
 
