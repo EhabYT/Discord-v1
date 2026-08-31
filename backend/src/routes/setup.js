@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const { isLoopback } = require('../middleware/auth');
-const { databaseConfigIssue } = require('../../../database/index');
+const { databaseConfigIssue } = require('eb-bot-database');
 
 const ROOT = path.join(__dirname, '..', '..', '..');
 const ENV_FILE = path.join(ROOT, '.env');

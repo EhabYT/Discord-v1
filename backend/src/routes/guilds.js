@@ -1,14 +1,14 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
-const { db } = require('../../../database/index');
+const { db } = require('eb-bot-database');
 const { EmbedBuilder, WebhookClient, PermissionsBitField } = require('discord.js');
 const { getUserPermLevel } = require('../middleware/permissions');
 const { sessionUserId } = require('../middleware/auth');
 const guildAccess = require('../middleware/guild-access');
 const rl = require('../middleware/rate-limit');
-const { withKeyLock } = require('../../../database/lock');
-const logger = require('../../../shared/lib/logger');
-const { ENTRY_REACTION, finalizeGiveaway, rerollGiveaway } = require('../../../shared/services/giveaways');
+const { withKeyLock } = require('eb-bot-database/lock');
+const logger = require('eb-bot-shared/lib/logger');
+const { ENTRY_REACTION, finalizeGiveaway, rerollGiveaway } = require('eb-bot-shared/services/giveaways');
 const registerAnalyticsRoutes = require('./guilds/analytics');
 
 module.exports = (botClient) => {
@@ -278,7 +278,7 @@ module.exports = (botClient) => {
         } catch (err) { next(err); }
     });
 
-    const verify = require('../../../shared/services/verification');
+    const verify = require('eb-bot-shared/services/verification');
 
     router.get('/verification', async (req, res, next) => {
         try {
@@ -475,7 +475,7 @@ module.exports = (botClient) => {
         } catch (err) { next(err); }
     });
 
-    const rr = require('../../../shared/services/reaction-roles');
+    const rr = require('eb-bot-shared/services/reaction-roles');
 
     router.get('/reactionroles', async (req, res, next) => {
         try {
@@ -616,11 +616,11 @@ module.exports = (botClient) => {
         } catch (err) { next(err); }
     });
 
-    const suggestions = require('../../../shared/services/suggestions');
-    const polls = require('../../../shared/services/polls');
-    const tags = require('../../../shared/services/tags');
-    const confessions = require('../../../shared/services/confessions');
-    const board = require('../../../shared/services/staff-board');
+    const suggestions = require('eb-bot-shared/services/suggestions');
+    const polls = require('eb-bot-shared/services/polls');
+    const tags = require('eb-bot-shared/services/tags');
+    const confessions = require('eb-bot-shared/services/confessions');
+    const board = require('eb-bot-shared/services/staff-board');
 
     router.get('/suggestions', async (req, res, next) => {
         try {

@@ -44,6 +44,8 @@
     "file-type": "^18.0.0",
     "eb-bot": "file:bot",
     "eb-bot-backend": "file:backend",
+    "eb-bot-database": "file:database",
+    "eb-bot-shared": "file:shared",
     "genius-lyrics": "^4.4.7",
     "mediaplex": "^1.0.0",
     "multer": "^2.3.0",

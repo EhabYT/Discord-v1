@@ -1,4 +1,4 @@
-const { db } = require('../../../database/index');
+const { db } = require('eb-bot-database');
 const { SYSTEM_ROLES, systemRole } = require('./devauth');
 
 let cached = { at: 0, flags: null };

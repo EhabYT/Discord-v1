@@ -1,15 +1,15 @@
 const express = require('express');
 const crypto = require('crypto');
-const { getAccountStore } = require('../../../database/accounts');
-const { getPool } = require('../../../database/index');
-const { validatePassword, hashPassword, verifyPassword } = require('../../../shared/services/passwords');
+const { getAccountStore } = require('eb-bot-database/accounts');
+const { getPool } = require('eb-bot-database');
+const { validatePassword, hashPassword, verifyPassword } = require('eb-bot-shared/services/passwords');
 const {
     sendVerificationEmail, sendEmailChangedNotice, sendPasswordResetEmail,
-} = require('../../../shared/services/account-mail');
-const logger = require('../../../shared/lib/logger');
-const { attachSessionSecurity } = require('../../../shared/services/account-sessions');
-const { decryptSecret, verifyTotp, recoveryHash } = require('../../../shared/services/account-mfa');
-const { normalizeDisplayName, normalizeLocalUsername, normalizeEmail } = require('../../../shared/services/account-validation');
+} = require('eb-bot-shared/services/account-mail');
+const logger = require('eb-bot-shared/lib/logger');
+const { attachSessionSecurity } = require('eb-bot-shared/services/account-sessions');
+const { decryptSecret, verifyTotp, recoveryHash } = require('eb-bot-shared/services/account-mfa');
+const { normalizeDisplayName, normalizeLocalUsername, normalizeEmail } = require('eb-bot-shared/services/account-validation');
 // Unknown accounts still perform one Argon2 verification to reduce timing-based
 // account enumeration. This value is never an account credential.
 const dummyHashPromise = hashPassword('not a real account password value');

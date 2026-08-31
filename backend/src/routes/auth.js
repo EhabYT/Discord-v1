@@ -3,10 +3,10 @@ const router = express.Router();
 const axios = require('axios');
 const crypto = require('crypto');
 const { requireAuth } = require('../middleware/auth');
-const { db, getPool } = require('../../../database/index');
-const { getAccountStore } = require('../../../database/accounts');
-const { attachSessionSecurity } = require('../../../shared/services/account-sessions');
-const logger = require('../../../shared/lib/logger');
+const { db, getPool } = require('eb-bot-database');
+const { getAccountStore } = require('eb-bot-database/accounts');
+const { attachSessionSecurity } = require('eb-bot-shared/services/account-sessions');
+const logger = require('eb-bot-shared/lib/logger');
 
 function publicOrigin(req) {
     const xfHost = req.headers['x-forwarded-host'];

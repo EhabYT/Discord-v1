@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
-const { db } = require('../../../database/index');
+const { db } = require('eb-bot-database');
 const { getUserPermLevel, LEVELS, LEVEL_NAMES, LEVEL_ACCESS } = require('../middleware/permissions');
 const guildAccess = require('../middleware/guild-access');
 

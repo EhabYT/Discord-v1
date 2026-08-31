@@ -17,7 +17,7 @@
  * accidentally publish an open dashboard through a tunnel or reverse proxy.
  */
 
-const logger = require('../../../shared/lib/logger');
+const logger = require('eb-bot-shared/lib/logger');
 
 let warnedAnonymous = false;
 let warnedRemoteBlocked = false;

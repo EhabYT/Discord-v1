@@ -1,4 +1,4 @@
-const { db } = require('../../../database/index');
+const { db } = require('eb-bot-database');
 
 const LEVELS = { VIEWER: 0, DJ: 1, MODERATOR: 2, ADMIN: 3 };
 const LEVEL_NAMES = ['Viewer', 'DJ', 'Moderator', 'Admin'];

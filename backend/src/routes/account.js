@@ -1,17 +1,17 @@
 const express = require('express');
 const multer = require('multer');
-const { getAccountStore } = require('../../../database/accounts');
-const { getPool } = require('../../../database/index');
+const { getAccountStore } = require('eb-bot-database/accounts');
+const { getPool } = require('eb-bot-database');
 const { requireAccount } = require('../middleware/auth');
-const { normalizeDisplayName, normalizeLocalUsername, normalizeEmail } = require('../../../shared/services/account-validation');
-const { validatePassword, hashPassword, verifyPassword } = require('../../../shared/services/passwords');
-const { hasRecentReauthentication, markReauthenticated } = require('../../../shared/services/account-sessions');
-const { sendEmailChangeVerification } = require('../../../shared/services/account-mail');
-const { normalizeAvatar, uploadAvatar, deleteAvatar } = require('../../../shared/services/account-avatars');
+const { normalizeDisplayName, normalizeLocalUsername, normalizeEmail } = require('eb-bot-shared/services/account-validation');
+const { validatePassword, hashPassword, verifyPassword } = require('eb-bot-shared/services/passwords');
+const { hasRecentReauthentication, markReauthenticated } = require('eb-bot-shared/services/account-sessions');
+const { sendEmailChangeVerification } = require('eb-bot-shared/services/account-mail');
+const { normalizeAvatar, uploadAvatar, deleteAvatar } = require('eb-bot-shared/services/account-avatars');
 const {
     enrollmentPayload, decryptSecret, verifyTotp, generateRecoveryCodes, recoveryHash,
-} = require('../../../shared/services/account-mfa');
-const logger = require('../../../shared/lib/logger');
+} = require('eb-bot-shared/services/account-mfa');
+const logger = require('eb-bot-shared/lib/logger');
 
 const avatarUpload = multer({
     storage: multer.memoryStorage(),

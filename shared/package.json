@@ -1,0 +1,1 @@
+{"name": "eb-bot-shared", "version": "3.1.0", "main": "index.js", "exports": {"./lib/*": "./lib/*.js", "./services/*": "./services/*.js", "./utils/*": "./utils/*.js", "./config/*": "./config/*.js", "./middleware/*": "./middleware/*.js", ".": "./index.js"}, "license": "MIT"}

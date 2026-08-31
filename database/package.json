@@ -1,0 +1,1 @@
+{"name": "eb-bot-database", "version": "3.1.0", "main": "index.js", "exports": {"./accounts": "./accounts.js", "./lock": "./lock.js", "./index": "./index.js", ".": "./index.js"}, "license": "MIT"}

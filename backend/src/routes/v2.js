@@ -1,8 +1,8 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const { db, databaseConfigIssue } = require('../../../database/index');
-const { config: botConfig } = require('../../../shared/config/bot-config');
+const { db, databaseConfigIssue } = require('eb-bot-database');
+const { config: botConfig } = require('eb-bot-shared/config/bot-config');
 
 const RELEASE = '2.0.0';
 const DASHBOARD_INDEX = path.join(__dirname, '..', '..', '..', 'dashboard', 'public', 'index.html');

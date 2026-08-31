@@ -24,7 +24,7 @@
  */
 
 const crypto = require('crypto');
-const logger = require('../../../shared/lib/logger');
+const logger = require('eb-bot-shared/lib/logger');
 
 /** Errors a route raises deliberately, with an intended HTTP status. */
 class ApiError extends Error {

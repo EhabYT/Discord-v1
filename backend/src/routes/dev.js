@@ -2,18 +2,18 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const express = require('express');
-const { db } = require('../../../database/index');
-const { readPublicUrl } = require('../../../shared/services/public-url');
+const { db } = require('eb-bot-database');
+const { readPublicUrl } = require('eb-bot-shared/services/public-url');
 const {
     SYSTEM_ROLES, ROLE_NAMES, requireSystemRole, systemRole, baseSystemRole,
     tokenOk, redactEnv, ownerIds,
 } = require('../middleware/devauth');
 const { isLoopback } = require('../middleware/auth');
 const { clientCount } = require('../utils/sse');
-const { recordDeveloperAction, readDeveloperAudit } = require('../../../shared/services/developer-audit');
+const { recordDeveloperAction, readDeveloperAudit } = require('eb-bot-shared/services/developer-audit');
 const { metricsSnapshot } = require('../metrics');
 const { invalidateMaintenanceCache } = require('../middleware/maintenance');
-const { config: botConfig } = require('../../../shared/config/bot-config');
+const { config: botConfig } = require('eb-bot-shared/config/bot-config');
 const scheduler = require('eb-bot');
 const { systemSnapshot } = require('./v2');
 
@@ -341,7 +341,7 @@ module.exports = (botClient) => {
 
     router.post('/deploy-commands', superAdminOnly, async (req, res, next) => {
         try {
-            const { deployCommands } = require('../../../shared/services/startup');
+            const { deployCommands } = require('eb-bot-shared/services/startup');
             const guildIds = [...(botClient?.guilds?.cache?.keys() || [])];
             await deployCommands(
                 process.env.DISCORD_TOKEN,

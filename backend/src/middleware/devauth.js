@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const { isLoopback } = require('./auth');
-const { recordDeveloperAction } = require('../../../shared/services/developer-audit');
+const { recordDeveloperAction } = require('eb-bot-shared/services/developer-audit');
 
 const SECRET_KEYS = /token|secret|password|passwd|private|credential|api[_-]?key|client_secret|jwt|database_url/i;
 const SYSTEM_ROLES = Object.freeze({ NONE: 0, SUPPORT: 1, DEVELOPER: 2, SUPER_ADMIN: 3 });
