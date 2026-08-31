@@ -32,10 +32,14 @@ find_cf() {
     echo "$cf_path"
     return
   fi
-  cf_path="$(find /home/user/.npm/_npx -name cloudflared -type f -executable 2>/dev/null | head -1)"
-  if [[ -n "$cf_path" && -x "$cf_path" ]]; then
-    echo "$cf_path"
-    return
+  local npx_root
+  npx_root="$(npm root -g 2>/dev/null)"
+  if [[ -n "$npx_root" ]]; then
+    cf_path="$(find "$npx_root" -name cloudflared -type f -executable 2>/dev/null | head -1)"
+    if [[ -n "$cf_path" && -x "$cf_path" ]]; then
+      echo "$cf_path"
+      return
+    fi
   fi
   echo cloudflared
 }
