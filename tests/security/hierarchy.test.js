@@ -2,7 +2,7 @@
  * Regression test for dashboard authorisation beyond authentication:
  * Discord role hierarchy, plus privacy redaction of anonymous content.
  *
- * The slash commands (commands/ban.js, commands/role.js) refuse to action a
+ * The slash commands (commands/moderation/ban.js, commands/settings/role.js) refuse to action a
  * user whose highest role sits at or above the caller's. The dashboard routes
  * did not, so a Moderator could ban an Admin and an Admin could grant a role
  * above their own position — privilege escalation via the web UI.

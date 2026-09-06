@@ -6,14 +6,28 @@ const { spawnSync } = require('child_process');
 const source = path.join(os.tmpdir(), `eb-legacy-${process.pid}.sqlite`);
 try { fs.unlinkSync(source); } catch { /* absent */ }
 
-const create = spawnSync(process.env.PYTHON || 'python3', ['-c', `
+// Windows machines commonly expose the interpreter as `python` while POSIX
+// uses `python3` (and Windows may stub `python3` to the Store). Try each.
+function spawnPython(args) {
+    const candidates = process.env.PYTHON
+        ? [process.env.PYTHON]
+        : (process.platform === 'win32' ? ['python', 'python3'] : ['python3', 'python']);
+    let last = null;
+    for (const cmd of candidates) {
+        const r = spawnSync(cmd, args, { encoding: 'utf8' });
+        if (r.status === 0) return r;
+        last = r;
+    }
+    return last || { status: null, stderr: 'no python interpreter found' };
+}
+const create = spawnPython(['-c', `
 import sqlite3, json
 c=sqlite3.connect(${JSON.stringify(source)})
 c.execute('CREATE TABLE json (ID TEXT PRIMARY KEY, json TEXT)')
 c.execute('INSERT INTO json VALUES (?,?)', ('welcome_123', json.dumps({'enabled': True})))
 c.execute('INSERT INTO json VALUES (?,?)', ('points_123_456', json.dumps(42)))
 c.commit(); c.close()
-`], { encoding: 'utf8' });
+`]);
 
 let fails = 0;
 const check = (label, ok, detail = '') => {

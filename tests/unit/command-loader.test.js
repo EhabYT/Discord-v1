@@ -10,7 +10,14 @@ function load(rel) {
 }
 
 const commandsPath = path.join(root, 'bot', 'src', 'commands');
-const files = fs.readdirSync(commandsPath).filter(f => f.endsWith('.js'));
+// Commands live in categorized subdirectories (moderation/, economy/, ...).
+const files = [];
+(function collect(dir, prefix = '') {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (entry.isDirectory()) collect(path.join(dir, entry.name), `${prefix}${entry.name}/`);
+        else if (entry.name.endsWith('.js')) files.push(`${prefix}${entry.name}`);
+    }
+})(commandsPath);
 const names = new Set();
 const cmds = [];
 

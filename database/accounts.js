@@ -133,8 +133,8 @@ function normalizeUsername(value) {
     return username.slice(0, 24).padEnd(3, '_');
 }
 
-async function hashAccountToken(token) {
-    const salt = crypto.createHash('sha256').update(process.env.ACCOUNT_ENCRYPTION_KEY || 'eb-bot-token-salt-v1').digest('hex').slice(0, 16);
+function hashAccountToken(token) {
+    const salt = Buffer.from(crypto.createHash('sha256').update(process.env.ACCOUNT_ENCRYPTION_KEY || 'eb-bot-token-salt-v1').digest('hex').slice(0, 16));
     return argon2.hash(String(token || ''), { type: argon2.argon2id, salt });
 }
 

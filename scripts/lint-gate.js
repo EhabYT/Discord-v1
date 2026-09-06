@@ -26,10 +26,12 @@ const path = require('path');
 const BASELINE_FILE = path.join(__dirname, '..', '.lintbaseline.json');
 
 function runEslint() {
-    const bin = path.join(__dirname, '..', 'node_modules', '.bin', 'eslint');
+    const binName = process.platform === 'win32' ? 'eslint.cmd' : 'eslint';
+    const bin = path.join(__dirname, '..', 'node_modules', '.bin', binName);
     let out;
     try {
-        out = execFileSync(bin, ['.', '-f', 'json'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+        // eslint on Windows is a .cmd shim and needs a shell to execute.
+        out = execFileSync(bin, ['.', '-f', 'json'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, shell: process.platform === 'win32' });
     } catch (err) {
         // ESLint exits non-zero when problems exist; the report is still on stdout.
         out = err.stdout;

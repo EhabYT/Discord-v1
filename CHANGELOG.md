@@ -27,6 +27,14 @@
 - Fixed `db.allByPrefix is not a function` by adding wrapper on `db` object in `database/index.js` and updating `rank.js`/`birthday.js` to use `scanPrefix`
 - Added `eb-bot-database` and `eb-bot-shared` packages with subpath exports
 - Replaced all `../../../database/` and `../../../shared/` relative imports in `backend/src/` with package-based imports
+- Graceful startup without `DATABASE_URL` (`shared/services/startup.js` warns instead of blocking) and automatic dashboard port fallback on `EADDRINUSE` (`backend/src/server.js`)
+- Fixed `argon2.hash` salt type in `database/accounts.js` (Buffer instead of hex string) and dropped redundant `async`
+- Bumped `file-type` to `^22.0.2` (ESM-only): verified the zero-size ASF sub-header hang fixed upstream; rewrote `tests/security/dependency-patches.test.js` with dynamic `import()` and documented the nested `file-type@16.5.4` exposure under `@discord-player/extractor`
+- Fixed `scripts/lint-gate.js` on Windows (`.cmd` shim + shell execution)
+- Cleaned runtime artifacts (`logs/*.log`, stray `.env` copy)
+- Python interpreter fallback (`python3` → `python`, `PYTHON` env override) in `scripts/migrate-sqlite-to-postgres.js` and `tests/security/migration.test.js` for Windows machines
+- Fixed broken `require('eb-bot')` bare imports (bot entrypoint exports nothing): `dev.js` now uses `eb-bot/src/scheduler`, `scheduler-jobs.js` uses `eb-bot/src/events/voiceEvents` and `eb-bot/src/events/messageCreate` — restores `/api/developer/jobs` (was 500)
+- Fixed stale flat command paths after categorization: `transaction-locks.test.js` points at `economy/*`/`community/giveaway.js`, `command-loader.test.js` walks subdirectories recursively (now validates 100 commands instead of 0), `tests/manual/command-execute.js` resolves categorized paths
 
 ## [3.0.0] - Initial V2 Release
 

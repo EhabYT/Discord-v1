@@ -44,11 +44,11 @@ const root = path.join(__dirname, '..', '..');
     assert.strictEqual(_chains.size, 0, 'all process-local lock queues must drain');
 
     const protectedSources = [
-        'bot/src/commands/pay.js',
-        'bot/src/commands/points.js',
-        'bot/src/commands/slots.js',
-        'bot/src/commands/work.js',
-        'bot/src/commands/giveaway.js',
+        'bot/src/commands/economy/pay.js',
+        'bot/src/commands/economy/points.js',
+        'bot/src/commands/economy/slots.js',
+        'bot/src/commands/economy/work.js',
+        'bot/src/commands/community/giveaway.js',
         'backend/src/routes/guilds.js',
         'shared/services/scheduler-jobs.js',
     ];
@@ -58,7 +58,7 @@ const root = path.join(__dirname, '..', '..');
         assert.match(source, /lockedDb/, `${relative} must use the transaction-bound database adapter`);
     }
 
-    const giveawayCommand = fs.readFileSync(path.join(root, 'bot/src/commands/giveaway.js'), 'utf8');
+    const giveawayCommand = fs.readFileSync(path.join(root, 'bot/src/commands/community/giveaway.js'), 'utf8');
     const guildRoutes = fs.readFileSync(path.join(root, 'backend/src/routes/guilds.js'), 'utf8');
     const scheduler = fs.readFileSync(path.join(root, 'shared/services/scheduler-jobs.js'), 'utf8');
     assert.doesNotMatch(giveawayCommand, /await db\.set\(giveawaysKey/,

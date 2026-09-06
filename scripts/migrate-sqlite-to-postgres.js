@@ -14,15 +14,26 @@ if (sourceArg >= 0 && !args[sourceArg + 1]) {
     process.exit(2);
 }
 
-let raw;
-try {
-    raw = execFileSync(process.env.PYTHON || 'python3', [
-        path.join(__dirname, 'read-quickdb-sqlite.py'), source,
-    ], { encoding: 'utf8', maxBuffer: 128 * 1024 * 1024 });
-} catch (err) {
-    console.error('Could not read the legacy SQLite database:', err.stderr || err.message);
+function readLegacySqlite() {
+    // On Windows the interpreter is `python` and `python3` is often a Store
+    // stub that prints noise straight to the console, so try `python` first.
+    const candidates = process.env.PYTHON
+        ? [process.env.PYTHON]
+        : (process.platform === 'win32' ? ['python', 'python3'] : ['python3', 'python']);
+    let lastErr = null;
+    for (const cmd of candidates) {
+        try {
+            return execFileSync(cmd, [
+                path.join(__dirname, 'read-quickdb-sqlite.py'), source,
+            ], { encoding: 'utf8', maxBuffer: 128 * 1024 * 1024 });
+        } catch (err) {
+            lastErr = err;
+        }
+    }
+    console.error('Could not read the legacy SQLite database:', lastErr?.stderr || lastErr?.message);
     process.exit(1);
 }
+const raw = readLegacySqlite();
 
 const rows = JSON.parse(raw);
 const prefixes = {};

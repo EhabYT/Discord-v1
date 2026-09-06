@@ -30,7 +30,7 @@ const check = (label, ok, detail = '') => {
     console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${label}${detail ? '  ' + detail : ''}`);
 };
 
-/** The /pay logic, with the lock — mirrors commands/pay.js. */
+/** The /pay logic, with the lock — mirrors commands/economy/pay.js. */
 async function payLocked(from, to, amount) {
     return withKeyLocks([key(from), key(to)], async (lockedDb) => {
         const balance = Number(await lockedDb.get(key(from))) || 0;

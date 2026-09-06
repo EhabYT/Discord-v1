@@ -257,8 +257,23 @@ const client = {
     }
 };
 
+// Commands live in categorized subdirectories; resolve flat names for callers.
+const commandFiles = [];
+(function collect(dir, prefix = '') {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (entry.isDirectory()) collect(path.join(dir, entry.name), `${prefix}${entry.name}/`);
+        else if (entry.name.endsWith('.js')) commandFiles.push(`${prefix}${entry.name}`);
+    }
+})(path.join(root, 'bot', 'src', 'commands'));
+function resolveCommand(file) {
+    if (file.includes('/')) return file;
+    const hit = commandFiles.find((f) => f.endsWith(`/${file}`) || f === file);
+    if (!hit) throw new Error(`unknown command file: ${file}`);
+    return hit;
+}
+
 async function run(file, extra = {}) {
-    const cmd = require(path.join(root, 'bot', 'src', 'commands', file));
+    const cmd = require(path.join(root, 'bot', 'src', 'commands', resolveCommand(file)));
     const { interaction, replies } = mockInteraction({ ...extra, name: cmd.data.name });
     interaction.client = client;
     await cmd.execute(interaction, client, db);
@@ -580,7 +595,7 @@ function dump(r) {
 
     // Sweep: every command file should at least load + execute without throwing
     const sweep = { ok: 0, crash: [] };
-    const files = fs.readdirSync(path.join(root, 'bot', 'src', 'commands')).filter(f => f.endsWith('.js'));
+    const files = commandFiles;
     const defaults = {
         fun: { sub: 'joke' },
         tools: { sub: 'uuid' },
