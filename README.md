@@ -52,14 +52,21 @@ npm start
 `npm ci` runs `postinstall`, installs the Dashboard dependencies, and builds
 `dashboard/public` automatically.
 
-For frontend hot reload:
+Fullstack scripts (single origin: Express API + React SPA + Discord bot):
 
 ```bash
-npm --prefix dashboard run dev -- --host 0.0.0.0
+npm start              # prod: bot + API + built dashboard on :3000
+npm run dev:fullstack  # dev: bot (nodemon) + Vite HMR on :5173
+npm run dev:backend    # API + built dashboard only (no bot gateway)
+npm run dev:frontend   # Vite HMR only
+npm run build          # rebuild dashboard/public
 ```
 
-The Vite server listens on `5173` and proxies `/api` and `/socket.io` to the
-backend on `3000`.
+The Vite server listens on `5173` and proxies `/api`, `/setup`, and
+`/socket.io` to the backend on `3000`. In production the same Express
+service serves the API and the built SPA from `dashboard/public`, so the
+frontend uses same-origin `fetch` with `credentials: include` and needs no
+CORS setup.
 
 Generate independent secrets:
 
