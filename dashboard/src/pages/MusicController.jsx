@@ -36,7 +36,12 @@ export default function MusicController({ guild }) {
       const d = await api.get(`/api/music/${guild.id}`);
       setData(d);
       if (d?.volume !== undefined) setVolume(d.volume);
-    } catch { setData(null); }
+    } catch {
+      // Keep the last known state on transient poll failures (or a track
+      // transition with no current track yet). Clearing here flickers a
+      // playing session back to "Nothing is playing". Explicit idle states
+      // (stop/track end) still arrive as successful empty payloads.
+    }
     setLoading(false);
   }, [guild?.id]);
 
@@ -49,8 +54,11 @@ export default function MusicController({ guild }) {
       if (busy) setVoiceId((cur) => cur || busy.id);
     }).catch(() => {});
   }, [guild?.id]);
+  // Poll continuously, not just while playing: otherwise playback started
+  // from Discord (or another session) never appears and the page sits on
+  // "Nothing is playing" forever. Idle polls are slower to save traffic.
   useEffect(() => {
-    const t = setInterval(() => { if (data?.current) load(); }, 3000);
+    const t = setInterval(() => { load(); }, data?.current ? 3000 : 5000);
     return () => clearInterval(t);
   }, [data?.current, load]);
 

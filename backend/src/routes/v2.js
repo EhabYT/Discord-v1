@@ -26,6 +26,7 @@ async function systemSnapshot(botClient) {
     return {
         release: RELEASE,
         apiVersion: 'v2',
+        ephemeralDatabase: !!db.isEphemeralDatabase,
         configuration: {
             schemaVersion: botConfig.schemaVersion,
             botName: botConfig.identity.name,

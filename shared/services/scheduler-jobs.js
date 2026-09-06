@@ -1,24 +1,23 @@
 const logger = require('../lib/logger');
 const { finalizeGiveaway } = require('./giveaways');
 const { withKeyLock } = require('../../database/lock');
-const { databaseConfigIssue } = require('eb-bot-database');
 
-// DB-backed jobs must neither spam the logs nor burn their consecutive-error
-// budget while the database is unavailable. Skipping keeps them alive so they
-// resume automatically once DATABASE_URL is configured, instead of stopping
-// after 5 errors and staying dead until the next process restart.
-function skipWhenDbDown(name, callback) {
-    return async () => {
-        if (databaseConfigIssue()) {
-            logger.debug(`Scheduler job "${name}" skipped — database is not configured`);
+function registerJobs(client, scheduler) {
+    const db = client.db;
+
+    // Skip a tick only while the database is actually unreachable. With the
+    // in-memory fallback (no DATABASE_URL) jobs run normally for the session;
+    // with Postgres down they pause quietly instead of burning their
+    // consecutive-error budget and dying permanently after 5 failures.
+    const skipWhenDbDown = (name, callback) => async () => {
+        try {
+            await db.ready();
+        } catch {
+            logger.debug(`Scheduler job "${name}" skipped — database is unreachable`);
             return;
         }
         await callback();
     };
-}
-
-function registerJobs(client, scheduler) {
-    const db = client.db;
 
     // Timed Bans Job
     scheduler.addJob('timed-bans', 60000, skipWhenDbDown('timed-bans', async () => {

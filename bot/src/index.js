@@ -126,12 +126,33 @@ function scheduleRetry(reason) {
 /* eslint-disable require-atomic-updates -- bootstrap attempts are serialized by retryTimer; these assignments intentionally publish lifecycle state after awaited I/O. */
 async function loadServicesOnce() {
   if (servicesLoaded) return;
+  // YouTube changes its API responses constantly; youtubei.js JIT-generates
+  // missing parser nodes at runtime and reports each one with a wall of
+  // text. That noise is harmless (playback is unaffected) so it is dropped
+  // to ERROR level BEFORE any extractor boots — the decipher warnings fire
+  // during registration itself. Genuine failures still surface as errors
+  // and through the extractor/player as thrown errors.
+  try {
+    const { Parser, Log } = require('youtubei.js');
+    if (typeof Parser?.setParserErrorHandler === 'function') Parser.setParserErrorHandler(() => {});
+    if (typeof Log?.setLevel === 'function' && Log?.Level) Log.setLevel(Log.Level.ERROR);
+  } catch { /* older youtubei.js without the hooks — noise stays, playback works */ }
   try {
     const { DefaultExtractors } = require('@discord-player/extractor');
     await player.extractors.loadMulti(DefaultExtractors);
     logger.info(`Music extractors loaded (${DefaultExtractors.length})`);
   } catch (err) {
     logger.error('Extractor error', { error: err.message });
+  }
+  // YouTube was removed from @discord-player/extractor's defaults. Without
+  // this, YouTube URLs fail with "no extractor found" while search (via
+  // SoundCloud/Spotify metadata) misleadingly still works.
+  try {
+    const { YoutubeiExtractor } = require('discord-player-youtubei');
+    await player.extractors.register(YoutubeiExtractor, {});
+    logger.info('YouTube (InnerTube) extractor registered');
+  } catch (err) {
+    logger.error('YouTube extractor error', { error: err.message });
   }
   loadEvents(client);
   registerJobs(client, scheduler);

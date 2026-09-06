@@ -542,6 +542,11 @@ export default function App() {
                 {t('shell.maintenance', 'Maintenance mode is on — slash commands are blocked for everyone except the owner.')}
               </div>
             )}
+            {guildData?.degraded && (
+              <div className="px-4 sm:px-6 py-2 text-xs text-amber-200 bg-amber-500/10 border-b border-amber-500/20">
+                {t('shell.dbDegraded', 'No database connected — everything works, but all data is temporary and lost on restart. Connect DATABASE_URL to persist.')}
+              </div>
+            )}
             {!browserOnline && (
               <div className="px-4 sm:px-6 py-2 text-xs text-red-200 bg-red-500/10 border-b border-red-500/20 flex items-center justify-between gap-3" role="alert">
                 <span>{t('shell.browserOffline', 'You are offline. Changes will not be saved until your connection returns.')}</span>

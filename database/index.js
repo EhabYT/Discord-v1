@@ -261,7 +261,15 @@ class PostgresDatabase {
     }
 }
 
-const db = isTestProcess ? new MemoryDatabase() : new PostgresDatabase();
+// Without a configured DATABASE_URL there is no Postgres to talk to. Rather
+// than failing every read, run a process-local in-memory store so the bot
+// and dashboard stay fully usable for the session. Everything in it is
+// ephemeral: a restart wipes it. Production fail-closeds (OAuth env check,
+// DASHBOARD_AUTH refusal, degraded V2 status) stay in force — consumers can
+// distinguish this mode via `db.isEphemeralDatabase`.
+const useMemoryFallback = !isTestProcess && !!databaseConfigIssue();
+const db = (isTestProcess || useMemoryFallback) ? new MemoryDatabase() : new PostgresDatabase();
+db.isEphemeralDatabase = useMemoryFallback;
 db.allByPrefix = function(prefix, options) { return this.scanPrefix(prefix, options).then(r => r.rows); };
 
 function getCached(key) { return db.get(key); }

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
-const { db } = require('eb-bot-database');
+const { db, databaseConfigIssue } = require('eb-bot-database');
 const { EmbedBuilder, WebhookClient, PermissionsBitField } = require('discord.js');
 const { getUserPermLevel } = require('../middleware/permissions');
 const { sessionUserId } = require('../middleware/auth');
@@ -32,6 +32,11 @@ module.exports = (botClient) => {
             const { guildId } = req.params;
             const guild = req.guild;
 
+            // Without a configured database the reads below hit the ephemeral
+            // in-memory fallback (empty until this session writes something).
+            // A configured-but-unreachable database still fails closed, so a
+            // real outage is never masked as empty configuration.
+            const databaseOnline = !databaseConfigIssue();
             const [automod, welcome, logging, djrole, xpEnabled, giveaways, commandsEnabled, tickets, rewards, customFilters, autoresponder] = await Promise.all([
                 db.get(`automod_${guildId}`),
                 db.get(`welcome_${guildId}`),
@@ -71,6 +76,8 @@ module.exports = (botClient) => {
             }
 
             res.json({
+                databaseOnline,
+                degraded: !databaseOnline,
                 guild: {
                     id: guild.id,
                     name: guild.name,

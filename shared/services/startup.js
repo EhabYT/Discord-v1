@@ -60,7 +60,7 @@ async function runDiagnostics(db) {
     let databaseReady = false;
     try {
         if (!process.env.DATABASE_URL) {
-            logger.warn('DATABASE_URL not configured — database features will be unavailable');
+            logger.warn('DATABASE_URL not configured — using ephemeral in-memory database (all data is lost on restart)');
             databaseReady = true;
         } else {
             databaseReady = !!(db && await db.ready());
