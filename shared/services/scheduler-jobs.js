@@ -1,12 +1,27 @@
 const logger = require('../lib/logger');
 const { finalizeGiveaway } = require('./giveaways');
 const { withKeyLock } = require('../../database/lock');
+const { databaseConfigIssue } = require('eb-bot-database');
+
+// DB-backed jobs must neither spam the logs nor burn their consecutive-error
+// budget while the database is unavailable. Skipping keeps them alive so they
+// resume automatically once DATABASE_URL is configured, instead of stopping
+// after 5 errors and staying dead until the next process restart.
+function skipWhenDbDown(name, callback) {
+    return async () => {
+        if (databaseConfigIssue()) {
+            logger.debug(`Scheduler job "${name}" skipped — database is not configured`);
+            return;
+        }
+        await callback();
+    };
+}
 
 function registerJobs(client, scheduler) {
     const db = client.db;
 
     // Timed Bans Job
-    scheduler.addJob('timed-bans', 60000, async () => {
+    scheduler.addJob('timed-bans', 60000, skipWhenDbDown('timed-bans', async () => {
         for (const [guildId, guild] of client.guilds.cache) {
             const bans = await db.get(`tempbans_${guildId}`) || [];
             const now = Date.now();
@@ -29,10 +44,10 @@ function registerJobs(client, scheduler) {
                 await db.set(`tempbans_${guildId}`, remainingBans);
             }
         }
-    });
+    }));
 
     // Giveaways Job
-    scheduler.addJob('giveaways', 10000, async () => {
+    scheduler.addJob('giveaways', 10000, skipWhenDbDown('giveaways', async () => {
         for (const [guildId, guild] of client.guilds.cache) {
           // Serialised against the dashboard's end/reroll routes, which perform
           // the same read-modify-write. Without this a concurrent finalise loses
@@ -66,11 +81,10 @@ function registerJobs(client, scheduler) {
             }
           }, db);
         }
-    });
-
+    }));
 
     // Birthday Job — runs every hour, fires celebrations once per day per user
-    scheduler.addJob('birthdays', 3600000, async () => {
+    scheduler.addJob('birthdays', 3600000, skipWhenDbDown('birthdays', async () => {
         const now   = new Date();
         const month = now.getMonth() + 1;
         const day   = now.getDate();
@@ -131,10 +145,10 @@ function registerJobs(client, scheduler) {
                 logger.error(`[Birthday] Error in ${guild.name}`, { error: err.message });
             }
         }
-    });
+    }));
 
     // Expire birthday roles after 24h (survives restarts)
-    scheduler.addJob('birthday-roles', 60 * 60 * 1000, async () => {
+    scheduler.addJob('birthday-roles', 60 * 60 * 1000, skipWhenDbDown('birthday-roles', async () => {
         const now = Date.now();
         const all = await db.allByPrefix('bday_role_');
         for (const entry of all) {
@@ -150,10 +164,10 @@ function registerJobs(client, scheduler) {
             }
             await db.delete(entry.id);
         }
-    });
+    }));
 
     // Fire due reminders
-    scheduler.addJob('reminders', 15000, async () => {
+    scheduler.addJob('reminders', 15000, skipWhenDbDown('reminders', async () => {
         const now = Date.now();
         const all = await db.allByPrefix('reminders_');
         for (const entry of all) {
@@ -179,7 +193,7 @@ function registerJobs(client, scheduler) {
                 await db.set(entry.id, remaining);
             }
         }
-    });
+    }));
 
     // Performance jobs: Cleanup Maps
     scheduler.addJob('map-cleanup', 3600000, () => {
@@ -201,7 +215,7 @@ function registerJobs(client, scheduler) {
     });
 
     // Kick members who never finished verification
-    scheduler.addJob('verification-kick', 60000, async () => {
+    scheduler.addJob('verification-kick', 60000, skipWhenDbDown('verification-kick', async () => {
         const { kickOverdue } = require('./verification');
         for (const [, guild] of client.guilds.cache) {
             try {
@@ -211,9 +225,9 @@ function registerJobs(client, scheduler) {
                 logger.error(`[Verify] kick job ${guild.name}`, { error: err.message });
             }
         }
-    });
+    }));
 
-    scheduler.addJob('polls-close', 30000, async () => {
+    scheduler.addJob('polls-close', 30000, skipWhenDbDown('polls-close', async () => {
         const { closeExpired } = require('./polls');
         for (const [, guild] of client.guilds.cache) {
             try {
@@ -223,7 +237,7 @@ function registerJobs(client, scheduler) {
                 logger.error(`[Polls] close job ${guild.name}`, { error: err.message });
             }
         }
-    });
+    }));
 
     // Pick up tunnel URL changes without restarting the bot
     scheduler.addJob('public-url', 15000, async () => {

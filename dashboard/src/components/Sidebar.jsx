@@ -79,7 +79,23 @@ export default function Sidebar({
             )}
             <div className="max-h-64 overflow-y-auto">
               {filteredGuilds.length === 0 ? (
-                <p className="px-3 py-4 text-xs text-zinc-500 text-center">No servers match</p>
+                guilds.length === 0 && !auth?.loggedIn ? (
+                  <div className="px-3 py-4 text-center">
+                    <p className="text-xs text-zinc-500 leading-relaxed">
+                      {auth?.oauthEnabled
+                        ? 'Sign in with Discord to see the servers you can manage.'
+                        : 'Discord login is unavailable — the backend has OAuth or its database unconfigured.'}
+                    </p>
+                    {auth?.oauthEnabled && (
+                      <a href="/api/auth/discord" className="cyber-button-solid inline-flex items-center gap-1.5 mt-3 text-xs px-3 py-1.5">
+                        <LogIn size={12} />
+                        Login with Discord
+                      </a>
+                    )}
+                  </div>
+                ) : (
+                  <p className="px-3 py-4 text-xs text-zinc-500 text-center">No servers match</p>
+                )
               ) : filteredGuilds.map((g) => (
                 <button
                   key={g.id}
