@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { ChevronDown, ChevronLeft, ChevronRight, Crown, LogIn, LogOut, Menu, Search, UserRound, X } from 'lucide-react';
 import clsx from 'clsx';
-import { NAV, LEVEL_LABELS, LEVEL_COLORS } from '../nav.js';
+import { LEVEL_LABELS, LEVEL_COLORS, visibleNavNodes } from '../nav.js';
 import { useI18n } from '../i18n.jsx';
 
 export default function Sidebar({
@@ -26,9 +26,8 @@ export default function Sidebar({
   }, [guilds, guildQuery]);
 
   const Content = ({ compact }) => {
-    // Tracks the last rendered diagram group (Guild Settings, Tickets, …) so a
-    // small sub-header is emitted once per group. Reset on every area section.
-    let lastGroup = null;
+    const visibility = { permLevel, canSeeDeveloper, canSeeMusicDesk };
+    const nodes = visibleNavNodes({ compact, ...visibility });
     return (
     <div className="flex flex-col h-full">
       <div className={clsx('border-b border-white/[0.06]', compact ? 'px-2 py-4' : 'px-4 py-4')}>
@@ -127,16 +126,14 @@ export default function Sidebar({
       </div>
 
       <nav className={clsx('flex-1 py-3 space-y-0.5 overflow-y-auto', compact ? 'px-2' : 'px-3')}>
-        {NAV.map((item, i) => {
-          if (item.section) {
-            lastGroup = null;
-            if (item.systemOnly && !canSeeDeveloper) return null;
-            if (item.minLevel && !item.always && permLevel < item.minLevel) return null;
-            if (compact) {
-              return <div key={i} className="my-2 mx-2 h-px bg-white/[0.06]" />;
-            }
+        {nodes.map((node) => {
+          if (node.type === 'divider') {
+            return <div key={node.key} className="my-2 mx-2 h-px bg-white/[0.06]" />;
+          }
+          if (node.type === 'section') {
+            const { item } = node;
             return (
-              <p key={i} className={clsx(
+              <p key={node.key} className={clsx(
                 'text-[10px] font-bold uppercase tracking-widest px-3 pt-3 pb-1 first:pt-1 flex items-center gap-1.5',
                 item.minLevel ? 'text-amber-600' : 'text-zinc-600'
               )}>
@@ -145,33 +142,29 @@ export default function Sidebar({
               </p>
             );
           }
-          if (item.minLevel && permLevel < item.minLevel) return null;
-          if (item.systemOnly && !canSeeDeveloper) return null;
-          if (item.devOnly && !canSeeMusicDesk) return null;
-          const { id, icon: Icon, label } = item;
+          if (node.type === 'group') {
+            return (
+              <p key={node.key} className="text-[9px] font-semibold uppercase tracking-[0.14em] px-3 pt-2.5 pb-0.5 text-zinc-600">
+                {t(`group.${node.item.group}`, node.item.group)}
+              </p>
+            );
+          }
+          const { id, icon: Icon, label, hint } = node.item;
           const isActive = page === id;
-          const showGroupLabel = !compact && item.group && item.group !== lastGroup;
-          if (item.group) lastGroup = item.group;
           return (
-            <React.Fragment key={id}>
-              {showGroupLabel && (
-                <p className="text-[9px] font-semibold uppercase tracking-[0.14em] px-3 pt-2.5 pb-0.5 text-zinc-600">
-                  {t(`group.${item.group}`, item.group)}
-                </p>
+            <button
+              key={node.key}
+              title={compact ? t(`nav.${id}`, label) : hint}
+              onClick={() => { setPage(id); setMobileOpen(false); }}
+              className={clsx(
+                'w-full',
+                isActive ? 'sidebar-item-active' : 'sidebar-item',
+                compact && 'justify-center px-0'
               )}
-              <button
-                title={compact ? t(`nav.${id}`, label) : item.hint}
-                onClick={() => { setPage(id); setMobileOpen(false); }}
-                className={clsx(
-                  'w-full',
-                  isActive ? 'sidebar-item-active' : 'sidebar-item',
-                  compact && 'justify-center px-0'
-                )}
-              >
-                <Icon size={15} className={isActive ? 'text-cyan-300' : 'text-zinc-500'} />
-                {!compact && <span className="truncate">{t(`nav.${id}`, label)}</span>}
-              </button>
-            </React.Fragment>
+            >
+              <Icon size={15} className={isActive ? 'text-cyan-300' : 'text-zinc-500'} />
+              {!compact && <span className="truncate">{t(`nav.${id}`, label)}</span>}
+            </button>
           );
         })}
       </nav>

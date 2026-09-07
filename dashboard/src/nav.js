@@ -88,5 +88,44 @@ export const SEARCHABLE_PAGES = NAV.filter((item) => item.id);
 
 export const DOCK_PAGES = ['overview', 'members', 'music', 'tickets'];
 
+// Single source of truth for "may this identity see this nav entry?".
+// Applies to area sections, group pages, and palette entries alike, so the
+// sidebar, command palette, and App.jsx guards can never diverge again.
+// `flags` mirrors the caller-side access state; the backend remains
+// authoritative if a URL is entered manually.
+export function isNavItemVisible(item, flags = {}) {
+  const { permLevel = 0, canSeeDeveloper = false, canSeeMusicDesk = false } = flags;
+  if (item.minLevel && !item.always && permLevel < item.minLevel) return false;
+  if (item.systemOnly && !canSeeDeveloper) return false;
+  if (item.devOnly && !canSeeMusicDesk) return false;
+  return true;
+}
+
+// Flat render model for the sidebar: section headers, diagram group
+// sub-headers (Guild Settings, Tickets, …), and page entries in display order.
+// Group headers are emitted before the first *visible* page of each group, so
+// hidden pages never leave orphan labels behind.
+export function visibleNavNodes({ compact = false, ...flags } = {}) {
+  const nodes = [];
+  let lastGroup = null;
+  NAV.forEach((item, index) => {
+    if (item.section) {
+      lastGroup = null;
+      if (!isNavItemVisible(item, flags)) return;
+      nodes.push(compact
+        ? { type: 'divider', key: `divider-${index}` }
+        : { type: 'section', key: `section-${index}`, item });
+      return;
+    }
+    if (!isNavItemVisible(item, flags)) return;
+    if (!compact && item.group && item.group !== lastGroup) {
+      nodes.push({ type: 'group', key: `group-${item.group}`, item });
+    }
+    if (item.group) lastGroup = item.group;
+    nodes.push({ type: 'page', key: item.id, item });
+  });
+  return nodes;
+}
+
 export const LEVEL_LABELS = ['Viewer', 'DJ', 'Mod', 'Admin'];
 export const LEVEL_COLORS = ['text-zinc-400', 'text-sky-300', 'text-amber-300', 'text-cyan-300'];

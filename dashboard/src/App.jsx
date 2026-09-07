@@ -101,6 +101,32 @@ const PAGES = {
 
 export const PermContext = React.createContext({ level: 0, levelName: 'Viewer' });
 
+// Developer Area leaves from the product diagram. `developer` keeps its
+// historic hash for backwards compatibility; the dev-* ids deep-link into the
+// same control center on a specific tab. Module scope: the mapping is static
+// and must not be rebuilt on every render.
+const DEV_TAB_BY_PAGE = {
+  developer: 'overview',
+  'dev-logs': 'logs',
+  // API leaf opens the command catalog; the bot-config tab stays one click away.
+  'dev-api': 'commands',
+  'dev-database': 'db',
+  'dev-monitoring': 'performance',
+  'dev-security': 'audit',
+};
+
+function developerInitialTab(page) {
+  // hasOwnProperty (not `in` or startsWith): page comes from the URL hash, so
+  // prototype names like "constructor" must never match.
+  return Object.prototype.hasOwnProperty.call(DEV_TAB_BY_PAGE, page)
+    ? DEV_TAB_BY_PAGE[page]
+    : undefined;
+}
+
+function isDeveloperAreaPage(page) {
+  return page === 'system' || developerInitialTab(page) !== undefined;
+}
+
 function getHashPage() {
   const pathRoutes = {
     '/profile': 'profile', '/login': 'login', '/register': 'register',
@@ -428,23 +454,12 @@ export default function App() {
   const PageComponent = PAGES[page] || Overview;
   const isLive = page === 'livefeed';
   const isHome = page === 'home';
-  // Developer Area leaves from the product diagram. `developer` keeps its
-  // historic hash for backwards compatibility; the dev-* ids deep-link into
-  // the same control center on a specific tab (see DEV_TAB_BY_PAGE).
-  const DEV_TAB_BY_PAGE = {
-    developer: 'overview',
-    'dev-logs': 'logs',
-    'dev-api': 'commands',
-    'dev-database': 'db',
-    'dev-monitoring': 'performance',
-    'dev-security': 'audit',
-  };
-  const isDeveloperPage = page === 'developer' || page === 'system' || page.startsWith('dev-');
-  const developerInitialTab = DEV_TAB_BY_PAGE[page] || 'overview';
+  const isDeveloperPage = isDeveloperAreaPage(page);
+  const initialTab = developerInitialTab(page);
   const canSeeSystem = developerAccess.baseRole !== 'NONE'
     || developerAccess.role !== 'NONE'
     || developerAccess.canUnlock === true;
-  const systemPageDenied = (page === 'system' || page === 'developer' || page.startsWith('dev-')) && !canSeeSystem;
+  const systemPageDenied = isDeveloperPage && !canSeeSystem;
   // The Music desk is developer-only (SUPPORT excluded), mirroring the
   // backend SYSTEM_ROLES.DEVELOPER gate on /api/music/*.
   const canSeeMusicDesk = ['DEVELOPER', 'SUPER_ADMIN'].includes(developerAccess.baseRole)
@@ -622,7 +637,7 @@ export default function App() {
                 <div className="h-full animate-fade-in">
                   <PageErrorBoundary key={page}>
                     <Suspense fallback={<PageLoading />}>
-                      <PageComponent pageHint={PAGE_HINTS[page]} initialTab={developerInitialTab} />
+                      <PageComponent pageHint={PAGE_HINTS[page]} {...(initialTab === undefined ? {} : { initialTab })} />
                     </Suspense>
                   </PageErrorBoundary>
                 </div>

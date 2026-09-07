@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, Clock3, Copy, CornerDownLeft, Search } from 'lucide-react';
 import clsx from 'clsx';
-import { SEARCHABLE_PAGES } from '../nav.js';
+import { SEARCHABLE_PAGES, isNavItemVisible } from '../nav.js';
 import { copyText, readRecentPages } from '../lib/clipboard.js';
 
 export default function CommandPalette({ open, onClose, onNavigate, permLevel = 0, developerAccess = {}, page, publicUrl }) {
@@ -18,10 +18,9 @@ export default function CommandPalette({ open, onClose, onNavigate, permLevel = 
 
   const items = useMemo(() => {
     const q = query.trim().toLowerCase();
+    const visibility = { permLevel, canSeeDeveloper, canSeeMusicDesk };
     const pages = SEARCHABLE_PAGES.filter((item) => {
-      if (item.minLevel && !item.always && permLevel < item.minLevel) return false;
-      if (item.systemOnly && !canSeeDeveloper) return false;
-      if (item.devOnly && !canSeeMusicDesk) return false;
+      if (!isNavItemVisible(item, visibility)) return false;
       if (!q) return true;
       const hay = `${item.label} ${item.id} ${item.hint || ''} ${item.keywords || ''} ${item.group || ''} ${item.section || ''} ${item.area || ''}`.toLowerCase();
       return hay.includes(q);
