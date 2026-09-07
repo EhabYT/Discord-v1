@@ -204,6 +204,13 @@ function startDashboard(botClient) {
     app.use('/api/auth', authRouter);
     app.use('/api/auth', accountAuthRouter);
     app.use('/api/account', accountRouter);
+    // Backend route tree mirrors the product diagram:
+    //   Public Dashboard → /api/guild/:guildId/* (guild levels 0-3 via
+    //     guild-access.js) + /api/guilds + /api/bot/presence (guild presence).
+    //   Developer Area → /api/developer/* (system roles via devauth.js) with a
+    //     308 compat redirect from legacy /api/dev/*, plus /api/music/:guildId
+    //     (DEVELOPER/SUPER_ADMIN only) and /api/v2 diagnostics.
+    //   Both halves converge on the Permission System → Discord Bot / DB.
     // /api/developer is the canonical system-control namespace. The legacy
     // prefix redirects with 308 so methods/bodies are preserved without
     // mounting a duplicate privileged route tree.

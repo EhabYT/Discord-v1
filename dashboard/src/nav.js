@@ -2,42 +2,75 @@ import {
   Activity, LayoutDashboard, Music, MessageSquare, Ticket, TrendingUp,
   ScrollText, Shield, Gift, Users, BarChart3, Settings,
   SlidersHorizontal, ShieldCheck, Trophy, Radio, Send, Zap, Terminal, BadgeCheck, Tags, Cake, Lightbulb, Vote, Hash, Ghost, Megaphone,
+  FileText, Code2, Database, Cpu, Lock,
 } from 'lucide-react';
 
+// Information architecture mirrors the product diagram:
+//
+//   Dashboard
+//   ├─ Public Dashboard (guild-scoped, permission levels 0-3)
+//   │  ├─ Guild Settings · Moderation · AutoMod · Tickets · Music · Roles · Logging
+//   └─ Developer Area (system roles SUPPORT / DEVELOPER / SUPER_ADMIN)
+//      ├─ Bot Control · System · Logs · API · Database · Monitoring · Security
+//   Backend → Permission System → Discord Bot / DB
+//
+// `section` renders the two top-level areas in the sidebar.
+// `group` renders the diagram leaf inside that area (e.g. "Tickets", "Database").
+// Guild pages keep their existing `id`s so deep links (#overview, …) keep working.
+// Developer leaves other than Bot Control / System are deep links into the single
+// Developer control center via `tab`; App.jsx maps each id to an initialTab.
 export const NAV = [
-  { section: 'Core' },
-  { id: 'overview',      icon: LayoutDashboard,  label: 'Overview',       hint: 'Server health, uptime and audit log', keywords: 'home status ping cpu memory audit' },
-  { id: 'analytics',     icon: BarChart3,         label: 'Analytics',      hint: '24h messages, joins and commands', keywords: 'stats chart csv peak' },
-  { id: 'leaderboard',   icon: Trophy,            label: 'Leaderboard',    hint: 'XP ranks and top members', keywords: 'rank xp top levels' },
-  { id: 'livefeed',      icon: Radio,             label: 'Live Feed',      hint: 'Realtime joins, messages and mods', keywords: 'realtime events stream' },
-  { id: 'members',       icon: Users,             label: 'Members',        hint: 'Staff tools, notes, kick and warnings', keywords: 'warn kick ban timeout notes staff mute' },
-  { section: 'Features' },
-  { id: 'music',         icon: Music,             label: 'Music',          hint: 'Queue, filters and playback (developers only)', devOnly: true, keywords: 'play pause queue voice spotify youtube' },
-  { id: 'giveaways',     icon: Gift,              label: 'Giveaways',      hint: 'Create and manage giveaways', keywords: 'prize winners raffle' },
-  { id: 'progression',   icon: TrendingUp,        label: 'XP & Levels',    hint: 'Leveling, rewards and XP boosts', keywords: 'level reward boost voice' },
-  { id: 'tickets',       icon: Ticket,            label: 'Tickets',        hint: 'Support panels and open tickets', keywords: 'support inbox close transcript' },
-  { id: 'reactionroles', icon: Tags,              label: 'Reaction Roles', hint: 'Button and reaction self-roles', keywords: 'roles reaction button self assign exclusive' },
-  { id: 'birthdays',     icon: Cake,              label: 'Birthdays',      hint: 'Upcoming dates and announcements', keywords: 'birthday cake announce role celebrate' },
-  { id: 'suggestions',   icon: Lightbulb,         label: 'Suggestions',    hint: 'Inbox, approve and deny ideas', keywords: 'suggest inbox approve deny community idea' },
-  { id: 'polls',         icon: Vote,              label: 'Polls',          hint: 'Create votes and close results', keywords: 'poll vote options yes no survey' },
-  { id: 'tags',          icon: Hash,              label: 'Tags',           hint: 'Reusable FAQ and snippet tags', keywords: 'tag snippet faq custom text' },
-  { id: 'confessions',   icon: Ghost,             label: 'Confessions',    hint: 'Anonymous channel and staff log', keywords: 'confess anonymous secret cooldown' },
-  { id: 'board',         icon: Megaphone,         label: 'Staff Board',    hint: 'Announce, AFK list and reminders', keywords: 'announce afk reminder ping everyone' },
-  { section: 'Config' },
-  { id: 'welcome',       icon: MessageSquare,     label: 'Welcome',        hint: 'Join messages and auto roles', keywords: 'join leave autorole goodbye' },
-  { id: 'verification',  icon: BadgeCheck,        label: 'Verification',   hint: 'Gate, captcha, pending members', keywords: 'verify captcha unverified role gate panel rules' },
-  { id: 'logs',          icon: ScrollText,        label: 'Logs',           hint: 'Mod and event log channels', keywords: 'logs logging modlog message delete' },
-  { id: 'security',      icon: Shield,            label: 'Security',       hint: 'AutoMod, anti-raid, anti-invite', keywords: 'raid automod antispam' },
-  { id: 'commands',      icon: Zap,               label: 'Commands',       hint: 'Browse and toggle slash commands', keywords: 'slash fun games tools toggle catalog' },
-  { id: 'settings',      icon: Settings,          label: 'Settings',       hint: 'Prefixes, locale and server options', keywords: 'prefix dj xp backup restore' },
-  { id: 'botcontrols',   icon: SlidersHorizontal, label: 'Bot Controls',   hint: 'Nickname, presence and status', keywords: 'nick presence status activity' },
-  { id: 'permissions',   icon: ShieldCheck,       label: 'Permissions',    hint: 'Dashboard access levels', keywords: 'roles admin mod viewer' },
-  { section: 'Owner', minLevel: 3 },
-  { id: 'embedbuilder',  icon: Send,              label: 'Embed Builder',  hint: 'Compose and send rich embeds', minLevel: 3, keywords: 'embed send announce' },
-  { id: 'autoresponder', icon: Zap,               label: 'Auto-Responder', hint: 'Keyword replies', minLevel: 3, keywords: 'trigger reply exact keyword' },
-  { section: 'Developer', always: true },
-  { id: 'system',        icon: Activity,          label: 'System Status',  hint: 'V2 backend readiness for Dashboard, Discord and Supabase', systemOnly: true, always: true, keywords: 'health ready status database oauth v2' },
-  { id: 'developer',     icon: Terminal,          label: 'Developer',      hint: 'Role-scoped backend control center', systemOnly: true, always: true, keywords: 'dev logs env token tunnel debug' },
+  { section: 'Public Dashboard', area: 'public' },
+  // Guild Settings
+  { id: 'overview',      icon: LayoutDashboard,  label: 'Overview',       hint: 'Server health, uptime and audit log', keywords: 'home status ping cpu memory audit', area: 'public', group: 'Guild Settings' },
+  { id: 'analytics',     icon: BarChart3,         label: 'Analytics',      hint: '24h messages, joins and commands', keywords: 'stats chart csv peak', area: 'public', group: 'Guild Settings' },
+  { id: 'leaderboard',   icon: Trophy,            label: 'Leaderboard',    hint: 'XP ranks and top members', keywords: 'rank xp top levels', area: 'public', group: 'Guild Settings' },
+  { id: 'livefeed',      icon: Radio,             label: 'Live Feed',      hint: 'Realtime joins, messages and mods', keywords: 'realtime events stream', area: 'public', group: 'Guild Settings' },
+  { id: 'settings',      icon: Settings,          label: 'Settings',       hint: 'Prefixes, locale and server options', keywords: 'prefix dj xp backup restore', area: 'public', group: 'Guild Settings' },
+  { id: 'welcome',       icon: MessageSquare,     label: 'Welcome',        hint: 'Join messages and auto roles', keywords: 'join leave autorole goodbye', area: 'public', group: 'Guild Settings' },
+  { id: 'verification',  icon: BadgeCheck,        label: 'Verification',   hint: 'Gate, captcha, pending members', keywords: 'verify captcha unverified role gate panel rules', area: 'public', group: 'Guild Settings' },
+  { id: 'commands',      icon: Zap,               label: 'Commands',       hint: 'Browse and toggle slash commands', keywords: 'slash fun games tools toggle catalog', area: 'public', group: 'Guild Settings' },
+  { id: 'progression',   icon: TrendingUp,        label: 'XP & Levels',    hint: 'Leveling, rewards and XP boosts', keywords: 'level reward boost voice', area: 'public', group: 'Guild Settings' },
+  { id: 'giveaways',     icon: Gift,              label: 'Giveaways',      hint: 'Create and manage giveaways', keywords: 'prize winners raffle', area: 'public', group: 'Guild Settings' },
+  { id: 'birthdays',     icon: Cake,              label: 'Birthdays',      hint: 'Upcoming dates and announcements', keywords: 'birthday cake announce role celebrate', area: 'public', group: 'Guild Settings' },
+  { id: 'suggestions',   icon: Lightbulb,         label: 'Suggestions',    hint: 'Inbox, approve and deny ideas', keywords: 'suggest inbox approve deny community idea', area: 'public', group: 'Guild Settings' },
+  { id: 'polls',         icon: Vote,              label: 'Polls',          hint: 'Create votes and close results', keywords: 'poll vote options yes no survey', area: 'public', group: 'Guild Settings' },
+  { id: 'tags',          icon: Hash,              label: 'Tags',           hint: 'Reusable FAQ and snippet tags', keywords: 'tag snippet faq custom text', area: 'public', group: 'Guild Settings' },
+  { id: 'confessions',   icon: Ghost,             label: 'Confessions',    hint: 'Anonymous channel and staff log', keywords: 'confess anonymous secret cooldown', area: 'public', group: 'Guild Settings' },
+  // Moderation
+  { id: 'members',       icon: Users,             label: 'Members',        hint: 'Staff tools, notes, kick and warnings', keywords: 'warn kick ban timeout notes staff mute', area: 'public', group: 'Moderation' },
+  { id: 'board',         icon: Megaphone,         label: 'Staff Board',    hint: 'Announce, AFK list and reminders', keywords: 'announce afk reminder ping everyone', area: 'public', group: 'Moderation' },
+  // AutoMod
+  { id: 'security',      icon: Shield,            label: 'Security',       hint: 'AutoMod, anti-raid, anti-invite', keywords: 'raid automod antispam', area: 'public', group: 'AutoMod' },
+  // Tickets
+  { id: 'tickets',       icon: Ticket,            label: 'Tickets',        hint: 'Support panels and open tickets', keywords: 'support inbox close transcript', area: 'public', group: 'Tickets' },
+  // Music — shown under Public per the diagram, but the desk drives voice
+  // connections remotely so the backend (/api/music/*) and this entry keep the
+  // DEVELOPER/SUPER_ADMIN gate. SUPPORT and guild levels receive 403.
+  { id: 'music',         icon: Music,             label: 'Music',          hint: 'Queue, filters and playback (developers only)', devOnly: true, keywords: 'play pause queue voice spotify youtube', area: 'public', group: 'Music' },
+  // Roles
+  { id: 'reactionroles', icon: Tags,              label: 'Reaction Roles', hint: 'Button and reaction self-roles', keywords: 'roles reaction button self assign exclusive', area: 'public', group: 'Roles' },
+  { id: 'permissions',   icon: ShieldCheck,       label: 'Permissions',    hint: 'Dashboard access levels', keywords: 'roles admin mod viewer', area: 'public', group: 'Roles' },
+  { id: 'embedbuilder',  icon: Send,              label: 'Embed Builder',  hint: 'Compose and send rich embeds', minLevel: 3, keywords: 'embed send announce', area: 'public', group: 'Roles' },
+  { id: 'autoresponder', icon: Zap,               label: 'Auto-Responder', hint: 'Keyword replies', minLevel: 3, keywords: 'trigger reply exact keyword', area: 'public', group: 'Roles' },
+  // Logging
+  { id: 'logs',          icon: ScrollText,        label: 'Logs',           hint: 'Mod and event log channels', keywords: 'logs logging modlog message delete', area: 'public', group: 'Logging' },
+  { section: 'Developer Area', area: 'developer', systemOnly: true, always: true },
+  // Bot Control — guild presence controls plus the global overview/flags/deploy center.
+  { id: 'botcontrols',   icon: SlidersHorizontal, label: 'Bot Control',    hint: 'Nickname, presence and status', keywords: 'nick presence status activity bot control', area: 'developer', group: 'Bot Control' },
+  { id: 'developer',     icon: Terminal,          label: 'Control Center', hint: 'Role-scoped backend control center', systemOnly: true, always: true, keywords: 'dev logs env token tunnel debug overview flags deploy', area: 'developer', group: 'Bot Control', tab: 'overview' },
+  // System
+  { id: 'system',        icon: Activity,          label: 'System',         hint: 'V2 backend readiness for Dashboard, Discord and Supabase', systemOnly: true, always: true, keywords: 'health ready status database oauth v2 system', area: 'developer', group: 'System' },
+  // Logs
+  { id: 'dev-logs',      icon: FileText,          label: 'Logs',           hint: 'Backend logs and developer audit trail', systemOnly: true, always: true, keywords: 'dev logs audit general error tunnel cloudflared', area: 'developer', group: 'Logs', tab: 'logs' },
+  // API
+  { id: 'dev-api',       icon: Code2,             label: 'API',            hint: 'Slash-command catalog and bot config', systemOnly: true, always: true, keywords: 'dev api commands config metadata schema', area: 'developer', group: 'API', tab: 'commands' },
+  // Database
+  { id: 'dev-database',  icon: Database,          label: 'Database',       hint: 'Supabase key counts and guild inventory', systemOnly: true, always: true, keywords: 'dev database postgres keys prefixes guilds', area: 'developer', group: 'Database', tab: 'db' },
+  // Monitoring
+  { id: 'dev-monitoring', icon: Cpu,              label: 'Monitoring',     hint: 'Performance metrics and scheduler jobs', systemOnly: true, always: true, keywords: 'dev monitoring performance metrics latency jobs scheduler', area: 'developer', group: 'Monitoring', tab: 'performance' },
+  // Security
+  { id: 'dev-security',  icon: Lock,              label: 'Security',       hint: 'Environment status and audit log', systemOnly: true, always: true, keywords: 'dev security env audit maintenance flags', area: 'developer', group: 'Security', tab: 'audit' },
 ];
 
 export const PAGE_TITLES = {

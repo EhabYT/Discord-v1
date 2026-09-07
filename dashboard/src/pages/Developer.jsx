@@ -36,11 +36,11 @@ function Pill({ ok, label }) {
   );
 }
 
-export default function Developer() {
+export default function Developer({ initialTab = 'overview' }) {
   const toast = useToast();
   const [who, setWho] = useState(null);
   const [token, setToken] = useState('');
-  const [tab, setTab] = useState('overview');
+  const [tab, setTab] = useState(initialTab);
   const [ov, setOv] = useState(null);
   const [logFile, setLogFile] = useState('general.log');
   const [log, setLog] = useState('');
@@ -60,6 +60,10 @@ export default function Developer() {
   const loadWho = () => api.get('/api/developer/whoami').then(setWho).catch(() => setWho({ unlocked: false }));
 
   useEffect(() => { loadWho(); }, []);
+
+  // Deep links from the Developer Area sidebar (Logs / API / Database /
+  // Monitoring / Security) reuse this component with a different initialTab.
+  useEffect(() => { setTab(initialTab); }, [initialTab]);
 
   const unlock = async (e) => {
     e.preventDefault();

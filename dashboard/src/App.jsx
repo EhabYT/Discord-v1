@@ -80,6 +80,15 @@ const PAGES = {
   embedbuilder: EmbedBuilder,
   autoresponder: AutoResponder,
   developer: Developer,
+  // Developer Area leaves from the product diagram. They share the single
+  // role-scoped control center and open directly on the matching tab, so the
+  // sidebar matches Bot Control / System / Logs / API / Database /
+  // Monitoring / Security without duplicating backend routes.
+  'dev-logs': Developer,
+  'dev-api': Developer,
+  'dev-database': Developer,
+  'dev-monitoring': Developer,
+  'dev-security': Developer,
   profile: Profile,
   login: Login,
   register: Register,
@@ -419,10 +428,23 @@ export default function App() {
   const PageComponent = PAGES[page] || Overview;
   const isLive = page === 'livefeed';
   const isHome = page === 'home';
+  // Developer Area leaves from the product diagram. `developer` keeps its
+  // historic hash for backwards compatibility; the dev-* ids deep-link into
+  // the same control center on a specific tab (see DEV_TAB_BY_PAGE).
+  const DEV_TAB_BY_PAGE = {
+    developer: 'overview',
+    'dev-logs': 'logs',
+    'dev-api': 'commands',
+    'dev-database': 'db',
+    'dev-monitoring': 'performance',
+    'dev-security': 'audit',
+  };
+  const isDeveloperPage = page === 'developer' || page === 'system' || page.startsWith('dev-');
+  const developerInitialTab = DEV_TAB_BY_PAGE[page] || 'overview';
   const canSeeSystem = developerAccess.baseRole !== 'NONE'
     || developerAccess.role !== 'NONE'
     || developerAccess.canUnlock === true;
-  const systemPageDenied = (page === 'system' || page === 'developer') && !canSeeSystem;
+  const systemPageDenied = (page === 'system' || page === 'developer' || page.startsWith('dev-')) && !canSeeSystem;
   // The Music desk is developer-only (SUPPORT excluded), mirroring the
   // backend SYSTEM_ROLES.DEVELOPER gate on /api/music/*.
   const canSeeMusicDesk = ['DEVELOPER', 'SUPER_ADMIN'].includes(developerAccess.baseRole)
@@ -596,11 +618,11 @@ export default function App() {
                     <button onClick={() => navigate('overview')} className="cyber-button mt-5">Return to dashboard</button>
                   </div>
                 </div>
-              ) : page === 'developer' || page === 'system' ? (
+              ) : isDeveloperPage ? (
                 <div className="h-full animate-fade-in">
                   <PageErrorBoundary key={page}>
                     <Suspense fallback={<PageLoading />}>
-                      <PageComponent pageHint={PAGE_HINTS[page]} />
+                      <PageComponent pageHint={PAGE_HINTS[page]} initialTab={developerInitialTab} />
                     </Suspense>
                   </PageErrorBoundary>
                 </div>

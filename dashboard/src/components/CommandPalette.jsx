@@ -23,7 +23,7 @@ export default function CommandPalette({ open, onClose, onNavigate, permLevel = 
       if (item.systemOnly && !canSeeDeveloper) return false;
       if (item.devOnly && !canSeeMusicDesk) return false;
       if (!q) return true;
-      const hay = `${item.label} ${item.id} ${item.hint || ''} ${item.keywords || ''}`.toLowerCase();
+      const hay = `${item.label} ${item.id} ${item.hint || ''} ${item.keywords || ''} ${item.group || ''} ${item.section || ''} ${item.area || ''}`.toLowerCase();
       return hay.includes(q);
     });
 
@@ -42,7 +42,7 @@ export default function CommandPalette({ open, onClose, onNavigate, permLevel = 
       icon: Copy,
     }] : [];
     return [...actions, ...recentItems, ...rest];
-  }, [query, permLevel, recents, publicUrl, canSeeDeveloper]);
+  }, [query, permLevel, recents, publicUrl, canSeeDeveloper, canSeeMusicDesk]);
 
   useEffect(() => {
     if (!open) return;
@@ -137,6 +137,11 @@ export default function CommandPalette({ open, onClose, onNavigate, permLevel = 
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2">
                       <span className="text-sm font-medium truncate">{item.label}</span>
+                      {item.group && (
+                        <span className="hidden sm:inline-flex text-[9px] uppercase tracking-wider text-zinc-600 border border-white/[0.07] rounded px-1.5 py-0.5">
+                          {item.group}
+                        </span>
+                      )}
                       {isCurrent && <span className="cyber-badge-cyan">Here</span>}
                       {showRecent && (
                         <span className="inline-flex items-center gap-1 text-[10px] text-zinc-500">

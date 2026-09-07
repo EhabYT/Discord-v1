@@ -14,7 +14,7 @@ export default function Sidebar({
   const canSeeDeveloper = developerAccess.baseRole !== 'NONE'
     || developerAccess.role !== 'NONE'
     || developerAccess.canUnlock === true;
-  // The Music desk is developer-only: unlike the Developer section above,
+  // The Music desk is developer-only: unlike the Developer Area above,
   // SUPPORT identities are excluded here to mirror the backend gate.
   const canSeeMusicDesk = ['DEVELOPER', 'SUPER_ADMIN'].includes(developerAccess.baseRole)
     || ['DEVELOPER', 'SUPER_ADMIN'].includes(developerAccess.role);
@@ -25,7 +25,11 @@ export default function Sidebar({
     return guilds.filter((g) => (g.name || '').toLowerCase().includes(q) || g.id.includes(q));
   }, [guilds, guildQuery]);
 
-  const Content = ({ compact }) => (
+  const Content = ({ compact }) => {
+    // Tracks the last rendered diagram group (Guild Settings, Tickets, …) so a
+    // small sub-header is emitted once per group. Reset on every area section.
+    let lastGroup = null;
+    return (
     <div className="flex flex-col h-full">
       <div className={clsx('border-b border-white/[0.06]', compact ? 'px-2 py-4' : 'px-4 py-4')}>
         <div className={clsx('flex items-center', compact ? 'justify-center' : 'gap-3')}>
@@ -125,7 +129,8 @@ export default function Sidebar({
       <nav className={clsx('flex-1 py-3 space-y-0.5 overflow-y-auto', compact ? 'px-2' : 'px-3')}>
         {NAV.map((item, i) => {
           if (item.section) {
-            if (item.section === 'Developer' && !canSeeDeveloper) return null;
+            lastGroup = null;
+            if (item.systemOnly && !canSeeDeveloper) return null;
             if (item.minLevel && !item.always && permLevel < item.minLevel) return null;
             if (compact) {
               return <div key={i} className="my-2 mx-2 h-px bg-white/[0.06]" />;
@@ -145,20 +150,28 @@ export default function Sidebar({
           if (item.devOnly && !canSeeMusicDesk) return null;
           const { id, icon: Icon, label } = item;
           const isActive = page === id;
+          const showGroupLabel = !compact && item.group && item.group !== lastGroup;
+          if (item.group) lastGroup = item.group;
           return (
-            <button
-              key={id}
-              title={compact ? t(`nav.${id}`, label) : item.hint}
-              onClick={() => { setPage(id); setMobileOpen(false); }}
-              className={clsx(
-                'w-full',
-                isActive ? 'sidebar-item-active' : 'sidebar-item',
-                compact && 'justify-center px-0'
+            <React.Fragment key={id}>
+              {showGroupLabel && (
+                <p className="text-[9px] font-semibold uppercase tracking-[0.14em] px-3 pt-2.5 pb-0.5 text-zinc-600">
+                  {t(`group.${item.group}`, item.group)}
+                </p>
               )}
-            >
-              <Icon size={15} className={isActive ? 'text-cyan-300' : 'text-zinc-500'} />
-              {!compact && <span className="truncate">{t(`nav.${id}`, label)}</span>}
-            </button>
+              <button
+                title={compact ? t(`nav.${id}`, label) : item.hint}
+                onClick={() => { setPage(id); setMobileOpen(false); }}
+                className={clsx(
+                  'w-full',
+                  isActive ? 'sidebar-item-active' : 'sidebar-item',
+                  compact && 'justify-center px-0'
+                )}
+              >
+                <Icon size={15} className={isActive ? 'text-cyan-300' : 'text-zinc-500'} />
+                {!compact && <span className="truncate">{t(`nav.${id}`, label)}</span>}
+              </button>
+            </React.Fragment>
           );
         })}
       </nav>
@@ -230,7 +243,8 @@ export default function Sidebar({
         </div>
       )}
     </div>
-  );
+    );
+  };
 
   return (
     <>

@@ -1,5 +1,10 @@
 /**
- * Shared guild-scoped access control.
+ * Shared guild-scoped access control — the Public Dashboard half of the
+ * Permission System.
+ *
+ * Product diagram:
+ *   Public Dashboard (Guild Settings, Moderation, AutoMod, Tickets, Music,
+ *   Roles, Logging) → Backend → Permission System → Discord Bot / DB
  *
  * ROOT CAUSE THIS ADDRESSES
  * -------------------------

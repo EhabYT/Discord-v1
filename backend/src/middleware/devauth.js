@@ -1,3 +1,16 @@
+/**
+ * Permission System — system half.
+ *
+ * Product diagram:
+ *   Dashboard (Developer Area) → Backend → Permission System → Discord Bot / DB
+ *
+ * System roles gate the Developer Area backend:
+ *   SUPER_ADMIN > DEVELOPER > SUPPORT > NONE
+ * Guild dashboard levels (see middleware/permissions.js) never grant system
+ * access on their own. Music desk (/api/music/*) additionally requires
+ * DEVELOPER/SUPER_ADMIN even though Music appears under Public Dashboard in
+ * the product diagram, because it can drive voice connections remotely.
+ */
 const crypto = require('crypto');
 const { isLoopback } = require('./auth');
 const { recordDeveloperAction } = require('eb-bot-shared/services/developer-audit');
