@@ -156,7 +156,9 @@ function greeting() {
   return 'Good evening';
 }
 
-export default function Overview({ guild, guildData, onNavigate, publicUrl: publicUrlProp }) {
+export default function Overview({ guild, guildData, onNavigate, publicUrl: publicUrlProp, developerAccess = {} }) {
+  const canSeeMusicDesk = ['DEVELOPER', 'SUPER_ADMIN'].includes(developerAccess.baseRole)
+    || ['DEVELOPER', 'SUPER_ADMIN'].includes(developerAccess.role);
   const [stats, setStats]       = useState(null);
   const [perf, setPerf]         = useState(null);
   const [activity, setActivity] = useState([]);
@@ -285,7 +287,7 @@ export default function Overview({ guild, guildData, onNavigate, publicUrl: publ
                 { id: 'confessions', icon: Ghost, label: 'Confess', hint: 'Anonymous' },
                 { id: 'security', icon: Shield, label: 'Security', hint: 'AutoMod & raid' },
                 { id: 'livefeed', icon: Radio, label: 'Live feed', hint: 'Realtime events' },
-              ].map(({ id, icon: Icon, label, hint }) => (
+              ].filter(({ id }) => id !== 'music' || canSeeMusicDesk).map(({ id, icon: Icon, label, hint }) => (
                 <button key={id} onClick={() => onNavigate(id)} className="cyber-card-hover p-3.5 flex items-center gap-3 text-left">
                   <span className="w-9 h-9 rounded-xl bg-cyan-400/10 border border-cyan-400/15 flex items-center justify-center text-cyan-300">
                     <Icon size={16} />

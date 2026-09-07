@@ -12,7 +12,7 @@ export const NAV = [
   { id: 'livefeed',      icon: Radio,             label: 'Live Feed',      hint: 'Realtime joins, messages and mods', keywords: 'realtime events stream' },
   { id: 'members',       icon: Users,             label: 'Members',        hint: 'Staff tools, notes, kick and warnings', keywords: 'warn kick ban timeout notes staff mute' },
   { section: 'Features' },
-  { id: 'music',         icon: Music,             label: 'Music',          hint: 'Queue, filters and playback', keywords: 'play pause queue voice spotify youtube' },
+  { id: 'music',         icon: Music,             label: 'Music',          hint: 'Queue, filters and playback (developers only)', devOnly: true, keywords: 'play pause queue voice spotify youtube' },
   { id: 'giveaways',     icon: Gift,              label: 'Giveaways',      hint: 'Create and manage giveaways', keywords: 'prize winners raffle' },
   { id: 'progression',   icon: TrendingUp,        label: 'XP & Levels',    hint: 'Leveling, rewards and XP boosts', keywords: 'level reward boost voice' },
   { id: 'tickets',       icon: Ticket,            label: 'Tickets',        hint: 'Support panels and open tickets', keywords: 'support inbox close transcript' },

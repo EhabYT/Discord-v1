@@ -13,12 +13,15 @@ export default function CommandPalette({ open, onClose, onNavigate, permLevel = 
   const canSeeDeveloper = developerAccess.baseRole !== 'NONE'
     || developerAccess.role !== 'NONE'
     || developerAccess.canUnlock === true;
+  const canSeeMusicDesk = ['DEVELOPER', 'SUPER_ADMIN'].includes(developerAccess.baseRole)
+    || ['DEVELOPER', 'SUPER_ADMIN'].includes(developerAccess.role);
 
   const items = useMemo(() => {
     const q = query.trim().toLowerCase();
     const pages = SEARCHABLE_PAGES.filter((item) => {
       if (item.minLevel && !item.always && permLevel < item.minLevel) return false;
       if (item.systemOnly && !canSeeDeveloper) return false;
+      if (item.devOnly && !canSeeMusicDesk) return false;
       if (!q) return true;
       const hay = `${item.label} ${item.id} ${item.hint || ''} ${item.keywords || ''}`.toLowerCase();
       return hay.includes(q);

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Gift, Plus, RotateCcw, Square, Clock, Users, Hash,
   RefreshCw, X, Trophy, ChevronDown, ChevronUp,
-  Trash2, Copy, Shield, Info, Star
+  Trash2, Copy, Shield, Info, Star, SlidersHorizontal
 } from 'lucide-react';
 import PageHeader from '../components/PageHeader.jsx';
 import { useToast } from '../components/Toast.jsx';
@@ -63,8 +63,58 @@ const DURATIONS = [
 const DEFAULT_FORM = {
   prize: '', description: '', duration: DURATIONS[4].ms,
   winners: 1, channelId: '', requiredRoleId: '',
-  color: '#FF69B4', dmWinner: true,
+  color: '#FF69B4', dmWinner: true, host: '',
 };
+
+const TIME_UNITS = [
+  { label: 'Minutes', ms: 60 * 1000 },
+  { label: 'Hours',   ms: 60 * 60 * 1000 },
+  { label: 'Days',    ms: 24 * 60 * 60 * 1000 },
+];
+
+const MAX_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
+
+/* ── Duration picker: presets plus a custom value/unit pair ───────── */
+function DurationInput({ value, onChange }) {
+  const [amount, setAmount] = useState(2);
+  const [unitMs, setUnitMs] = useState(60 * 60 * 1000);
+  const applyCustom = (a, u) => {
+    const ms = Math.round(Math.max(1, Number(a) || 1) * u);
+    onChange(Math.min(MAX_DURATION_MS, Math.max(60 * 1000, ms)));
+  };
+  if (!DURATIONS.some(d => d.ms === value)) {
+    return (
+      <div className="flex gap-2">
+        <input type="number" min="1" value={amount} aria-label="Custom duration value"
+          onChange={e => { setAmount(e.target.value); applyCustom(e.target.value, unitMs); }}
+          className="cyber-input" />
+        <select value={unitMs} aria-label="Custom duration unit"
+          onChange={e => { setUnitMs(Number(e.target.value)); applyCustom(amount, Number(e.target.value)); }}
+          className="cyber-select">
+          {TIME_UNITS.map(u => <option key={u.ms} value={u.ms}>{u.label}</option>)}
+        </select>
+        <button onClick={() => onChange(DURATIONS[4].ms)} title="Back to presets"
+          className="px-2 text-[11px] text-gray-500 hover:text-cyan-300 transition-colors flex-shrink-0">
+          Presets
+        </button>
+      </div>
+    );
+  }
+  return (
+    <select value={value} onChange={e => {
+        if (e.target.value === 'custom') applyCustom(amount, unitMs);
+        else onChange(Number(e.target.value));
+      }} className="cyber-select">
+      {DURATIONS.map(d => <option key={d.ms} value={d.ms}>{d.label}</option>)}
+      <option value="custom">Custom…</option>
+    </select>
+  );
+}
+
+const fmtDuration = (ms) => DURATIONS.find(d => d.ms === ms)?.label
+  || (ms >= 24 * 60 * 60 * 1000 ? `${Math.round(ms / (24 * 60 * 60 * 1000))}d`
+    : ms >= 60 * 60 * 1000 ? `${Math.round(ms / (60 * 60 * 1000))}h`
+    : `${Math.round(ms / (60 * 1000))}m`);
 
 /* ── GiveawayCard ───────────────────────────────────────────────── */
 function GiveawayCard({ g, channels, roles, onEnd, onReroll, onDelete, onDuplicate, actionPending }) {
@@ -202,7 +252,7 @@ function GiveawayCard({ g, channels, roles, onEnd, onReroll, onDelete, onDuplica
             </div>
             <div>
               <p className="text-gray-600 text-[10px] uppercase tracking-wide mb-1">Hosted By</p>
-              <p className="text-gray-400 text-[11px]">{g.hostId === 'Dashboard' ? '🖥 Dashboard' : `<@${g.hostId}>`}</p>
+              <p className="text-gray-400 text-[11px]">{g.host ? g.host : (g.hostId === 'Dashboard' ? '🖥 Dashboard' : `<@${g.hostId}>`)}</p>
             </div>
             <div>
               <p className="text-gray-600 text-[10px] uppercase tracking-wide mb-1">End Time</p>
@@ -243,6 +293,10 @@ export default function Giveaways({ guild, guildData, permLevel }) {
   const [creating,      setCreating]      = useState(false);
   const [actionPending, setActionPending] = useState('');
   const [query, setQuery] = useState('');
+  const [settings, setSettings] = useState({});
+  const [showSettings, setShowSettings] = useState(false);
+  const [draft, setDraft] = useState(null);
+  const [savingSettings, setSavingSettings] = useState(false);
 
   const channels = guildData?.guild?.channels?.filter(c => c.type === 0) || [];
   const roles    = guildData?.guild?.roles || [];
@@ -253,10 +307,56 @@ export default function Giveaways({ guild, guildData, permLevel }) {
     try {
       setGiveaways(await api.get(`/api/guild/${guild.id}/giveaways`) || []);
     } catch {}
+    try {
+      setSettings(await api.get(`/api/guild/${guild.id}/giveaways/settings`) || {});
+    } catch {}
     setLoading(false);
   }, [guild?.id]);
 
   useEffect(() => { load(); }, [load]);
+
+  const validDuration = (ms) => DURATIONS.some(d => d.ms === ms) ? ms : DEFAULT_FORM.duration;
+
+  const openNew = () => {
+    setForm({
+      ...DEFAULT_FORM,
+      channelId: settings.channelId || '',
+      duration: validDuration(settings.duration),
+      winners: settings.winners || 1,
+      requiredRoleId: settings.requiredRoleId || '',
+      color: settings.color || DEFAULT_FORM.color,
+      dmWinner: settings.dmWinner !== false,
+      host: settings.host || '',
+    });
+    setShowForm(true);
+  };
+
+  const openSettings = () => {
+    setDraft({
+      channelId: settings.channelId || '',
+      duration: validDuration(settings.duration),
+      winners: settings.winners || 1,
+      requiredRoleId: settings.requiredRoleId || '',
+      color: settings.color || DEFAULT_FORM.color,
+      dmWinner: settings.dmWinner !== false,
+      host: settings.host || '',
+    });
+    setShowSettings(true);
+  };
+
+  const saveSettings = async () => {
+    if (!draft) return;
+    setSavingSettings(true);
+    try {
+      const saved = await api.post(`/api/guild/${guild.id}/giveaways/settings`, draft);
+      setSettings(saved || draft);
+      setShowSettings(false);
+      toast.success('Giveaway defaults saved — new forms are pre-filled!');
+    } catch (e) {
+      toast.error(e.message || 'Failed to save defaults.');
+    }
+    setSavingSettings(false);
+  };
 
   const create = async () => {
     if (!form.prize.trim()) { toast.error('Prize name is required.'); return; }
@@ -318,6 +418,7 @@ export default function Giveaways({ guild, guildData, permLevel }) {
       requiredRoleId: g.requiredRoleId || '',
       color:          g.color || '#FF69B4',
       dmWinner:       g.dmWinner ?? true,
+      host:           g.host || '',
     });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -340,7 +441,18 @@ export default function Giveaways({ guild, guildData, permLevel }) {
           <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
         </button>
         {canCreate && (
-          <button onClick={() => setShowForm(v => !v)}
+          <button onClick={() => setShowSettings(v => { if (!v) openSettings(); return !v; })}
+            className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+              showSettings
+                ? 'bg-white/[0.05] border border-white/10 text-gray-400'
+                : 'border border-white/10 text-gray-400 hover:text-cyan-300 hover:border-cyan-500/30'
+            }`}>
+            <SlidersHorizontal size={13} />
+            Defaults
+          </button>
+        )}
+        {canCreate && (
+          <button onClick={() => (showForm ? setShowForm(false) : openNew())}
             className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
               showForm
                 ? 'bg-white/[0.05] border border-white/10 text-gray-400'
@@ -351,6 +463,88 @@ export default function Giveaways({ guild, guildData, permLevel }) {
           </button>
         )}
       </PageHeader>
+
+      {/* Defaults settings */}
+      {showSettings && draft && (
+        <div className="cyber-card p-5 border-purple-500/25 animate-slide-up">
+          <h2 className="text-sm font-bold text-white mb-1 flex items-center gap-2">
+            <SlidersHorizontal size={14} className="text-purple-300" /> Default Settings
+          </h2>
+          <p className="text-[11px] text-gray-600 mb-4">Pre-fill every new giveaway form. Existing giveaways are untouched.</p>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="cyber-label mb-1.5">Default Channel</label>
+                <select value={draft.channelId}
+                  onChange={e => setDraft(d => ({ ...d, channelId: e.target.value }))}
+                  className="cyber-select">
+                  <option value="">— None —</option>
+                  {channels.map(c => <option key={c.id} value={c.id}>#{c.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="cyber-label mb-1.5">Default Duration</label>
+                <DurationInput value={draft.duration}
+                  onChange={v => setDraft(d => ({ ...d, duration: v }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="cyber-label mb-1.5">Default Winners (1–20)</label>
+                <input type="number" min="1" max="20" value={draft.winners}
+                  onChange={e => setDraft(d => ({ ...d, winners: Math.min(20, Math.max(1, Number(e.target.value))) }))}
+                  className="cyber-input" />
+              </div>
+              <div>
+                <label className="cyber-label mb-1.5">Default Required Role</label>
+                <select value={draft.requiredRoleId}
+                  onChange={e => setDraft(d => ({ ...d, requiredRoleId: e.target.value }))}
+                  className="cyber-select">
+                  <option value="">— Anyone can enter —</option>
+                  {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="cyber-label mb-1.5">Default Host <span className="text-gray-600">(optional)</span></label>
+              <input type="text" placeholder="e.g. EB Team" maxLength={32}
+                value={draft.host || ''}
+                onChange={e => setDraft(d => ({ ...d, host: e.target.value }))}
+                className="cyber-input" />
+            </div>
+            <div className="grid grid-cols-2 gap-3 items-end">
+              <div>
+                <label className="cyber-label mb-1.5">Default Color</label>
+                <div className="flex gap-2 items-center">
+                  <input type="color" value={draft.color}
+                    onChange={e => setDraft(d => ({ ...d, color: e.target.value }))}
+                    className="h-8 w-10 rounded-lg border border-cyan-500/20 cursor-pointer p-0.5 bg-transparent" />
+                  <input type="text" value={draft.color} maxLength={7}
+                    onChange={e => setDraft(d => ({ ...d, color: e.target.value }))}
+                    className="cyber-input font-mono text-xs w-24" />
+                </div>
+              </div>
+              <label className="flex items-center gap-2.5 cursor-pointer group pb-1">
+                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
+                  draft.dmWinner ? 'bg-cyan-500 border-cyan-500' : 'border-white/20 group-hover:border-cyan-500/40'
+                }`} onClick={() => setDraft(d => ({ ...d, dmWinner: !d.dmWinner }))}>
+                  {draft.dmWinner && <span className="text-[8px] text-black font-bold">✓</span>}
+                </div>
+                <p className="text-xs text-gray-300">DM winners by default</p>
+              </label>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button onClick={saveSettings} disabled={savingSettings} className="cyber-button-solid flex items-center gap-2">
+                {savingSettings ? 'Saving…' : 'Save Defaults'}
+              </button>
+              <button onClick={() => { setShowSettings(false); setDraft(null); }}
+                className="px-4 py-2 text-sm text-gray-500 hover:text-gray-300 transition-colors">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="relative">
         <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search prizes…" className="cyber-input text-xs" />
@@ -399,11 +593,8 @@ export default function Giveaways({ guild, guildData, permLevel }) {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="cyber-label mb-1.5">Duration</label>
-                <select value={form.duration}
-                  onChange={e => setForm(f => ({ ...f, duration: Number(e.target.value) }))}
-                  className="cyber-select">
-                  {DURATIONS.map(d => <option key={d.ms} value={d.ms}>{d.label}</option>)}
-                </select>
+                <DurationInput value={form.duration}
+                  onChange={v => setForm(f => ({ ...f, duration: v }))} />
               </div>
               <div>
                 <label className="cyber-label mb-1.5">Winners <span className="text-gray-600">(1–20)</span></label>
@@ -435,6 +626,15 @@ export default function Giveaways({ guild, guildData, permLevel }) {
                   {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                 </select>
               </div>
+            </div>
+
+            {/* Host */}
+            <div>
+              <label className="cyber-label mb-1.5">Host <span className="text-gray-600">(optional, shown on card + panel)</span></label>
+              <input type="text" placeholder="e.g. EB Team" maxLength={32}
+                value={form.host}
+                onChange={e => setForm(f => ({ ...f, host: e.target.value }))}
+                className="cyber-input" />
             </div>
 
             {/* Color */}
@@ -477,8 +677,9 @@ export default function Giveaways({ guild, guildData, permLevel }) {
                 <span style={{ color: form.color }}>🎉 <strong>{form.prize}</strong></span>
                 <span className="text-gray-500"> · {form.winners} winner{form.winners !== 1 ? 's' : ''}</span>
                 <span className="text-gray-500"> · #{channels.find(c => c.id === form.channelId)?.name}</span>
-                <span className="text-gray-500"> · ends in {DURATIONS.find(d => d.ms === form.duration)?.label}</span>
+                <span className="text-gray-500"> · ends in {fmtDuration(form.duration)}</span>
                 {form.requiredRoleId && <span className="text-purple-400"> · 🛡 {roles.find(r => r.id === form.requiredRoleId)?.name}</span>}
+                {form.host && <span className="text-cyan-400"> · by {form.host}</span>}
               </div>
             )}
 

@@ -130,8 +130,8 @@ export default function MusicController({ guild }) {
         badgeColor={hasTrack ? (paused ? 'yellow' : 'green') : 'cyan'}
       />
 
-      <div className="grid md:grid-cols-5 gap-4">
-        <div className="md:col-span-3 cyber-card p-5">
+      <div className="grid gap-4 items-start lg:grid-cols-5">
+        <div className="lg:col-span-3 cyber-card p-5 min-w-0">
           {loading ? (
             <div className="flex items-center gap-3 h-20">
               <Loader2 size={18} className="animate-spin text-cyan-400" />
@@ -166,8 +166,12 @@ export default function MusicController({ guild }) {
 
               <div className="h-1.5 rounded-full bg-white/10 mb-5 overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-cyan-500 transition-all duration-1000"
-                  style={{ width: `${data.current?.progress || 0}%`, boxShadow: '0 0 8px rgba(0,255,255,0.6)' }}
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.round(data.current?.progress || 0)}
+                  className={`h-full rounded-full bg-gradient-to-r from-cyan-400 via-cyan-500 to-blue-500 transition-[width] duration-1000 ease-linear ${paused ? 'opacity-50' : 'animate-pulse-cyan'}`}
+                  style={{ width: `${data.current?.progress || 0}%` }}
                 />
               </div>
 
@@ -229,7 +233,7 @@ export default function MusicController({ guild }) {
           )}
         </div>
 
-        <div className="md:col-span-2 space-y-4">
+        <div className="lg:col-span-2 space-y-4 lg:sticky lg:top-4 self-start w-full min-w-0">
           <div className="cyber-card p-4">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Audio Filters</p>
             <div className="flex flex-wrap gap-1.5">

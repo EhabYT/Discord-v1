@@ -21,6 +21,9 @@
 
 process.env.DASHBOARD_PORT = process.env.DASHBOARD_PORT || '3188';
 process.env.DASHBOARD_AUTH = 'true';
+// The guild-admin fixture member doubles as system owner so the
+// developer-only music desk has a positive case below.
+process.env.OWNER_ID = 'admin';
 
 const http = require('http');
 const { EventEmitter } = require('events');
@@ -115,6 +118,7 @@ async function loginAs(id) {
     const srv = require('../../backend/src/server.js');
     srv.app.get('/__login/:id', (r, s) => {
         r.session.user = { id: r.params.id };
+        r.session.account = { id: `account-${r.params.id}`, mfaEnabled: true };
         r.session.userGuilds = [{ id: GUILD_A }];
         r.session.save(() => s.json({ ok: true }));
     });
@@ -152,13 +156,17 @@ async function loginAs(id) {
         method: 'POST', cookie: adminCookie, body: { roleId: 'not-a-snowflake', level: 2 } });
     check('malformed role id is rejected', r.status === 400, `${r.status}`);
 
-    console.log('\nMusic router must enforce guild isolation:\n');
+    console.log('\nMusic desk is developer-only:\n');
 
     r = await req(`/api/music/${GUILD_B}`, { cookie: viewerCookie });
     check('cross-guild queue read is refused', r.status === 403, `${r.status}`);
 
     r = await req(`/api/music/${GUILD_A}`, { cookie: viewerCookie });
-    check('own-guild queue read still works', r.status === 200, `${r.status}`);
+    check('guild viewer without system role is refused music',
+        r.status === 403 && r.body.includes('SYSTEM_ROLE_REQUIRED'), `${r.status}`);
+
+    r = await req(`/api/music/${GUILD_A}`, { cookie: adminCookie });
+    check('system owner retains music access', r.status === 200, `${r.status}`);
 
     r = await req(`/api/events/stream?guildId=${GUILD_B}`, { cookie: viewerCookie });
     check('cross-guild live event stream is refused', r.status === 403, `${r.status}`);

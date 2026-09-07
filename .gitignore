@@ -12,6 +12,9 @@ json.sqlite-shm
 *.sqlite-journal
 *.sqlite-wal
 *.sqlite-shm
+# DB-less local fallback snapshot (same class of runtime data as above)
+ephemeral-fallback.json
+database/ephemeral-fallback.json
 
 # Runtime logs & tunnel state
 logs/*

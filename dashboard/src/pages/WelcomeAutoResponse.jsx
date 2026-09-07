@@ -12,8 +12,10 @@ import api from '../api.js';
 const VARS = [
   { v: '{user}',     desc: 'Mention the member (@NewMember)' },
   { v: '{userName}', desc: 'Username without @' },
-  { v: '{guild}',    desc: 'Server name' },
-  { v: '{count}',    desc: 'Current member count' },
+  { v: '{guild}',    desc: 'Server name (also [server])' },
+  { v: '{count}',    desc: 'Current member count (also [memberCount])' },
+  { v: '{inviter}',  desc: 'Mention the inviter, join only (also [inviter])' },
+  { v: '{inviterName}', desc: 'Inviter name, join only (also [inviterName])' },
 ];
 
 function VarPills({ onInsert }) {
@@ -43,10 +45,12 @@ function VarPills({ onInsert }) {
 /* ── Discord message preview ────────────────────────────────────── */
 function DiscordPreview({ text, embed, guildName }) {
   const replace = str => str
-    ?.replace(/{user}/g, '@NewMember')
-    .replace(/{userName}/g, 'NewMember')
-    .replace(/{guild}/g, guildName || 'Your Server')
-    .replace(/{count}/g, '1,234');
+    ?.replace(/{user}/g, '@NewMember').replace(/\[user\]/g, '@NewMember')
+    .replace(/{userName}/g, 'NewMember').replace(/\[userName\]/g, 'NewMember')
+    .replace(/{guild}/g, guildName || 'Your Server').replace(/\[server\]/g, guildName || 'Your Server')
+    .replace(/{count}/g, '1,234').replace(/\[memberCount\]/g, '1,234')
+    .replace(/{inviter}/g, '@Inviter').replace(/\[inviter\]/g, '@Inviter')
+    .replace(/{inviterName}/g, 'Inviter').replace(/\[inviterName\]/g, 'Inviter');
 
   return (
     <div className="rounded-xl bg-[#36393f] border border-white/10 p-4">

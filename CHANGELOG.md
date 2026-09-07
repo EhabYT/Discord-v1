@@ -1,5 +1,34 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- ProBot-style welcome variables: `[user]`, `[userName]`, `[server]`,
+  `[memberCount]`, `[inviter]`, `[inviterName]` now resolve everywhere the
+  `{...}` forms do (join message/embed/DM, leave message, dashboard test),
+  via one shared `shared/utils/welcome-vars.js` helper (covered by
+  `tests/unit/welcome-vars.test.js`). Leave messages also gained `{userName}`.
+- Giveaway default settings (`GET/POST /api/guild/:id/giveaways/settings`):
+  default channel, duration, winners, color, DM-winner flag, and required
+  role. The dashboard Giveaways page has a Defaults card and pre-fills every
+  new giveaway form from them. Giveaways also accept a free-text host (shown
+  on the card and the Discord panel), a custom duration beyond the presets,
+  and the Discord panel now lists the required role when one is set.
+- DB-less fallback now snapshots dashboard settings to
+  `database/ephemeral-fallback.json` (gitignored), so restarts no longer wipe
+  reaction-role panels and other configs. Sessions still reset on restart;
+  Supabase PostgreSQL remains the production store.
+
+### Changed
+- Dashboard dependencies upgraded: `lucide-react` 0.577 → 1.x,
+  `autoprefixer` → 10.5.5, `postcss` → 8.5.28. Tailwind stays on v3
+  (v4 needs a config migration with visual regression risk).
+- Dashboard Music desk (`Music` page and `/api/music/*`) is now restricted to
+  `DEVELOPER` and `SUPER_ADMIN` system roles. Frontend navigation, command
+  palette, mobile dock, and overview shortcuts hide it from everyone else;
+  the backend fails closed with `403 SYSTEM_ROLE_REQUIRED`. Discord `/play`
+  and guild DJ levels are unchanged.
+
 ## [3.1.0] - 2026-08-29
 
 ### Added

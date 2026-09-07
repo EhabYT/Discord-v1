@@ -98,6 +98,9 @@ export default function Home({ health, auth, onEnter }) {
                 {t('home.invite', 'Invite')}
               </a>
             )}
+            <a href="/login" className="hidden sm:inline-flex text-xs px-3 py-2 text-zinc-400 hover:text-white transition-colors">
+              {t('home.login', 'Log in')}
+            </a>
             <button onClick={() => go('overview')} className="cyber-button-solid text-xs px-3 py-2 inline-flex items-center gap-1.5">
               {t('home.openDashboard', 'Open dashboard')} <ArrowRight size={13} />
             </button>
@@ -143,6 +146,12 @@ export default function Home({ health, auth, onEnter }) {
               {auth?.oauthEnabled && !auth?.loggedIn && (
                 <a href="/api/auth/discord" className="cyber-button px-5 py-2.5">{t('common.loginDiscord', 'Login with Discord')}</a>
               )}
+              <a href="/register" className="cyber-button px-5 py-2.5 inline-flex items-center">
+                {t('home.signup', 'Sign up')}
+              </a>
+              <a href="/login" className="px-5 py-2.5 text-sm text-zinc-400 hover:text-white transition-colors inline-flex items-center">
+                {t('home.login', 'Log in')}
+              </a>
             </div>
           </div>
 

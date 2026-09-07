@@ -539,7 +539,7 @@ async function createRoles(guild, { which = 'both', verifiedName = 'Verified', u
     if (wantV) {
         const role = await guild.roles.create({
             name: String(verifiedName || 'Verified').slice(0, 100),
-            color: 0x00fbff,
+            colors: { primary: 0x00fbff },
             reason: 'EB verification — verified role',
             mentionable: false,
         });
@@ -548,7 +548,7 @@ async function createRoles(guild, { which = 'both', verifiedName = 'Verified', u
     if (wantU) {
         const role = await guild.roles.create({
             name: String(unverifiedName || 'Unverified').slice(0, 100),
-            color: 0x6b7280,
+            colors: { primary: 0x6b7280 },
             hoist: false,
             reason: 'EB verification — join / pending role',
             mentionable: false,

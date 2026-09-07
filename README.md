@@ -184,12 +184,19 @@ Dashboard levels:
 | Level | Name | Access |
 |---:|---|---|
 | 0 | Viewer | Read-only overview, statistics, and member data |
-| 1 | DJ | Viewer plus music controls |
+| 1 | DJ | Viewer plus Discord music commands (`/play` and playback controls) |
 | 2 | Moderator | DJ plus moderation and community operations |
 | 3 | Admin | Full guild configuration, permissions, backup, and restore |
 
 The browser permission check is only a UX layer. Every sensitive action is
 verified again by backend middleware.
+
+The Dashboard Music desk (`Music` page and `/api/music/*`) additionally
+requires a `DEVELOPER` or `SUPER_ADMIN` system role on top of guild access.
+Guild DJ levels govern only the Discord `/play` command, not the dashboard
+desk, because the desk can drive voice connections remotely. Ordinary users,
+Viewers, DJs, Moderators, Admins, and `SUPPORT` receive HTTP 403
+`SYSTEM_ROLE_REQUIRED` there.
 
 ### System operations
 
@@ -265,7 +272,7 @@ React 19 + Vite, served from the same origin as the Express API.
 - Overview
 - Analytics, leaderboard, and live activity
 - Members and moderation
-- Music
+- Music desk (DEVELOPER/SUPER_ADMIN only)
 - Giveaways and progression
 - Tickets and reaction roles
 - Birthdays, suggestions, polls, tags, and confessions
@@ -314,6 +321,7 @@ Legacy `/api/dev/*` requests receive a method-preserving `308` redirect.
 | Guild operational summary | ✓ | ✓ | ✓ |
 | Read feature flags | ✓ | ✓ | ✓ |
 | Logs | — | ✓ | ✓ |
+| Music desk (queue, filters, playback) | — | ✓ | ✓ |
 | Environment configured status | — | ✓ | ✓ |
 | Database diagnostics | — | ✓ | ✓ |
 | Performance metrics | — | ✓ | ✓ |
@@ -532,7 +540,7 @@ Current verification scope:
 - 100 Discord commands
 - Bot Config schema and AutoMod normalization
 - 23 security suites
-- 183 API routes
+- 185 API routes
 - OAuth, sessions, CSRF, and guild isolation
 - Discord hierarchy and privacy redaction
 - Abuse and rate limits

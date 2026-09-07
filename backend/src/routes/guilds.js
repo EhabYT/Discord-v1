@@ -11,6 +11,17 @@ const logger = require('eb-bot-shared/lib/logger');
 const { ENTRY_REACTION, finalizeGiveaway, rerollGiveaway } = require('eb-bot-shared/services/giveaways');
 const registerAnalyticsRoutes = require('./guilds/analytics');
 
+/** Strict http(s) URL check for Discord embed fields (setURL/setImage/... throw shapeshift 500s otherwise). */
+function isHttpUrl(value) {
+    if (typeof value !== 'string' || !value.trim()) return false;
+    try {
+        const url = new URL(value.trim());
+        return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch {
+        return false;
+    }
+}
+
 module.exports = (botClient) => {
     // Guard implementations live in middleware/guildAccess.js so that EVERY
     // guild-scoped router shares one definition. They were previously closures
@@ -937,11 +948,53 @@ module.exports = (botClient) => {
         } catch (err) { next(err); }
     });
 
+    // Giveaway default settings prefill the dashboard create form.
+    router.get('/giveaways/settings', async (req, res, next) => {
+        try {
+            res.json(await db.get(`giveaway_settings_${req.params.guildId}`) || {});
+        } catch (err) { next(err); }
+    });
+
+    router.post('/giveaways/settings', requirePerm(2), async (req, res, next) => {
+        try {
+            const guild = req.guild;
+            const {
+                channelId = '', duration, winners = 1,
+                color = '#FF69B4', dmWinner = true, requiredRoleId = '', host = '',
+            } = req.body || {};
+            if (channelId && !guild.channels.cache.has(channelId)) {
+                return res.status(404).json({ error: 'Default channel not found' });
+            }
+            if (requiredRoleId && !guild.roles.cache.has(requiredRoleId)) {
+                return res.status(400).json({ error: 'Default required role not found' });
+            }
+            const durationMs = duration == null || duration === '' ? null : Number(duration);
+            if (durationMs != null && (!Number.isFinite(durationMs) || durationMs < 60 * 1000 || durationMs > 30 * 24 * 60 * 60 * 1000)) {
+                return res.status(400).json({ error: 'Default duration must be between 1 minute and 30 days' });
+            }
+            const winnerCount = Number(winners);
+            if (!Number.isInteger(winnerCount) || winnerCount < 1 || winnerCount > 20) {
+                return res.status(400).json({ error: 'Default winners must be between 1 and 20' });
+            }
+            const settings = {
+                channelId: channelId || '',
+                duration: durationMs,
+                winners: winnerCount,
+                color: /^#[0-9a-f]{6}$/i.test(String(color)) ? String(color) : '#FF69B4',
+                dmWinner: dmWinner !== false,
+                requiredRoleId: requiredRoleId || '',
+                host: String(host || '').trim().slice(0, 32),
+            };
+            await db.set(`giveaway_settings_${req.params.guildId}`, settings);
+            res.json(settings);
+        } catch (err) { next(err); }
+    });
+
     router.post('/giveaways/create', requirePerm(2), async (req, res, next) => {
         try {
             const {
                 prize, description = '', duration, winners = 1, channelId,
-                requiredRoleId = '', color = '#FF69B4', dmWinner = true
+                requiredRoleId = '', color = '#FF69B4', dmWinner = true, host = ''
             } = req.body;
             const guild = req.guild;
             const channel = guild.channels.cache.get(channelId);
@@ -959,6 +1012,7 @@ module.exports = (botClient) => {
             if (requiredRoleId && !guild.roles.cache.has(requiredRoleId)) {
                 return res.status(400).json({ error: 'Required role not found' });
             }
+            const hostName = String(host || '').trim().slice(0, 32);
 
             const safeColor = /^#[0-9a-f]{6}$/i.test(color) ? color : '#FF69B4';
             const endsAt = Date.now() + durationMs;
@@ -967,6 +1021,8 @@ module.exports = (botClient) => {
                 `**Prize:** ${String(prize).trim()}`,
                 `**Ends:** <t:${Math.round(endsAt / 1000)}:R>`,
                 `**Winners:** ${winnerCount}`,
+                requiredRoleId ? `**Requires:** <@&${requiredRoleId}>` : '',
+                hostName ? `**Hosted by:** ${hostName}` : '',
                 'React with 🎉 to enter!'
             ].filter(Boolean).join('\n');
             const embed = new EmbedBuilder()
@@ -989,6 +1045,7 @@ module.exports = (botClient) => {
                 endsAt,
                 active: true,
                 hostId: 'Dashboard',
+                host: hostName,
                 requiredRoleId: requiredRoleId || null,
                 color: safeColor,
                 dmWinner: dmWinner !== false,
@@ -1383,11 +1440,8 @@ module.exports = (botClient) => {
             const channel = channelId ? guild.channels.cache.get(channelId) : null;
             if (!channel) return res.status(400).json({ error: 'Channel not found' });
             const member = guild.members.me;
-            let msg = (config.message || 'Welcome {user} to {guild}!')
-                .replace(/{user}/g, member.toString())
-                .replace(/{userName}/g, member.user.username)
-                .replace(/{guild}/g, guild.name)
-                .replace(/{count}/g, guild.memberCount.toString());
+            const { formatWelcomeVars } = require('eb-bot-shared/utils/welcome-vars');
+            const msg = formatWelcomeVars(config.message || 'Welcome {user} to {guild}!', { member });
             await channel.send({ content: `**[Test Welcome]** ${msg}` });
             res.json({ success: true });
         } catch (err) { next(err); }
@@ -1443,6 +1497,40 @@ module.exports = (botClient) => {
                 image, thumbnail, fields, addTimestamp } = req.body;
             const channel = req.guild.channels.cache.get(channelId);
             if (!channel) return res.status(404).json({ error: 'Channel not found' });
+
+            // Discord builder validation throws (HTTP 500 + full stack in the
+            // logs) on the first bad value. Reject bad input here with 400.
+            const urlFields = { titleUrl, authorIconUrl, footerIconUrl, image, thumbnail };
+            for (const [name, value] of Object.entries(urlFields)) {
+                if (value != null && value !== '' && !isHttpUrl(value)) {
+                    return res.status(400).json({ error: `Invalid ${name}: must be an http(s) URL` });
+                }
+            }
+            if (title != null && String(title).length > 256) {
+                return res.status(400).json({ error: 'Title must be 256 characters or fewer' });
+            }
+            if (description != null && String(description).length > 4096) {
+                return res.status(400).json({ error: 'Description must be 4096 characters or fewer' });
+            }
+            if (author != null && String(author).length > 256) {
+                return res.status(400).json({ error: 'Author name must be 256 characters or fewer' });
+            }
+            if (footer != null && String(footer).length > 2048) {
+                return res.status(400).json({ error: 'Footer text must be 2048 characters or fewer' });
+            }
+            if (color != null && color !== '') {
+                try { require('discord.js').resolveColor(color); } catch {
+                    return res.status(400).json({ error: 'Invalid color: use #rrggbb, a 0-16777215 number, or a color name' });
+                }
+            }
+            if (Array.isArray(fields)) {
+                if (fields.length > 25) return res.status(400).json({ error: 'At most 25 fields are allowed' });
+                for (const field of fields) {
+                    if (field && (String(field.name || '').length > 256 || String(field.value || '').length > 1024)) {
+                        return res.status(400).json({ error: 'Field names allow 256 and values 1024 characters' });
+                    }
+                }
+            }
 
             const embed = new EmbedBuilder().setColor(color || '#00fbff');
             if (title) { embed.setTitle(title); if (titleUrl) embed.setURL(titleUrl); }

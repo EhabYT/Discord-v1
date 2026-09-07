@@ -230,12 +230,18 @@ class PageErrorBoundary extends React.Component {
   }
 }
 
-function MobileDock({ page, onNavigate, onSearch }) {
+function MobileDock({ page, onNavigate, onSearch, canSeeMusicDesk }) {
   const { t } = useI18n();
+  const dockIds = DOCK_PAGES.filter((id) => {
+    const item = SEARCHABLE_PAGES.find((p) => p.id === id);
+    if (!item) return false;
+    if (item.devOnly && !canSeeMusicDesk) return false;
+    return true;
+  });
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 glass-header border-t border-white/[0.06] pb-[env(safe-area-inset-bottom)]">
-      <div className="grid grid-cols-5 h-14">
-        {DOCK_PAGES.map((id) => {
+      <div className={`grid h-14 ${dockIds.length >= 4 ? 'grid-cols-5' : 'grid-cols-4'}`}>
+        {dockIds.map((id) => {
           const item = SEARCHABLE_PAGES.find((p) => p.id === id);
           if (!item) return null;
           const Icon = item.icon;
@@ -417,6 +423,11 @@ export default function App() {
     || developerAccess.role !== 'NONE'
     || developerAccess.canUnlock === true;
   const systemPageDenied = (page === 'system' || page === 'developer') && !canSeeSystem;
+  // The Music desk is developer-only (SUPPORT excluded), mirroring the
+  // backend SYSTEM_ROLES.DEVELOPER gate on /api/music/*.
+  const canSeeMusicDesk = ['DEVELOPER', 'SUPER_ADMIN'].includes(developerAccess.baseRole)
+    || ['DEVELOPER', 'SUPER_ADMIN'].includes(developerAccess.role);
+  const musicPageDenied = page === 'music' && !canSeeMusicDesk;
   const publicUrl = health?.publicUrl || '';
 
   if (loading || authLoading) {
@@ -574,12 +585,14 @@ export default function App() {
                   <code className="block mt-1 text-[11px] text-cyan-300 break-all">{auth.redirectUri}</code>
                 </div>
               )}
-              {systemPageDenied ? (
+              {systemPageDenied || musicPageDenied ? (
                 <div className="min-h-full flex items-center justify-center p-8">
                   <div className="cyber-card max-w-sm p-7 text-center">
                     <AlertTriangle size={28} className="mx-auto text-red-300 mb-3" />
                     <p className="text-white font-semibold">System access required</p>
-                    <p className="text-sm text-zinc-500 mt-2">This backend page is available only to configured SUPPORT, DEVELOPER, or SUPER_ADMIN identities.</p>
+                    <p className="text-sm text-zinc-500 mt-2">{musicPageDenied
+                      ? 'The Music desk is available only to configured DEVELOPER or SUPER_ADMIN identities.'
+                      : 'This backend page is available only to configured SUPPORT, DEVELOPER, or SUPER_ADMIN identities.'}</p>
                     <button onClick={() => navigate('overview')} className="cyber-button mt-5">Return to dashboard</button>
                   </div>
                 </div>
@@ -623,6 +636,7 @@ export default function App() {
                         guildData={guildData}
                         setGuildData={setGuildData}
                         permLevel={permLevel}
+                        developerAccess={developerAccess}
                         onNavigate={navigate}
                         pageHint={PAGE_HINTS[page]}
                         publicUrl={publicUrl}
@@ -637,7 +651,7 @@ export default function App() {
         )}
 
         {!isHome && !mobileOpen && !paletteOpen && (
-          <MobileDock page={page} onNavigate={navigate} onSearch={() => setPaletteOpen(true)} />
+          <MobileDock page={page} onNavigate={navigate} onSearch={() => setPaletteOpen(true)} canSeeMusicDesk={canSeeMusicDesk} />
         )}
 
         <CommandPalette

@@ -14,6 +14,10 @@ export default function Sidebar({
   const canSeeDeveloper = developerAccess.baseRole !== 'NONE'
     || developerAccess.role !== 'NONE'
     || developerAccess.canUnlock === true;
+  // The Music desk is developer-only: unlike the Developer section above,
+  // SUPPORT identities are excluded here to mirror the backend gate.
+  const canSeeMusicDesk = ['DEVELOPER', 'SUPER_ADMIN'].includes(developerAccess.baseRole)
+    || ['DEVELOPER', 'SUPER_ADMIN'].includes(developerAccess.role);
 
   const filteredGuilds = useMemo(() => {
     const q = guildQuery.trim().toLowerCase();
@@ -138,6 +142,7 @@ export default function Sidebar({
           }
           if (item.minLevel && permLevel < item.minLevel) return null;
           if (item.systemOnly && !canSeeDeveloper) return null;
+          if (item.devOnly && !canSeeMusicDesk) return null;
           const { id, icon: Icon, label } = item;
           const isActive = page === id;
           return (

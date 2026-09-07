@@ -54,6 +54,21 @@ function classify(err) {
 
     // discord.js: DiscordAPIError / HTTPError carry `code` and `status`.
     const dcode = typeof err?.code === 'number' ? err.code : null;
+    if (dcode === 50035) {
+        // Invalid Form Body: Discord names the offending field
+        // (e.g. components[0]...emoji.name). That detail is the operator's
+        // own payload reflected back, so it is safe to expose and it turns
+        // a cryptic rejection into an actionable message.
+        const detail = String(err?.message || '').replace(/\s+/g, ' ').slice(0, 220);
+        return {
+            status: 400,
+            message: detail && detail !== 'Invalid Form Body'
+                ? `Discord rejected the request payload: ${detail}`
+                : 'Discord rejected the request payload',
+            code: 'DISCORD_50035',
+            expose: true,
+        };
+    }
     if (dcode !== null) {
         const map = {
             10003: [404, 'Unknown channel'],
@@ -65,7 +80,6 @@ function classify(err) {
             30005: [409, 'This server has reached Discord\'s role limit'],
             50001: [403, 'The bot cannot access that resource'],
             50013: [403, 'The bot is missing permissions for that action'],
-            50035: [400, 'Discord rejected the request payload'],
         };
         const hit = map[dcode];
         if (hit) return { status: hit[0], message: hit[1], code: `DISCORD_${dcode}`, expose: true };
@@ -95,6 +109,27 @@ function classify(err) {
             status: 503,
             message: 'Database is temporarily unavailable. Verify DATABASE_URL and Supabase Session Pooler settings.',
             code: 'DATABASE_UNAVAILABLE',
+            expose: true,
+        };
+    }
+
+    // discord-player failures are operational (unresolvable URL/query, missing
+    // voice engine), not application crashes. Surfacing them as 500 filled
+    // error.log with full stacks for ordinary user input.
+    if (err?.name === 'NoResultError'
+        || /no results found/i.test(String(err?.message || ''))) {
+        return {
+            status: 400,
+            message: 'No playable track found for that URL or search query.',
+            code: 'MUSIC_NO_RESULTS',
+            expose: true,
+        };
+    }
+    if (/could not load ffmpeg/i.test(String(err?.message || ''))) {
+        return {
+            status: 503,
+            message: 'Voice audio engine is unavailable. Try again shortly.',
+            code: 'MUSIC_ENGINE_UNAVAILABLE',
             expose: true,
         };
     }

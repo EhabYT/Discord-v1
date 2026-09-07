@@ -1,7 +1,15 @@
+const fs = require('fs');
+const path = require('path');
 const { Pool } = require('pg');
 
 const isTestProcess = process.env.NODE_ENV === 'test'
     || process.argv.some((arg) => /(?:^|[\\/])tests[\\/]/.test(arg));
+
+// Local JSON snapshot used ONLY for the DB-less development fallback (never
+// in tests, never when DATABASE_URL is configured). Dashboard configs such
+// as reaction-role panels otherwise vanish on every restart, leaving dead
+// buttons behind. Sessions still reset on restart by design.
+const FALLBACK_SNAPSHOT = path.join(__dirname, 'ephemeral-fallback.json');
 
 function normalizePrefixOptions(prefix, options = {}) {
     const cleanPrefix = String(prefix || '');
@@ -14,7 +22,33 @@ function normalizePrefixOptions(prefix, options = {}) {
 }
 
 class MemoryDatabase {
-    constructor() { this.data = new Map(); }
+    constructor({ persist = false, snapshotPath = FALLBACK_SNAPSHOT } = {}) {
+        this.data = new Map();
+        this.persist = persist === true && !isTestProcess;
+        this.snapshotPath = snapshotPath;
+        if (this.persist) this.loadSnapshot();
+    }
+    loadSnapshot() {
+        let raw = null;
+        try { raw = fs.readFileSync(this.snapshotPath, 'utf8'); } catch { return; }
+        try {
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                for (const [key, value] of Object.entries(parsed)) this.data.set(String(key), value);
+            }
+        } catch {
+            // A corrupt snapshot must never prevent startup; start empty.
+        }
+    }
+    saveSnapshot() {
+        if (!this.persist) return;
+        try {
+            fs.mkdirSync(path.dirname(this.snapshotPath), { recursive: true });
+            fs.writeFileSync(this.snapshotPath, JSON.stringify(Object.fromEntries(this.data)), 'utf8');
+        } catch {
+            // Persistence is best-effort; the in-memory state stays authoritative.
+        }
+    }
     ready() { return Promise.resolve(true); }
     withAdvisoryLocks(keys, fn) {
         return fn(this);
@@ -24,9 +58,14 @@ class MemoryDatabase {
     }
     set(key, value) {
         this.data.set(String(key), structuredClone(value === undefined ? null : value));
+        this.saveSnapshot();
         return Promise.resolve(value);
     }
-    delete(key) { return Promise.resolve(this.data.delete(String(key))); }
+    delete(key) {
+        const existed = this.data.delete(String(key));
+        if (existed) this.saveSnapshot();
+        return Promise.resolve(existed);
+    }
     all() {
         return Promise.resolve([...this.data.entries()].map(([id, value]) => ({ id, value: structuredClone(value) })));
     }
@@ -51,6 +90,7 @@ class MemoryDatabase {
         for (const key of [...this.data.keys()]) {
             if (key.startsWith(normalized.prefix)) { this.data.delete(key); deleted++; }
         }
+        if (deleted) this.saveSnapshot();
         return Promise.resolve(deleted);
     }
     keyCount() { return Promise.resolve(this.data.size); }
@@ -263,14 +303,19 @@ class PostgresDatabase {
 
 // Without a configured DATABASE_URL there is no Postgres to talk to. Rather
 // than failing every read, run a process-local in-memory store so the bot
-// and dashboard stay fully usable for the session. Everything in it is
-// ephemeral: a restart wipes it. Production fail-closeds (OAuth env check,
-// DASHBOARD_AUTH refusal, degraded V2 status) stay in force — consumers can
-// distinguish this mode via `db.isEphemeralDatabase`.
+// and dashboard stay fully usable. Dashboard configuration is snapshotted to
+// ephemeral-fallback.json so restarts no longer wipe reaction-role panels and
+// other settings (sessions still reset on restart; connect Postgres for
+// production). Production fail-closeds (OAuth env check, DASHBOARD_AUTH
+// refusal, degraded V2 status) stay in force — consumers can distinguish this
+// mode via `db.isEphemeralDatabase`.
 const useMemoryFallback = !isTestProcess && !!databaseConfigIssue();
-const db = (isTestProcess || useMemoryFallback) ? new MemoryDatabase() : new PostgresDatabase();
+const db = isTestProcess
+    ? new MemoryDatabase()
+    : useMemoryFallback
+        ? new MemoryDatabase({ persist: true })
+        : new PostgresDatabase();
 db.isEphemeralDatabase = useMemoryFallback;
-db.allByPrefix = function(prefix, options) { return this.scanPrefix(prefix, options).then(r => r.rows); };
 
 function getCached(key) { return db.get(key); }
 async function setCached(key, value) { await db.set(key, value); }

@@ -53,7 +53,7 @@ async function applyMapping(member, mapping, adding, all) {
     if (!role) throw new Error('Role not found');
     const me = member.guild.members.me;
     if (me && role.position >= me.roles.highest.position) {
-        throw new Error('Role is higher than the bot');
+        throw new Error(`I cannot manage **${role.name}** — move the bot role above it in Server Settings → Roles`);
     }
     const mode = mapping.mode || 'toggle';
     const has = member.roles.cache.has(role.id);

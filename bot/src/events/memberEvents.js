@@ -89,28 +89,29 @@ module.exports = [
             });
 
             let inviteInfo = 'Unknown';
+            let joinedVia = null;
             try {
                 const newInvites = await member.guild.invites.fetch();
                 const oldInvites = client.invites.get(member.guild.id);
                 const invite = newInvites.find(i => i.uses > (oldInvites?.get(i.code) || 0));
                 if (invite) {
                     inviteInfo = `Code: \`${invite.code}\` | Inviter: ${invite.inviter || 'System'}`;
+                    joinedVia = invite.inviter || null;
                     client.invites.set(member.guild.id, new Map(newInvites.map(i => [i.code, i.uses])));
                 }
             } catch (err) {
                 logger.error(`Invite tracking error in ${member.guild.name}`, { error: err.message });
             }
 
+            // Shared template variables ({user}/[user], {count}/[memberCount],
+            // {inviter}/..., ...). See shared/utils/welcome-vars.js.
+            const { formatWelcomeVars } = require('../../../shared/utils/welcome-vars');
+            const replaceVars = (str) => formatWelcomeVars(str, { member, inviter: joinedVia });
+
             if (welcomeCfg && welcomeCfg.enabled && welcomeCfg.channelId) {
                 const welcomeCh = await member.guild.channels.fetch(welcomeCfg.channelId).catch(() => null);
                 if (welcomeCh) {
-                    let msgContent = welcomeCfg.message || 'Welcome {user} to {guild}!';
-                    const replaceVars = (str) => str
-                        .replace(/{user}/g, String(member))
-                        .replace(/{userName}/g, member.user.username)
-                        .replace(/{guild}/g, member.guild.name)
-                        .replace(/{count}/g, member.guild.memberCount);
-                    msgContent = replaceVars(msgContent);
+                    const msgContent = replaceVars(welcomeCfg.message || 'Welcome {user} to {guild}!');
                     const payload = { content: msgContent };
 
                     // Canvas welcome card (if explicitly enabled via cardEnabled flag)
@@ -151,11 +152,6 @@ module.exports = [
             // DM on join
             if (welcomeCfg && welcomeCfg.dmEnabled && welcomeCfg.dmMessage) {
                 try {
-                    const replaceVars = (str) => str
-                        .replace(/{user}/g, String(member))
-                        .replace(/{userName}/g, member.user.username)
-                        .replace(/{guild}/g, member.guild.name)
-                        .replace(/{count}/g, member.guild.memberCount);
                     await member.user.send(replaceVars(welcomeCfg.dmMessage));
                 } catch (dmErr) {
                     logger.warn(`DM welcome failed for ${member.user?.tag || member.id} (DMs likely disabled)`);
@@ -259,9 +255,10 @@ module.exports = [
             if (welcomeCfg && welcomeCfg.leaveEnabled && leaveChId) {
                 const leaveCh = await member.guild.channels.fetch(leaveChId).catch(() => null);
                 if (leaveCh) {
-                    let msg = welcomeCfg.leaveMessage || '{user} has left the server.';
-                    msg = msg.replace(/{user}/g, member.user?.tag || member.user?.username || member.id).replace(/{guild}/g, member.guild.name).replace(/{count}/g, member.guild.memberCount);
-                    await leaveCh.send(msg);
+                    const { formatWelcomeVars } = require('../../../shared/utils/welcome-vars');
+                    await leaveCh.send(formatWelcomeVars(
+                        welcomeCfg.leaveMessage || '{user} has left the server.', { member }
+                    ));
                 }
             }
 

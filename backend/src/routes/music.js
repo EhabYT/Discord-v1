@@ -2,26 +2,24 @@ const express = require('express');
 const router = express.Router({ mergeParams: true });
 const { QueueRepeatMode } = require('discord-player');
 const { Client: GeniusClient } = require('genius-lyrics');
-const { getUserPermLevel } = require('../middleware/permissions');
-const { sessionUserId } = require('../middleware/auth');
 const guildAccess = require('../middleware/guild-access');
+const { SYSTEM_ROLES, requireSystemRole } = require('../middleware/devauth');
 const genius = new GeniusClient();
 
 module.exports = (botClient) => {
-    async function requireDJ(req, res, next) {
-        const userId = sessionUserId(req);
-        // The explicit localhost-only development bypass has no Discord user.
-        if (!userId || req.method === 'GET') return next();
-        const level = await getUserPermLevel(botClient, req.params.guildId, userId);
-        if (level < 1) return res.status(403).json({ error: 'DJ access required' });
-        return next();
-    }
+    // The Music desk is restricted to backend developers (DEVELOPER and
+    // SUPER_ADMIN system roles). Guild DJ levels still govern the /play
+    // slash command in Discord; this HTTP desk is a privileged surface
+    // because it can drive voice connections remotely.
+    const developerOnly = requireSystemRole(botClient, SYSTEM_ROLES.DEVELOPER);
 
     // Apply authentication, guild validation, membership isolation and Viewer
     // access before exposing queue/lyrics data. Previously any authenticated
     // user could read another server's music endpoints by guessing its id.
+    // The developer gate runs after the session check so anonymous callers
+    // still receive 401 (not 403), keeping the fail-closed contract stable.
     router.use(guildAccess.guildAccessStack(botClient, 0));
-    router.use(requireDJ);
+    router.use(developerOnly);
 
     router.get('/', (req, res, next) => {
         try {
