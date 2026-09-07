@@ -6,9 +6,13 @@
  *
  * Guild dashboard levels (0 Viewer … 3 Admin) gate every `/api/guild/:guildId`
  * route via middleware/guild-access.js. System roles (SUPPORT / DEVELOPER /
- * SUPER_ADMIN) live in middleware/devauth.js and gate `/api/developer/*` and
- * `/api/music/*`. The two halves are intentionally separate: guild Admin never
- * implies system access, and system SUPPORT never implies guild access.
+ * SUPER_ADMIN) live in middleware/devauth.js and gate `/api/developer/*`,
+ * `/api/music/*`, the global `/api/bot/presence` endpoints, the bot
+ * nickname route and the Settings-exclusive guild routes (`/config`,
+ * `/backup`, `/restore`, `/leave`, `/webhook-logs`). Shared guild routes
+ * (command toggles, AutoMod filters) keep their guild levels. The two halves
+ * are intentionally separate: guild Admin never implies system access, and
+ * system SUPPORT never implies guild access.
  */
 const { db } = require('eb-bot-database');
 

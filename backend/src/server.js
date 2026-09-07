@@ -9,6 +9,7 @@ const logger = require('../../shared/lib/logger');
 const { setupSocket, closeSocket, emitLog } = require('./websocket/socket');
 const { addClient, broadcast, clientCount, send, closeAll: closeSseClients } = require('./utils/sse');
 const { requireAuth, logAuthMode } = require('./middleware/auth');
+const { SYSTEM_ROLES, requireSystemRole } = require('./middleware/devauth');
 const { csrfGuard } = require('./middleware/csrf');
 const rl = require('./middleware/rate-limit');
 const { errorHandler } = require('./middleware/errors');
@@ -194,6 +195,12 @@ function startDashboard(botClient) {
     const setupRouter = require('./routes/setup')();
     const v2Router = require('./routes/v2')(botClient);
 
+    // Bot Controls (global presence) are developer-only, like the music desk:
+    // they drive the bot's public identity across every guild. requireAuth
+    // runs first so anonymous callers still receive 401 (not 403), keeping
+    // the fail-closed contract stable.
+    const developerOnly = requireSystemRole(botClient, SYSTEM_ROLES.DEVELOPER);
+
     // Maintenance is enforced server-side for every normal API. Health, OAuth,
     // V2 diagnostics and role-authorized developer APIs remain reachable.
     app.use('/api', maintenanceGuard(botClient));
@@ -250,7 +257,7 @@ function startDashboard(botClient) {
         });
     });
 
-    app.get('/api/bot/presence', requireAuth, (req, res) => {
+    app.get('/api/bot/presence', requireAuth, developerOnly, (req, res) => {
         if (!botClient || !botClient.user) return res.status(503).json({ error: 'Bot is initializing' });
         const presence = botClient.user.presence;
         const act = presence?.activities?.[0];
@@ -266,7 +273,7 @@ function startDashboard(botClient) {
         });
     });
 
-    app.post('/api/bot/presence', requireAuth, async (req, res, next) => {
+    app.post('/api/bot/presence', requireAuth, developerOnly, async (req, res, next) => {
         if (!botClient || !botClient.user) return res.status(503).json({ error: 'Bot is initializing' });
         const status = typeof req.body.status === 'string' ? req.body.status : 'online';
         const activityText = typeof req.body.activityText === 'string' ? req.body.activityText.trim() : '';

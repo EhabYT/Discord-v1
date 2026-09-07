@@ -5,6 +5,7 @@ const { EmbedBuilder, WebhookClient, PermissionsBitField } = require('discord.js
 const { getUserPermLevel } = require('../middleware/permissions');
 const { sessionUserId } = require('../middleware/auth');
 const guildAccess = require('../middleware/guild-access');
+const { SYSTEM_ROLES, requireSystemRole } = require('../middleware/devauth');
 const rl = require('../middleware/rate-limit');
 const { withKeyLock } = require('eb-bot-database/lock');
 const logger = require('eb-bot-shared/lib/logger');
@@ -31,6 +32,9 @@ module.exports = (botClient) => {
     // divergence happens.
     const requirePerm = (minLevel) => guildAccess.requirePerm(botClient, minLevel);
     const hierarchyError = guildAccess.hierarchyError;
+    // The bot-nickname section of Bot Controls is developer-only, like the
+    // global presence endpoints in server.js.
+    const developerOnly = requireSystemRole(botClient, SYSTEM_ROLES.DEVELOPER);
 
     // Apply validation to all routes in this router.
     // requirePerm(0) makes every route — including GETs — require a session.
@@ -889,7 +893,7 @@ module.exports = (botClient) => {
         } catch (err) { next(err); }
     });
 
-    router.post('/config', requirePerm(3), async (req, res, next) => {
+    router.post('/config', requirePerm(3), developerOnly, async (req, res, next) => {
         try {
             const { xpEnabled, autoresponder, djRoleId } = req.body;
             if (typeof xpEnabled !== 'undefined') {
@@ -1370,7 +1374,7 @@ module.exports = (botClient) => {
         } catch (err) { next(err); }
     });
 
-    router.post('/nickname', requirePerm(3), async (req, res, next) => {
+    router.post('/nickname', requirePerm(3), developerOnly, async (req, res, next) => {
         try {
             const me = req.guild.members.me;
             if (!me) return res.status(503).json({ error: 'Bot member not available' });
@@ -1584,7 +1588,7 @@ module.exports = (botClient) => {
 
     // security/automod setting — routing around the redaction on /confessions.
 
-    router.get('/backup', requirePerm(3), rl.heavyRead(), async (req, res, next) => {
+    router.get('/backup', requirePerm(3), developerOnly, rl.heavyRead(), async (req, res, next) => {
         try {
             const { guildId } = req.params;
             const keys = [
@@ -1601,7 +1605,7 @@ module.exports = (botClient) => {
         } catch (err) { next(err); }
     });
 
-    router.post('/restore', requirePerm(3), rl.restore(), async (req, res, next) => {
+    router.post('/restore', requirePerm(3), developerOnly, rl.restore(), async (req, res, next) => {
         try {
             const backup = req.body;
             if (!backup || typeof backup !== 'object' || Array.isArray(backup)) return res.status(400).json({ error: 'Invalid backup data' });
@@ -1618,7 +1622,7 @@ module.exports = (botClient) => {
         } catch (err) { next(err); }
     });
 
-    router.post('/leave', requirePerm(3), async (req, res, next) => {
+    router.post('/leave', requirePerm(3), developerOnly, async (req, res, next) => {
         try {
             await req.guild.leave();
             res.json({ success: true });
@@ -1717,7 +1721,7 @@ module.exports = (botClient) => {
         } catch (err) { next(err); }
     });
 
-    router.post('/webhook-logs', requirePerm(3), async (req, res, next) => {
+    router.post('/webhook-logs', requirePerm(3), developerOnly, async (req, res, next) => {
         try {
             const { url } = req.body;
             if (!url) return res.status(400).json({ error: 'URL required' });

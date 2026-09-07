@@ -24,6 +24,11 @@ const { Collection } = require('discord.js');
 const PORT = process.env.DASHBOARD_PORT;
 const GUILD = '111111111111111111';
 
+// The actor doubles as system owner: the backup export under test here is
+// developer-only (see isolation.test.js), so the throttle assertions need an
+// identity that passes the system gate. Auth itself is covered there.
+process.env.OWNER_ID = 'admin';
+
 const kicked = [];
 
 function mkMember(id, { admin = false, position = 0, kickable = true } = {}) {
@@ -100,6 +105,7 @@ function req(path, { method = 'GET', body, cookie } = {}) {
     const srv = require('../../backend/src/server.js');
     srv.app.get('/__login/:id', (r, s) => {
         r.session.user = { id: r.params.id };
+        r.session.account = { id: `account-${r.params.id}`, mfaEnabled: true };
         r.session.userGuilds = [{ id: GUILD }];
         r.session.save(() => s.json({ ok: true }));
     });

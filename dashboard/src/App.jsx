@@ -467,6 +467,8 @@ export default function App() {
   const canSeeMusicDesk = ['DEVELOPER', 'SUPER_ADMIN'].includes(developerAccess.baseRole)
     || ['DEVELOPER', 'SUPER_ADMIN'].includes(developerAccess.role);
   const musicPageDenied = page === 'music' && !canSeeMusicDesk;
+  const botControlsDenied = page === 'botcontrols' && !canSeeMusicDesk;
+  const settingsDenied = page === 'settings' && !canSeeMusicDesk;
   const publicUrl = health?.publicUrl || '';
 
   if (loading || authLoading) {
@@ -624,13 +626,17 @@ export default function App() {
                   <code className="block mt-1 text-[11px] text-cyan-300 break-all">{auth.redirectUri}</code>
                 </div>
               )}
-              {systemPageDenied || musicPageDenied ? (
+              {systemPageDenied || musicPageDenied || botControlsDenied || settingsDenied ? (
                 <div className="min-h-full flex items-center justify-center p-8">
                   <div className="cyber-card max-w-sm p-7 text-center">
                     <AlertTriangle size={28} className="mx-auto text-red-300 mb-3" />
                     <p className="text-white font-semibold">System access required</p>
                     <p className="text-sm text-zinc-500 mt-2">{musicPageDenied
                       ? 'The Music desk is available only to configured DEVELOPER or SUPER_ADMIN identities.'
+                      : botControlsDenied
+                        ? 'Bot Controls are available only to configured DEVELOPER or SUPER_ADMIN identities.'
+                      : settingsDenied
+                        ? 'Server Settings are available only to configured DEVELOPER or SUPER_ADMIN identities.'
                       : 'This backend page is available only to configured SUPPORT, DEVELOPER, or SUPER_ADMIN identities.'}</p>
                     <button onClick={() => navigate('overview')} className="cyber-button mt-5">Return to dashboard</button>
                   </div>

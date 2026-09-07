@@ -45,8 +45,16 @@ function mkMember(id, admin) {
 }
 
 const viewer = mkMember('viewer', false);   // level 0
-const admin = mkMember('admin', true);      // level 3 (Administrator)
-const membersA = new Collection([['viewer', viewer], ['admin', admin]]);
+const admin = mkMember('admin', true);      // level 3 (Administrator) + system owner
+const boss = mkMember('boss', true);        // level 3 (Administrator), no system role
+// Bot member mock doubles as the nickname target for the developer-only
+// Bot Controls positive case below.
+const botMember = {
+    roles: { highest: { position: 50 } }, permissions: { has: () => true },
+    nickname: null, displayName: 'b',
+    setNickname: async (nick) => { botMember.nickname = nick; },
+};
+const membersA = new Collection([['viewer', viewer], ['admin', admin], ['boss', boss]]);
 
 function mkGuild(id, members) {
     return {
@@ -59,7 +67,7 @@ function mkGuild(id, members) {
         bans: { fetch: async () => new Collection() },
         invites: { fetch: async () => new Collection() },
         members: {
-            me: { roles: { highest: { position: 50 } }, permissions: { has: () => true } },
+            me: botMember,
             cache: members,
             fetch: async (i) => (i === undefined || typeof i === 'object')
                 ? members : (members.get(String(i)) || null),
@@ -127,6 +135,7 @@ async function loginAs(id) {
 
     const viewerCookie = await loginAs('viewer');
     const adminCookie = await loginAs('admin');
+    const bossCookie = await loginAs('boss');
 
     let fails = 0;
     const check = (label, ok, detail = '') => {
@@ -168,10 +177,73 @@ async function loginAs(id) {
     r = await req(`/api/music/${GUILD_A}`, { cookie: adminCookie });
     check('system owner retains music access', r.status === 200, `${r.status}`);
 
+    console.log('\nBot Controls are developer-only:\n');
+
+    r = await req('/api/bot/presence', { cookie: viewerCookie });
+    check('guild viewer without system role is refused presence read',
+        r.status === 403 && r.body.includes('SYSTEM_ROLE_REQUIRED'), `${r.status}`);
+
+    r = await req('/api/bot/presence', {
+        method: 'POST', cookie: bossCookie, body: { status: 'dnd', activityText: 'PWNED' } });
+    check('guild admin without system role is refused presence write',
+        r.status === 403 && r.body.includes('SYSTEM_ROLE_REQUIRED'), `${r.status}`);
+
+    r = await req(`/api/guild/${GUILD_A}/nickname`, {
+        method: 'POST', cookie: bossCookie, body: { nickname: 'PWNED' } });
+    check('guild admin without system role is refused bot nickname',
+        r.status === 403 && r.body.includes('SYSTEM_ROLE_REQUIRED'), `${r.status}`);
+
+    r = await req('/api/bot/presence', { cookie: adminCookie });
+    check('system owner retains presence read', r.status === 200, `${r.status}`);
+
+    r = await req('/api/bot/presence', {
+        method: 'POST', cookie: adminCookie, body: { status: 'idle', activityText: 'ok' } });
+    check('system owner retains presence write', r.status === 200, `${r.status}`);
+
+    r = await req(`/api/guild/${GUILD_A}/nickname`, {
+        method: 'POST', cookie: adminCookie, body: { nickname: 'EB' } });
+    check('system owner retains bot nickname',
+        r.status === 200 && r.body.includes('"nickname":"EB"'), `${r.status} ${r.body}`);
+
+    console.log('\nServer Settings are developer-only:\n');
+
+    r = await req(`/api/guild/${GUILD_A}/config`, {
+        method: 'POST', cookie: bossCookie, body: { xpEnabled: false } });
+    check('guild admin without system role is refused config write',
+        r.status === 403 && r.body.includes('SYSTEM_ROLE_REQUIRED'), `${r.status}`);
+
+    r = await req(`/api/guild/${GUILD_A}/backup`, { cookie: bossCookie });
+    check('guild admin without system role is refused backup export',
+        r.status === 403 && r.body.includes('SYSTEM_ROLE_REQUIRED'), `${r.status}`);
+
+    r = await req(`/api/guild/${GUILD_A}/restore`, {
+        method: 'POST', cookie: bossCookie, body: {} });
+    check('guild admin without system role is refused restore',
+        r.status === 403 && r.body.includes('SYSTEM_ROLE_REQUIRED'), `${r.status}`);
+
+    r = await req(`/api/guild/${GUILD_A}/webhook-logs`, {
+        method: 'POST', cookie: bossCookie, body: { url: 'https://example.com/hook' } });
+    check('guild admin without system role is refused webhook bridge',
+        r.status === 403 && r.body.includes('SYSTEM_ROLE_REQUIRED'), `${r.status}`);
+
+    r = await req(`/api/guild/${GUILD_A}/leave`, { method: 'POST', cookie: bossCookie });
+    check('guild admin without system role is refused guild leave',
+        r.status === 403 && r.body.includes('SYSTEM_ROLE_REQUIRED'), `${r.status}`);
+
+    r = await req(`/api/guild/${GUILD_A}/config`, {
+        method: 'POST', cookie: adminCookie, body: { xpEnabled: true } });
+    check('system owner retains config write',
+        r.status === 200 && r.body.includes('"success":true'), `${r.status} ${r.body}`);
+
+    r = await req(`/api/guild/${GUILD_A}/webhook-logs`, {
+        method: 'POST', cookie: adminCookie, body: {} });
+    check('system owner passes the gate to webhook validation',
+        r.status === 400, `${r.status}`);
+
     r = await req(`/api/events/stream?guildId=${GUILD_B}`, { cookie: viewerCookie });
     check('cross-guild live event stream is refused', r.status === 403, `${r.status}`);
 
-    console.log('\nBackup is an Admin-only export:\n');
+    console.log('\nBackup stays a privileged export:\n');
 
     r = await req(`/api/guild/${GUILD_A}/backup`, { cookie: viewerCookie });
     check('Viewer cannot download a backup', r.status === 403, `${r.status}`);

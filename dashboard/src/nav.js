@@ -26,7 +26,10 @@ export const NAV = [
   { id: 'analytics',     icon: BarChart3,         label: 'Analytics',      hint: '24h messages, joins and commands', keywords: 'stats chart csv peak', area: 'public', group: 'Guild Settings' },
   { id: 'leaderboard',   icon: Trophy,            label: 'Leaderboard',    hint: 'XP ranks and top members', keywords: 'rank xp top levels', area: 'public', group: 'Guild Settings' },
   { id: 'livefeed',      icon: Radio,             label: 'Live Feed',      hint: 'Realtime joins, messages and mods', keywords: 'realtime events stream', area: 'public', group: 'Guild Settings' },
-  { id: 'settings',      icon: Settings,          label: 'Settings',       hint: 'Prefixes, locale and server options', keywords: 'prefix dj xp backup restore', area: 'public', group: 'Guild Settings' },
+  // Settings is developer-only like Music and Bot Control: its exclusive
+  // routes (config, backup/restore, webhook bridge, leave) are gated
+  // DEVELOPER/SUPER_ADMIN backend-side. Shared toggles keep guild levels.
+  { id: 'settings',      icon: Settings,          label: 'Settings',       hint: 'Prefixes, locale and server options', devOnly: true, keywords: 'prefix dj xp backup restore', area: 'public', group: 'Guild Settings' },
   { id: 'welcome',       icon: MessageSquare,     label: 'Welcome',        hint: 'Join messages and auto roles', keywords: 'join leave autorole goodbye', area: 'public', group: 'Guild Settings' },
   { id: 'verification',  icon: BadgeCheck,        label: 'Verification',   hint: 'Gate, captcha, pending members', keywords: 'verify captcha unverified role gate panel rules', area: 'public', group: 'Guild Settings' },
   { id: 'commands',      icon: Zap,               label: 'Commands',       hint: 'Browse and toggle slash commands', keywords: 'slash fun games tools toggle catalog', area: 'public', group: 'Guild Settings' },
@@ -57,7 +60,9 @@ export const NAV = [
   { id: 'logs',          icon: ScrollText,        label: 'Logs',           hint: 'Mod and event log channels', keywords: 'logs logging modlog message delete', area: 'public', group: 'Logging' },
   { section: 'Developer Area', area: 'developer', systemOnly: true, always: true },
   // Bot Control — guild presence controls plus the global overview/flags/deploy center.
-  { id: 'botcontrols',   icon: SlidersHorizontal, label: 'Bot Control',    hint: 'Nickname, presence and status', keywords: 'nick presence status activity bot control', area: 'developer', group: 'Bot Control' },
+  // Developer-only like the Music desk: presence and nickname drive the bot's
+  // public identity, so guild levels alone must not unlock them.
+  { id: 'botcontrols',   icon: SlidersHorizontal, label: 'Bot Control',    hint: 'Nickname, presence and status', devOnly: true, keywords: 'nick presence status activity bot control', area: 'developer', group: 'Bot Control' },
   { id: 'developer',     icon: Terminal,          label: 'Control Center', hint: 'Role-scoped backend control center', systemOnly: true, always: true, keywords: 'dev logs env token tunnel debug overview flags deploy', area: 'developer', group: 'Bot Control', tab: 'overview' },
   { id: 'dev-flags',     icon: Flag,              label: 'Flags',          hint: 'Feature flags and maintenance policy (SUPER_ADMIN writes)', systemOnly: true, always: true, keywords: 'dev flags maintenance verbose policy', area: 'developer', group: 'Bot Control', tab: 'flags' },
   // System
