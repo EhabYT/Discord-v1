@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Shield, Zap, Lock, Activity, RefreshCw, AlertTriangle, Users } from 'lucide-react';
+import { Shield, Zap, Lock, Activity, RefreshCw, AlertTriangle, Users, Ban, Unlink, MailX, MessageSquareOff, CaseUpper, Sticker, AtSign } from 'lucide-react';
 import CyanToggle from '../components/CyanToggle.jsx';
 import GaugeChart from '../components/GaugeChart.jsx';
 import PageHeader from '../components/PageHeader.jsx';
@@ -20,13 +20,13 @@ function SectionCard({ icon: Icon, title, iconColor = 'text-cyan-400', badge, ch
 }
 
 const AUTOMOD_FEATURES = [
-  { key: 'antiSpam',  label: 'Anti-Spam',      desc: 'Block repeated message spam',        simple: true,  icon: '🚫' },
-  { key: 'antiLinks', label: 'Anti-Links',      desc: 'Block unauthorized URLs',            simple: true,  icon: '🔗' },
-  { key: 'antiInvite',label: 'Anti-Invite',     desc: 'Block Discord invite links',         simple: true,  icon: '📨' },
-  { key: 'badWords',  label: 'Bad Words',       desc: 'Filter profanity & slurs',           simple: true,  icon: '🤬' },
-  { key: 'caps',      label: 'Excessive CAPS',  desc: 'Block messages in all-caps',         simple: false, icon: '🔠' },
-  { key: 'emojis',    label: 'Emoji Spam',      desc: 'Limit excessive emoji usage',        simple: false, icon: '😵' },
-  { key: 'mentions',  label: 'Mass Mentions',   desc: 'Block bulk user mentions',           simple: false, icon: '📢' },
+  { key: 'antiSpam',  label: 'Anti-Spam',      desc: 'Block repeated message spam',        simple: true,  icon: Ban },
+  { key: 'antiLinks', label: 'Anti-Links',      desc: 'Block unauthorized URLs',            simple: true,  icon: Unlink },
+  { key: 'antiInvite',label: 'Anti-Invite',     desc: 'Block Discord invite links',         simple: true,  icon: MailX },
+  { key: 'badWords',  label: 'Bad Words',       desc: 'Filter profanity & slurs',           simple: true,  icon: MessageSquareOff },
+  { key: 'caps',      label: 'Excessive CAPS',  desc: 'Block messages in all-caps',         simple: false, icon: CaseUpper },
+  { key: 'emojis',    label: 'Emoji Spam',      desc: 'Limit excessive emoji usage',        simple: false, icon: Sticker },
+  { key: 'mentions',  label: 'Mass Mentions',   desc: 'Block bulk user mentions',           simple: false, icon: AtSign },
 ];
 
 export default function Security({ guild, guildData, onNavigate }) {
@@ -242,7 +242,7 @@ export default function Security({ guild, guildData, onNavigate }) {
         </div>
 
         <div className="grid md:grid-cols-2 gap-3">
-          {AUTOMOD_FEATURES.map(({ key, label, desc, simple, icon }) => {
+          {AUTOMOD_FEATURES.map(({ key, label, desc, simple, icon: Icon }) => {
             const val = simple ? !!automod[key] : !!(automod[key]?.enabled);
             return (
               <div
@@ -254,7 +254,7 @@ export default function Security({ guild, guildData, onNavigate }) {
                 }`}
               >
                 <div className="flex items-start gap-2">
-                  <span className="text-base mt-0.5 flex-shrink-0">{icon}</span>
+                  <Icon size={16} className={`mt-0.5 flex-shrink-0 ${val ? 'text-cyan-400' : 'text-zinc-600'}`} />
                   <div className="flex-1 min-w-0">
                     <CyanToggle
                       enabled={val}
