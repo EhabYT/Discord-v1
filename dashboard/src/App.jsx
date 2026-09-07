@@ -89,6 +89,7 @@ const PAGES = {
   'dev-database': Developer,
   'dev-monitoring': Developer,
   'dev-security': Developer,
+  'dev-flags': Developer,
   profile: Profile,
   login: Login,
   register: Register,
@@ -107,6 +108,7 @@ export const PermContext = React.createContext({ level: 0, levelName: 'Viewer' }
 // and must not be rebuilt on every render.
 const DEV_TAB_BY_PAGE = {
   developer: 'overview',
+  'dev-flags': 'flags',
   'dev-logs': 'logs',
   // API leaf opens the command catalog; the bot-config tab stays one click away.
   'dev-api': 'commands',

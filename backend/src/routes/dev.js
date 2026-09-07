@@ -55,11 +55,15 @@ function procs() {
         { id: 'watchdog', re: /keep-tunnel\.sh/ },
         { id: 'cloudflared', re: /cloudflared tunnel --url/ },
     ];
+    const offline = names.map((n) => ({ id: n.id, running: false }));
+    // `ps` does not exist on Windows; probing would only spam the console
+    // with a shell error on every /overview poll, so report offline there.
+    if (process.platform === 'win32') return offline;
     let text = '';
     try {
-        text = require('child_process').execSync('ps -eo pid,etime,rss,args --no-headers', { encoding: 'utf8', timeout: 3000 });
+        text = require('child_process').execSync('ps -eo pid,etime,rss,args --no-headers', { encoding: 'utf8', timeout: 3000, stdio: ['ignore', 'pipe', 'ignore'] });
     } catch {
-        return names.map((n) => ({ id: n.id, running: false }));
+        return offline;
     }
     return names.map((n) => {
         const line = text.split('\n').find((l) => n.re.test(l) && !l.includes('grep'));

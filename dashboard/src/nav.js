@@ -2,7 +2,7 @@ import {
   Activity, LayoutDashboard, Music, MessageSquare, Ticket, TrendingUp,
   ScrollText, Shield, Gift, Users, BarChart3, Settings,
   SlidersHorizontal, ShieldCheck, Trophy, Radio, Send, Zap, Terminal, BadgeCheck, Tags, Cake, Lightbulb, Vote, Hash, Ghost, Megaphone,
-  FileText, Code2, Database, Cpu, Lock,
+  FileText, Code2, Database, Cpu, Lock, Flag,
 } from 'lucide-react';
 
 // Information architecture mirrors the product diagram:
@@ -59,6 +59,7 @@ export const NAV = [
   // Bot Control — guild presence controls plus the global overview/flags/deploy center.
   { id: 'botcontrols',   icon: SlidersHorizontal, label: 'Bot Control',    hint: 'Nickname, presence and status', keywords: 'nick presence status activity bot control', area: 'developer', group: 'Bot Control' },
   { id: 'developer',     icon: Terminal,          label: 'Control Center', hint: 'Role-scoped backend control center', systemOnly: true, always: true, keywords: 'dev logs env token tunnel debug overview flags deploy', area: 'developer', group: 'Bot Control', tab: 'overview' },
+  { id: 'dev-flags',     icon: Flag,              label: 'Flags',          hint: 'Feature flags and maintenance policy (SUPER_ADMIN writes)', systemOnly: true, always: true, keywords: 'dev flags maintenance verbose policy', area: 'developer', group: 'Bot Control', tab: 'flags' },
   // System
   { id: 'system',        icon: Activity,          label: 'System',         hint: 'V2 backend readiness for Dashboard, Discord and Supabase', systemOnly: true, always: true, keywords: 'health ready status database oauth v2 system', area: 'developer', group: 'System' },
   // Logs

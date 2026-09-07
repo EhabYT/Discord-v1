@@ -51,6 +51,8 @@ export default function Developer({ initialTab = 'overview' }) {
   const [audit, setAudit] = useState([]);
   const [metrics, setMetrics] = useState(null);
   const [botConfig, setBotConfig] = useState(null);
+  const [sysStatus, setSysStatus] = useState(null);
+  const [flags, setFlags] = useState(null);
   const [jobs, setJobs] = useState([]);
   const [maintenanceMessage, setMaintenanceMessage] = useState('');
   const [maintenanceDuration, setMaintenanceDuration] = useState('');
@@ -82,6 +84,8 @@ export default function Developer({ initialTab = 'overview' }) {
   const lock = async () => {
     await api.post('/api/developer/lock', {}).catch(() => {});
     setOv(null);
+    setSysStatus(null);
+    setFlags(null);
     loadWho();
   };
 
@@ -93,6 +97,12 @@ export default function Developer({ initialTab = 'overview' }) {
         const data = await api.get('/api/developer/overview');
         setOv(data);
         setMaintenanceMessage(data.flags?.maintenanceMessage || '');
+      }
+      if (tab === 'system-status') setSysStatus(await api.get('/api/developer/system-status'));
+      if (tab === 'flags') {
+        const data = await api.get('/api/developer/flags');
+        setFlags(data);
+        setMaintenanceMessage(data?.maintenanceMessage || '');
       }
       if (tab === 'logs') {
         const d = await api.get(`/api/developer/logs?file=${encodeURIComponent(logFile)}&lines=180`);
@@ -119,6 +129,7 @@ export default function Developer({ initialTab = 'overview' }) {
     try {
       const next = await api.post('/api/developer/flags', { [key]: value });
       setOv((p) => (p ? { ...p, flags: next } : p));
+      setFlags(next);
       toast.success('Flag saved.');
     } catch (err) { toast.error(err.message); }
   };
@@ -133,6 +144,7 @@ export default function Developer({ initialTab = 'overview' }) {
         maintenanceUntil: duration ? Date.now() + duration : null,
       });
       setOv((previous) => previous ? { ...previous, flags: next } : previous);
+      setFlags(next);
       toast.success('Maintenance policy saved and enforced by the backend.');
     } catch (err) { toast.error(err.message || 'Could not save maintenance policy'); }
     setBusy('');
@@ -213,13 +225,15 @@ export default function Developer({ initialTab = 'overview' }) {
   const p = ov?.processes || [];
   const availableTabs = [
     ['overview', 'Overview', 1],
+    ['system-status', 'System Status', 1],
     ['commands', 'Commands', 1],
     ['config', 'Bot Config', 1],
     ['guilds', 'Guilds', 1],
+    ['flags', 'Flags', 1],
     ['logs', 'Logs', 2],
     ['env', 'Environment', 2],
     ['db', 'Database', 2],
-    ['performance', 'Performance', 2],
+    ['performance', 'Metrics', 2],
     ['jobs', 'Jobs', 2],
     ['audit', 'Audit Log', 2],
   ].filter(([, , minimum]) => systemLevel >= minimum);
@@ -341,6 +355,104 @@ export default function Developer({ initialTab = 'overview' }) {
                 {ov.deadHosts.map((h) => <div key={h}>{h}</div>)}
               </div>
             </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'system-status' && (
+        <div className="space-y-3">
+          {!sysStatus ? (
+            <div className="cyber-card p-8 text-center text-sm text-zinc-500">Loading system status…</div>
+          ) : (
+            <>
+              <div className="cyber-card-accent p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <p className="cyber-label">EB Dashboard V2 · API {sysStatus.apiVersion || 'v2'}</p>
+                  <h3 className="text-lg font-bold text-white mt-1">Release {sysStatus.release || '2.0.0'}</h3>
+                  {sysStatus.botBootstrap?.state && sysStatus.botBootstrap.state !== 'ready' && (
+                    <p className="text-[11px] text-zinc-500 mt-1">
+                      Bot recovery: {sysStatus.botBootstrap.state}
+                      {sysStatus.botBootstrap.lastError ? ` · ${sysStatus.botBootstrap.lastError}` : ''}
+                    </p>
+                  )}
+                </div>
+                <Pill ok={sysStatus.status === 'ready'} label={sysStatus.status === 'ready' ? 'Ready' : 'Degraded'} />
+              </div>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {Object.entries(sysStatus.checks || {}).map(([key, ok]) => (
+                  <div key={key} className="px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06] flex items-center justify-between gap-2">
+                    <span className="font-mono text-[11px] text-zinc-300">{key}</span>
+                    <Pill ok={!!ok} label={ok ? 'ok' : 'not ready'} />
+                  </div>
+                ))}
+              </div>
+              {sysStatus.databaseError && (
+                <div className="cyber-card p-4 text-xs text-amber-200/80 break-words">
+                  Database: {sysStatus.databaseError}
+                </div>
+              )}
+              <div className="cyber-card p-4 flex flex-wrap gap-2">
+                {(sysStatus.capabilities?.bilingual || []).map((lang) => <span key={lang} className="cyber-badge-cyan">{String(lang).toUpperCase()}</span>)}
+                {sysStatus.capabilities?.rtl && <span className="cyber-badge-purple">RTL</span>}
+                {(sysStatus.capabilities?.realtime || []).map((item) => <span key={item} className="cyber-badge-green">{item}</span>)}
+                {sysStatus.ephemeralDatabase && <span className="cyber-badge-yellow">ephemeral database</span>}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {tab === 'flags' && (
+        <div className="cyber-card p-4 space-y-3">
+          {!flags ? (
+            <p className="text-sm text-zinc-500">Loading feature flags…</p>
+          ) : (
+            <>
+              <label className="flex items-center justify-between text-xs text-zinc-300">
+                Maintenance
+                <input
+                  type="checkbox"
+                  className="accent-fuchsia-400"
+                  disabled={systemLevel < ROLE_LEVEL.SUPER_ADMIN}
+                  checked={!!flags.maintenance}
+                  onChange={(e) => setFlag('maintenance', e.target.checked)}
+                />
+              </label>
+              <label className="flex items-center justify-between text-xs text-zinc-300">
+                Verbose analytics
+                <input
+                  type="checkbox"
+                  className="accent-fuchsia-400"
+                  disabled={systemLevel < ROLE_LEVEL.SUPER_ADMIN}
+                  checked={!!flags.verbose}
+                  onChange={(e) => setFlag('verbose', e.target.checked)}
+                />
+              </label>
+              {systemLevel >= ROLE_LEVEL.SUPER_ADMIN ? (
+                <>
+                  <div className="grid sm:grid-cols-[1fr_auto] gap-2">
+                    <input
+                      value={maintenanceMessage}
+                      onChange={(e) => setMaintenanceMessage(e.target.value)}
+                      maxLength={300}
+                      placeholder="Maintenance message shown to users"
+                      className="cyber-input text-xs"
+                    />
+                    <select value={maintenanceDuration} onChange={(e) => setMaintenanceDuration(e.target.value)} className="cyber-select text-xs sm:w-36">
+                      <option value="">No auto-end</option>
+                      <option value="3600000">1 hour</option>
+                      <option value="21600000">6 hours</option>
+                      <option value="86400000">24 hours</option>
+                    </select>
+                  </div>
+                  <button onClick={saveMaintenance} disabled={busy === 'maintenance'} className="cyber-button text-xs">
+                    {busy === 'maintenance' ? 'Saving…' : 'Save maintenance policy'}
+                  </button>
+                </>
+              ) : (
+                <p className="text-[11px] text-zinc-600">Flag writes require SUPER_ADMIN — this view is read-only for your role.</p>
+              )}
+            </>
           )}
         </div>
       )}

@@ -67,7 +67,10 @@ function setupSocket(httpServer, sessionMiddleware, botClient) {
         });
 
         socket.on('leave:guild', (guildId) => {
-            if (typeof guildId !== 'string') return;
+            // Mirror the join guard: only normalized snowflake rooms may be
+            // left, so a malformed payload can never create or touch a
+            // `guild:undefined`-style room.
+            if (typeof guildId !== 'string' || !/^\d{17,20}$/.test(guildId)) return;
             socket.leave(`guild:${guildId}`);
         });
     });
