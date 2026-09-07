@@ -20,6 +20,13 @@
   Supabase PostgreSQL remains the production store.
 
 ### Changed
+- Developer audit writes no longer block the request event loop:
+  `recordDeveloperAction` queues events and appends them asynchronously in one
+  batched write (250 ms window, bounded queue, directory created once).
+  `readDeveloperAudit` and graceful shutdown (`stopDashboard`, bot `SIGTERM` /
+  `SIGINT`) flush the pending batch synchronously first, so write-then-read
+  stays consistent and no audit context is lost on shutdown. Covered by
+  `tests/unit/developer-audit.test.js`.
 - Dashboard dependencies upgraded: `lucide-react` 0.577 → 1.x,
   `autoprefixer` → 10.5.5, `postcss` → 8.5.28. Tailwind stays on v3
   (v4 needs a config migration with visual regression risk).

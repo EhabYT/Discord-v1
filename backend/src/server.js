@@ -541,6 +541,11 @@ async function stopDashboard() {
     closeMetrics();
     closeSseClients();
     await closeSocket();
+    try {
+        // Persist the trailing async developer-audit batch before log streams
+        // close; otherwise the last ~250 ms of audit context is lost on SIGTERM.
+        require('../../shared/services/developer-audit').flushDeveloperAudit();
+    } catch { /* auditing must never fail shutdown */ }
     if (!httpServer.listening) return;
     await new Promise((resolve) => httpServer.close(() => resolve()));
 }

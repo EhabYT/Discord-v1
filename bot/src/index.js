@@ -227,6 +227,9 @@ async function shutdown(signal) {
   try { await closePool(); } catch (err) {
     logger.warn('PostgreSQL pool shutdown failed', { error: err?.message || String(err) });
   }
+  try {
+    require('../../shared/services/developer-audit').flushDeveloperAudit();
+  } catch { /* auditing must never fail shutdown */ }
   clearTimeout(forceExit);
   await logger.close();
   process.exit(0);
