@@ -1,4 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
+const { ApiError, badRequest, notFound } = require('../lib/http-errors');
 
 function nid() {
     return Date.now().toString(36).slice(-6) + Math.random().toString(36).slice(2, 4);
@@ -53,19 +54,19 @@ async function checkCooldown(db, guildId, userId, minutes) {
 
 async function create(guild, db, payload = {}) {
     const cfg = await getConfig(db, guild.id);
-    if (!cfg.enabled) throw new Error('Confessions are disabled');
+    if (!cfg.enabled) throw badRequest('Confessions are disabled', 'CONFESSIONS_DISABLED');
     const message = String(payload.message || '').trim().slice(0, 1500);
-    if (!message) throw new Error('Confession cannot be empty');
+    if (!message) throw badRequest('Confession cannot be empty', 'CONFESSION_EMPTY');
     const channelId = payload.channelId || cfg.channelId;
     const channel = channelId ? guild.channels.cache.get(channelId) : null;
-    if (!channel) throw new Error('Set a confession channel first');
+    if (!channel) throw badRequest('Set a confession channel first', 'CONFESSION_CHANNEL_REQUIRED');
 
     if (payload.authorId && !payload.skipCooldown) {
         const remaining = await checkCooldown(db, guild.id, payload.authorId, cfg.cooldownMinutes);
         if (remaining > 0) {
-            const err = new Error(`Please wait ${Math.ceil(remaining / 60000)} more minute(s) before confessing again.`);
-            err.code = 'COOLDOWN';
-            throw err;
+            throw new ApiError(429,
+                `Please wait ${Math.ceil(remaining / 60000)} more minute(s) before confessing again.`,
+                'COOLDOWN');
         }
     }
 
@@ -89,7 +90,7 @@ async function create(guild, db, payload = {}) {
 async function remove(guild, db, id) {
     const items = await list(db, guild.id);
     const entry = items.find((x) => x.id === id);
-    if (!entry) throw new Error('Confession not found');
+    if (!entry) throw notFound('Confession not found', 'CONFESSION_NOT_FOUND');
     await saveList(db, guild.id, items.filter((x) => x.id !== id));
     const channel = entry.channelId ? await guild.channels.fetch(entry.channelId).catch(() => null) : null;
     const msg = channel && entry.messageId ? await channel.messages.fetch(entry.messageId).catch(() => null) : null;

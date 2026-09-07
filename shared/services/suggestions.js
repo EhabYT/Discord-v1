@@ -1,4 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
+const { badRequest, notFound } = require('../lib/http-errors');
 
 function nid() {
     return Date.now().toString(36).slice(-6) + Math.random().toString(36).slice(2, 4);
@@ -49,9 +50,9 @@ async function create(guild, db, payload = {}) {
     const cfg = await getConfig(db, guild.id);
     const channelId = payload.channelId || cfg.channelId;
     const channel = channelId ? guild.channels.cache.get(channelId) : null;
-    if (!channel) throw new Error('Set a suggestions channel first');
+    if (!channel) throw badRequest('Set a suggestions channel first', 'SUGGESTION_CHANNEL_REQUIRED');
     const message = String(payload.message || '').trim().slice(0, 1500);
-    if (!message) throw new Error('Suggestion cannot be empty');
+    if (!message) throw badRequest('Suggestion cannot be empty', 'SUGGESTION_EMPTY');
     const suggestion = {
         id: nid(),
         message,
@@ -77,10 +78,10 @@ async function create(guild, db, payload = {}) {
 }
 
 async function setStatus(guild, db, id, status, extra = {}) {
-    if (!['pending', 'approved', 'denied'].includes(status)) throw new Error('Invalid status');
+    if (!['pending', 'approved', 'denied'].includes(status)) throw badRequest('Invalid status', 'SUGGESTION_INVALID_STATUS');
     const items = await list(db, guild.id);
     const s = items.find((x) => x.id === id);
-    if (!s) throw new Error('Suggestion not found');
+    if (!s) throw notFound('Suggestion not found', 'SUGGESTION_NOT_FOUND');
     s.status = status;
     s.reviewedBy = extra.reviewedBy || 'Dashboard';
     s.reviewedAt = Date.now();
@@ -95,7 +96,7 @@ async function setStatus(guild, db, id, status, extra = {}) {
 async function remove(guild, db, id) {
     const items = await list(db, guild.id);
     const s = items.find((x) => x.id === id);
-    if (!s) throw new Error('Suggestion not found');
+    if (!s) throw notFound('Suggestion not found', 'SUGGESTION_NOT_FOUND');
     await saveList(db, guild.id, items.filter((x) => x.id !== id));
     const channel = s.channelId ? await guild.channels.fetch(s.channelId).catch(() => null) : null;
     const posted = channel && s.messageId ? await channel.messages.fetch(s.messageId).catch(() => null) : null;

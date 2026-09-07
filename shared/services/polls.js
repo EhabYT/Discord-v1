@@ -1,4 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
+const { badRequest, notFound } = require('../lib/http-errors');
 
 const EMOJIS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
 
@@ -52,15 +53,15 @@ async function tally(guild, poll) {
 
 async function create(guild, db, payload = {}) {
     const channel = guild.channels.cache.get(payload.channelId);
-    if (!channel) throw new Error('Channel not found');
+    if (!channel) throw badRequest('Channel not found', 'POLL_CHANNEL_REQUIRED');
     const question = String(payload.question || '').trim().slice(0, 300);
-    if (!question) throw new Error('Question required');
+    if (!question) throw badRequest('Question required', 'POLL_QUESTION_REQUIRED');
     let texts = Array.isArray(payload.options)
         ? payload.options.map((o) => (typeof o === 'string' ? o : o?.text || '').trim()).filter(Boolean).slice(0, 10)
         : [];
     const yesNo = texts.length === 0;
     if (yesNo) texts = ['Yes', 'No'];
-    if (texts.length < 2) throw new Error('Need at least 2 options');
+    if (texts.length < 2) throw badRequest('Need at least 2 options', 'POLL_OPTIONS_REQUIRED');
     const durationMs = Number(payload.durationMs) || 0;
     const poll = {
         id: nid(),
@@ -90,7 +91,7 @@ async function create(guild, db, payload = {}) {
 async function close(guild, db, id) {
     const items = await list(db, guild.id);
     const poll = items.find((p) => p.id === id);
-    if (!poll) throw new Error('Poll not found');
+    if (!poll) throw notFound('Poll not found', 'POLL_NOT_FOUND');
     if (poll.closed) return poll;
     const results = await tally(guild, poll);
     poll.closed = true;
@@ -106,7 +107,7 @@ async function close(guild, db, id) {
 async function remove(guild, db, id) {
     const items = await list(db, guild.id);
     const poll = items.find((p) => p.id === id);
-    if (!poll) throw new Error('Poll not found');
+    if (!poll) throw notFound('Poll not found', 'POLL_NOT_FOUND');
     await saveList(db, guild.id, items.filter((p) => p.id !== id));
     const channel = poll.channelId ? await guild.channels.fetch(poll.channelId).catch(() => null) : null;
     const msg = channel && poll.messageId ? await channel.messages.fetch(poll.messageId).catch(() => null) : null;

@@ -4,6 +4,7 @@ const {
     ButtonBuilder,
     ButtonStyle,
     MessageFlags,
+    PermissionFlagsBits,
 } = require('discord.js');
 const { randomUUID } = require('crypto');
 const logger = require('../lib/logger');
@@ -48,12 +49,51 @@ function emojiMatches(stored, reaction) {
     return stored === unicode || stored === mention || stored === reaction.emoji.toString();
 }
 
-async function applyMapping(member, mapping, adding, all) {
-    const role = member.guild.roles.cache.get(mapping.roleId);
-    if (!role) throw new Error('Role not found');
-    const me = member.guild.members.me;
+function getRoleProblem(guild, roleId) {
+    const role = guild.roles.cache.get(roleId);
+    if (!role) return { role: null, error: 'Role not found (was it deleted?)', code: 'NOT_FOUND' };
+    if (role.id === guild.id) {
+        return { role, error: '@everyone cannot be used as a self-assignable role', code: 'EVERYONE' };
+    }
+    if (role.managed) {
+        return { role, error: `**${role.name}** is managed by an integration (bot/boost) and cannot be assigned by anyone`, code: 'MANAGED_ROLE' };
+    }
+    const me = guild.members.me;
+    if (me && !me.permissions.has(PermissionFlagsBits.ManageRoles)) {
+        return { role, error: `I don't have the **Manage Roles** permission, so I can't assign **${role.name}**`, code: 'NO_PERMS' };
+    }
     if (me && role.position >= me.roles.highest.position) {
-        throw new Error(`I cannot manage **${role.name}** — move the bot role above it in Server Settings → Roles`);
+        return { role, error: `I cannot manage **${role.name}** — move the bot role above it in Server Settings → Roles`, code: 'HIERARCHY' };
+    }
+    return { role, error: null, code: null };
+}
+
+function assertRoleManageable(guild, roleId) {
+    const { role, error, code } = getRoleProblem(guild, roleId);
+    if (error) {
+        const err = new Error(error);
+        err.code = code;
+        if (role) err.roleName = role.name;
+        throw err;
+    }
+    return role;
+}
+
+async function applyMapping(member, mapping, adding, all) {
+    const guild = member.guild;
+    const role = guild.roles.cache.get(mapping.roleId);
+    if (!role) throw new Error('Role not found (was it deleted?)');
+    let me = guild.members.me;
+    if (!me && typeof guild.members.fetchMe === 'function') {
+        try { me = await guild.members.fetchMe(); } catch { me = null; }
+    }
+    if (me) {
+        const { error, code } = getRoleProblem(guild, mapping.roleId);
+        if (error) {
+            const err = new Error(error);
+            err.code = code;
+            throw err;
+        }
     }
     const mode = mapping.mode || 'toggle';
     const has = member.roles.cache.has(role.id);
@@ -142,6 +182,25 @@ async function postPanel(guild, db, opts) {
     const incoming = (opts.roles || []).filter((r) => r.roleId).slice(0, 20);
     if (!incoming.length) throw new Error('Add at least one role');
 
+    // Fail fast: a panel with an unmanageable role would otherwise post fine
+    // and then every member click fails with "I cannot manage ...". Surface it
+    // to the admin now, before anything is posted.
+    const problems = [];
+    for (const r of incoming) {
+        const { error, code } = getRoleProblem(guild, r.roleId);
+        if (error) {
+            const err = new Error(error);
+            err.code = code;
+            problems.push(err);
+        }
+    }
+    if (problems.length) {
+        const err = new Error(problems.map((e) => e.message).join('\n'));
+        err.code = problems[0].code || 'HIERARCHY';
+        err.problems = problems.map((e) => e.message);
+        throw err;
+    }
+
     const style = opts.style === 'button' ? 'button' : 'reaction';
     const mappings = incoming.map((r) => ({
         id: nid(),
@@ -188,4 +247,6 @@ module.exports = {
     handleButton,
     postPanel,
     nid,
+    getRoleProblem,
+    assertRoleManageable,
 };

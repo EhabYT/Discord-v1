@@ -52,6 +52,21 @@ function classify(err) {
         return { status: err.status, message: err.message, code: err.code, expose: true };
     }
 
+    // Shared services (shared/services/*) raise duck-typed HTTP errors via
+    // shared/lib/http-errors.js so dashboard validation failures surface as
+    // 400/404 with their actionable message instead of 500 "Internal server
+    // error". Honoured only with an explicit expose flag and a numeric 4xx/5xx
+    // status: DiscordAPIError also carries `.status`, but never `expose`, so
+    // the Discord branches below are unaffected.
+    if (err?.expose === true && Number.isInteger(err?.status) && err.status >= 400 && err.status < 600) {
+        return {
+            status: err.status,
+            message: String(err.message || 'Request failed').slice(0, 300),
+            code: typeof err.code === 'string' ? err.code.slice(0, 40) : undefined,
+            expose: true,
+        };
+    }
+
     // discord.js: DiscordAPIError / HTTPError carry `code` and `status`.
     const dcode = typeof err?.code === 'number' ? err.code : null;
     if (dcode === 50035) {

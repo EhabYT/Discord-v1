@@ -1,3 +1,5 @@
+const { badRequest, notFound } = require('../lib/http-errors');
+
 function normalize(name) {
     return String(name || '').toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9_-]/g, '').slice(0, 32);
 }
@@ -29,9 +31,9 @@ async function get(db, guildId, name) {
 
 async function upsert(db, guildId, name, content, authorId) {
     const key = normalize(name);
-    if (!key) throw new Error('Tag name required');
+    if (!key) throw badRequest('Tag name required', 'TAG_NAME_REQUIRED');
     const text = String(content || '').trim().slice(0, 1500);
-    if (!text) throw new Error('Tag content required');
+    if (!text) throw badRequest('Tag content required', 'TAG_CONTENT_REQUIRED');
     const tags = await mapOf(db, guildId);
     tags[key] = { content: text, author: authorId || 'dashboard', ts: Date.now() };
     await db.set(`tags_${guildId}`, tags);
@@ -41,7 +43,7 @@ async function upsert(db, guildId, name, content, authorId) {
 async function remove(db, guildId, name) {
     const key = normalize(name);
     const tags = await mapOf(db, guildId);
-    if (!tags[key]) throw new Error('Tag not found');
+    if (!tags[key]) throw notFound('Tag not found', 'TAG_NOT_FOUND');
     delete tags[key];
     await db.set(`tags_${guildId}`, tags);
     return { success: true };

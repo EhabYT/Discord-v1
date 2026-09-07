@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Tags, Plus, Trash2, Send, Loader, Search, SmilePlus, MousePointerClick, Info,
+  Tags, Plus, Trash2, Send, Loader, Search, SmilePlus, MousePointerClick, Info, AlertTriangle,
 } from 'lucide-react';
 import PageHeader from '../components/PageHeader.jsx';
 import StatCard from '../components/StatCard.jsx';
@@ -32,6 +32,14 @@ export default function ReactionRoles({ guild, guildData }) {
 
   const channels = guildData?.guild?.channels?.filter((c) => c.type === 0) || [];
   const roles = guildData?.guild?.roles || [];
+  const botTop = guildData?.guild?.botHighestPosition ?? null;
+  const botCanManage = guildData?.guild?.botCanManageRoles;
+  const isUnmanageable = (roleId) => {
+    if (botTop == null) return false;
+    const r = roles.find((x) => x.id === roleId);
+    return !!r && typeof r.position === 'number' && r.position >= botTop;
+  };
+  const badRows = rows.filter((r) => r.roleId && isUnmanageable(r.roleId));
 
   const load = useCallback(async () => {
     if (!guild?.id) return;
@@ -142,6 +150,24 @@ export default function ReactionRoles({ guild, guildData }) {
             </p>
           </div>
 
+          {botCanManage === false && (
+            <div className="rounded-xl border border-red-400/30 bg-red-400/10 p-3 flex gap-2">
+              <AlertTriangle size={14} className="text-red-400 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-red-200 leading-relaxed">
+                The bot does not have the <strong>Manage Roles</strong> permission, so no self-assignable role can be given out yet.
+              </p>
+            </div>
+          )}
+          {badRows.length > 0 && botTop != null && (
+            <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 flex gap-2">
+              <AlertTriangle size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-200 leading-relaxed">
+                {badRows.map((r) => roles.find((x) => x.id === r.roleId)?.name || 'A role').join(', ')} {badRows.length === 1 ? 'is' : 'are'} above the bot&apos;s highest role.
+                Move the bot role above {badRows.length === 1 ? 'it' : 'them'} in Server Settings → Roles, or members will see “I cannot manage…”.
+              </p>
+            </div>
+          )}
+
           <div className="cyber-card p-5 space-y-4">
             <div className="grid grid-cols-2 gap-2">
               {[
@@ -206,7 +232,11 @@ export default function ReactionRoles({ guild, guildData }) {
                 <input value={row.emoji} onChange={(e) => setRow(i, { emoji: e.target.value })} className="cyber-input text-center" placeholder="✅" />
                 <select value={row.roleId} onChange={(e) => setRow(i, { roleId: e.target.value })} className="cyber-select text-xs">
                   <option value="">— Role —</option>
-                  {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                  {roles.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}{botTop != null && typeof r.position === 'number' && r.position >= botTop ? ' ⚠ (above bot)' : ''}
+                    </option>
+                  ))}
                 </select>
                 <input value={row.label} onChange={(e) => setRow(i, { label: e.target.value })} className="cyber-input text-xs" placeholder="Button label" />
                 <button onClick={() => delRow(i)} className="text-zinc-600 hover:text-red-400" disabled={rows.length <= 1}>
@@ -252,11 +282,15 @@ export default function ReactionRoles({ guild, guildData }) {
             <div className="space-y-1.5">
               {filtered.map((m) => {
                 const role = roles.find((r) => r.id === m.roleId);
+                const stuck = botTop != null && role && typeof role.position === 'number' && role.position >= botTop;
                 return (
                   <div key={m.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
                     <span className="text-lg w-8 text-center">{m.emoji || '🔘'}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-white truncate">{m.label || role?.name || m.roleId}</p>
+                      <p className="text-xs font-semibold text-white truncate">
+                        {m.label || role?.name || m.roleId}
+                        {stuck && <span className="ml-1.5 inline-flex items-center gap-0.5 text-amber-400 font-normal" title="Above the bot role — move the bot role above it in Server Settings → Roles"><AlertTriangle size={11} /> above bot</span>}
+                      </p>
                       <p className="text-[10px] text-zinc-600">
                         {m.style} · {m.mode}{m.group ? ` · group ${m.group}` : ''}
                         {m.channelId ? ` · #${channels.find((c) => c.id === m.channelId)?.name || m.channelId}` : ''}

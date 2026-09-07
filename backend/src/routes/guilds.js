@@ -106,7 +106,9 @@ module.exports = (botClient) => {
                         .map(c => ({ id: c.id, name: c.name, type: c.type })),
                     roles: guild.roles.cache
                         .filter(r => r.name !== '@everyone' && !r.managed)
-                        .map(r => ({ id: r.id, name: r.name, color: r.hexColor }))
+                        .map(r => ({ id: r.id, name: r.name, color: r.hexColor, position: r.position })),
+                    botHighestPosition: botMember?.roles.highest.position ?? 0,
+                    botCanManageRoles: botMember ? botMember.permissions.has(PermissionsBitField.Flags.ManageRoles) : false
                 },
                 diagnostics,
                 automod: automod || {},
@@ -511,6 +513,12 @@ module.exports = (botClient) => {
             const { messageId, channelId, emoji, roleId, mode, style, label, group } = req.body || {};
             if (!roleId) return res.status(400).json({ error: 'roleId required' });
             if (!messageId && style !== 'button') return res.status(400).json({ error: 'messageId required for reaction mappings' });
+            try {
+                rr.assertRoleManageable(req.guild, roleId);
+            } catch (err) {
+                const status = err.code === 'NOT_FOUND' ? 400 : 403;
+                return res.status(status).json({ error: err.message, code: err.code || 'HIERARCHY' });
+            }
             const list = await rr.list(db, req.params.guildId);
             list.push({
                 id: rr.nid(),
@@ -546,7 +554,15 @@ module.exports = (botClient) => {
         try {
             const result = await rr.postPanel(req.guild, db, req.body || {});
             res.json({ success: true, ...result });
-        } catch (err) { next(err); }
+        } catch (err) {
+            if (err.code === 'HIERARCHY' || err.code === 'MANAGED_ROLE' || err.code === 'EVERYONE' || err.code === 'NO_PERMS') {
+                return res.status(403).json({ error: err.message, code: err.code, problems: err.problems || undefined });
+            }
+            if (err.code === 'NOT_FOUND') {
+                return res.status(400).json({ error: err.message, code: err.code });
+            }
+            next(err);
+        }
     });
 
     function daysUntil(month, day) {

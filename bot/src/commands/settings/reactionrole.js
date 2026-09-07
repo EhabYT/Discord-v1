@@ -38,6 +38,13 @@ module.exports = {
             const role = interaction.options.getRole('role');
             const mode = interaction.options.getString('mode') || 'toggle';
 
+            try {
+                const { assertRoleManageable } = require('../../../../shared/services/reaction-roles');
+                assertRoleManageable(interaction.guild, role.id);
+            } catch (err) {
+                return interaction.reply({ content: `❌ ${err.message}`, flags: [MessageFlags.Ephemeral] });
+            }
+
             const message = await interaction.channel.messages.fetch(messageId).catch(() => null);
             if (!message) return interaction.reply({ content: '❌ Message not found.', flags: [MessageFlags.Ephemeral] });
 
