@@ -19,6 +19,12 @@
  * consumer is this test — so the exposure is limited to media bytes the music
  * extractor itself chooses to sniff. Tracked here so a future extractor bump
  * can drop this note.
+ *
+ * An npm `overrides` bump of the nested copy was evaluated and rejected:
+ * extractor 7.2.0 calls the pre-v16 `fileType.fromFile()` API, which was
+ * removed in file-type v18+ (verified: `fromFile` is undefined while
+ * `fileTypeFromFile` exists). Forcing >=21.3.1 would trade a moderate,
+ * upload-gated DoS for a certain crash on local-file attachment playback.
  */
 
 const { spawnSync } = require('child_process');
