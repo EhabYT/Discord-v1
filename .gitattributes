@@ -1,0 +1,5 @@
+# Normalize line endings: check out native, commit LF. Stops the
+# "LF will be replaced by CRLF" churn seen on ~40 dashboard files.
+* text=auto eol=lf
+*.png binary
+*.woff2 binary

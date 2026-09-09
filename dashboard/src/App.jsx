@@ -2,6 +2,7 @@ import React, { lazy, Suspense, useState, useEffect, useCallback } from 'react';
 import Sidebar from './components/Sidebar.jsx';
 import CommandPalette from './components/CommandPalette.jsx';
 import CopyButton from './components/CopyButton.jsx';
+import LanguageMenu from './components/LanguageMenu.jsx';
 import { ToastProvider } from './components/Toast.jsx';
 import Home from './pages/Home.jsx';
 
@@ -49,7 +50,7 @@ import { useAuth } from './auth/AuthContext.jsx';
 import { PAGE_TITLES, PAGE_HINTS, DOCK_PAGES, SEARCHABLE_PAGES } from './nav.js';
 import { rememberRecentPage } from './lib/clipboard.js';
 import { useI18n } from './i18n.jsx';
-import { Activity, AlertTriangle, CheckCircle2, Languages, Search, Wifi, WifiOff, X } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle2, Search, Wifi, WifiOff, X } from 'lucide-react';
 
 const PAGES = {
   overview: Overview,
@@ -161,16 +162,32 @@ function formatUptime(seconds) {
 }
 
 function PageLoading() {
+  const { t } = useI18n();
   return (
-    <div className="page-shell" aria-label="Loading page" aria-busy="true">
-      <div className="space-y-2 mb-7">
-        <div className="skeleton h-7 w-52" />
-        <div className="skeleton h-3 w-80 max-w-full" />
+    <div className="page-shell" aria-label={t('shell.loadingPage', 'Loading page')} aria-busy="true">
+      <div className="glass-panel mesh-glow p-5 flex items-center gap-4 mb-2">
+        <div className="skeleton h-11 w-11 !rounded-2xl flex-shrink-0" />
+        <div className="space-y-2 flex-1">
+          <div className="skeleton h-5 w-52 max-w-full" />
+          <div className="skeleton h-3 w-80 max-w-full" />
+        </div>
+        <div className="skeleton h-8 w-24 hidden sm:block" />
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[0, 1, 2, 3].map((n) => (
+          <div key={n} className="cyber-card p-4 flex items-center gap-3">
+            <div className="skeleton h-11 w-11 !rounded-2xl flex-shrink-0" />
+            <div className="space-y-2 flex-1">
+              <div className="skeleton h-3 w-16" />
+              <div className="skeleton h-5 w-20" />
+            </div>
+          </div>
+        ))}
       </div>
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {[0, 1, 2, 3, 4, 5].map((n) => (
           <div key={n} className="cyber-card p-5 space-y-4">
-            <div className="skeleton h-10 w-10" />
+            <div className="skeleton h-10 w-10 !rounded-xl" />
             <div className="skeleton h-4 w-2/3" />
             <div className="skeleton h-3 w-full" />
             <div className="skeleton h-3 w-4/5" />
@@ -226,6 +243,29 @@ function OAuthNotice() {
   );
 }
 
+function PageErrorCard({ onOverview }) {
+  const { t } = useI18n();
+  return (
+    <div className="min-h-full flex items-center justify-center p-6">
+      <div className="cyber-card max-w-md w-full p-7 text-center animate-slide-up" role="alert">
+        <div className="w-12 h-12 mx-auto mb-4 rounded-2xl flex items-center justify-center bg-red-500/10 border border-red-500/20 text-red-300">
+          <AlertTriangle size={22} />
+        </div>
+        <h2 className="text-lg font-semibold text-white">{t('err.title', 'This page could not load')}</h2>
+        <p className="text-sm text-zinc-500 mt-2 leading-relaxed">
+          {t('err.text', 'The dashboard may have been updated while it was open. Retry the page or return to Overview.')}
+        </p>
+        <div className="flex justify-center gap-2 mt-5">
+          <button onClick={() => window.location.reload()} className="cyber-button-solid">{t('err.retry', 'Retry')}</button>
+          <button onClick={onOverview} className="cyber-button">
+            {t('nav.overview', 'Overview')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 class PageErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -243,26 +283,9 @@ class PageErrorBoundary extends React.Component {
   render() {
     if (!this.state.error) return this.props.children;
     return (
-      <div className="min-h-full flex items-center justify-center p-6">
-        <div className="cyber-card max-w-md w-full p-7 text-center animate-slide-up" role="alert">
-          <div className="w-12 h-12 mx-auto mb-4 rounded-2xl flex items-center justify-center bg-red-500/10 border border-red-500/20 text-red-300">
-            <AlertTriangle size={22} />
-          </div>
-          <h2 className="text-lg font-semibold text-white">This page could not load</h2>
-          <p className="text-sm text-zinc-500 mt-2 leading-relaxed">
-            The dashboard may have been updated while it was open. Retry the page or return to Overview.
-          </p>
-          <div className="flex justify-center gap-2 mt-5">
-            <button onClick={() => window.location.reload()} className="cyber-button-solid">Retry</button>
-            <button
-              onClick={() => { this.setState({ error: null }); window.location.hash = 'overview'; }}
-              className="cyber-button"
-            >
-              Overview
-            </button>
-          </div>
-        </div>
-      </div>
+      <PageErrorCard
+        onOverview={() => { this.setState({ error: null }); window.location.hash = 'overview'; }}
+      />
     );
   }
 }
@@ -276,8 +299,11 @@ function MobileDock({ page, onNavigate, onSearch, canSeeMusicDesk }) {
     return true;
   });
   return (
-    <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 glass-header border-t border-white/[0.06] pb-[env(safe-area-inset-bottom)]">
-      <div className={`grid h-14 ${dockIds.length >= 4 ? 'grid-cols-5' : 'grid-cols-4'}`}>
+    <nav
+      aria-label={t('shell.quickNav', 'Quick navigation')}
+      className="md:hidden fixed bottom-3 inset-x-3 z-40 pb-[env(safe-area-inset-bottom)]"
+    >
+      <div className="dock-glass rounded-3xl px-2 py-2 flex items-stretch justify-between gap-1">
         {dockIds.map((id) => {
           const item = SEARCHABLE_PAGES.find((p) => p.id === id);
           if (!item) return null;
@@ -289,15 +315,28 @@ function MobileDock({ page, onNavigate, onSearch, canSeeMusicDesk }) {
               onClick={() => onNavigate(id)}
               aria-current={active ? 'page' : undefined}
               aria-label={t(`nav.${id}`, item.label)}
-              className={`flex flex-col items-center justify-center gap-0.5 text-[10px] transition-colors ${active ? 'text-cyan-200' : 'text-zinc-500 hover:text-zinc-300'}`}
+              className={`relative flex-1 flex flex-col items-center justify-center gap-1 py-2 rounded-2xl text-[10px] font-medium transition-all duration-200 active:scale-95 ${
+                active
+                  ? 'text-cyan-100 bg-gradient-to-b from-cyan-400/20 to-indigo-400/10 border border-cyan-300/25 shadow-[0_0_20px_rgba(34,211,238,0.15)]'
+                  : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.05] border border-transparent'
+              }`}
             >
-              <Icon size={16} />
+              <Icon size={17} className={active ? 'text-cyan-200' : undefined} />
               {t(`nav.${id}`, item.label).split(' ')[0]}
+              {active && (
+                <span className="absolute -top-0.5 w-8 h-0.5 rounded-full bg-gradient-to-r from-cyan-300 to-indigo-300 shadow-[0_0_8px_rgba(103,232,249,0.9)]" />
+              )}
             </button>
           );
         })}
-        <button onClick={onSearch} className="flex flex-col items-center justify-center gap-0.5 text-[10px] text-zinc-500">
-          <Search size={16} />
+        <button
+          onClick={onSearch}
+          aria-label={t('common.search', 'Search')}
+          className="flex-1 flex flex-col items-center justify-center gap-1 py-2 rounded-2xl text-[10px] font-medium text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.05] border border-transparent transition-all active:scale-95"
+        >
+          <span className="w-[34px] h-[26px] rounded-xl flex items-center justify-center bg-white/[0.05] border border-white/10">
+            <Search size={14} />
+          </span>
           {t('common.search', 'Search')}
         </button>
       </div>
@@ -306,7 +345,7 @@ function MobileDock({ page, onNavigate, onSearch, canSeeMusicDesk }) {
 }
 
 export default function App() {
-  const { locale, t, toggleLocale } = useI18n();
+  const { t } = useI18n();
   const { auth, account, discord, displayUser: me, loading: authLoading } = useAuth();
   const [page, setPage] = useState(getHashPage);
   const [guilds, setGuilds] = useState([]);
@@ -369,6 +408,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const quickIds = ['overview', 'analytics', 'livefeed', 'members', 'tickets', 'music'];
     const onKey = (e) => {
       if (e.key === 'Escape') setMobileOpen(false);
       const tag = (e.target?.tagName || '').toLowerCase();
@@ -378,6 +418,17 @@ export default function App() {
         setPaletteOpen((v) => !v);
         return;
       }
+      // ⌘1…⌘6 quick-switch between primary desks (palette stays authoritative
+      // for permission gating: hidden pages are ignored).
+      if ((e.metaKey || e.ctrlKey) && /^[1-6]$/.test(e.key)) {
+        const target = quickIds[Number(e.key) - 1];
+        if (target) {
+          e.preventDefault();
+          setPaletteOpen(false);
+          navigate(target);
+        }
+        return;
+      }
       if (!typing && e.key === '/' && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         setPaletteOpen(true);
@@ -385,7 +436,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     Promise.all([
@@ -480,8 +531,8 @@ export default function App() {
             <div className="absolute inset-0 rounded-full border-2 border-cyan-500/15" />
             <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-cyan-300 animate-spin" />
           </div>
-          <p className="text-cyan-200 text-sm font-semibold glow-text">Starting EB Dashboard</p>
-          <p className="text-zinc-500 text-xs mt-1">Connecting to the bot…</p>
+          <p className="text-cyan-200 text-sm font-semibold glow-text">{t('shell.starting', 'Starting EB Dashboard')}</p>
+          <p className="text-zinc-500 text-xs mt-1">{t('shell.connecting', 'Connecting to the bot…')}</p>
         </div>
       </div>
     );
@@ -504,7 +555,7 @@ export default function App() {
       <PermContext.Provider value={{ level: permLevel, levelName: permLevelName }}>
         <OAuthNotice />
         <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:px-3 focus:py-2 focus:rounded-lg focus:bg-cyan-400 focus:text-black text-sm font-semibold">
-          Skip to content
+          {t('shell.skip', 'Skip to content')}
         </a>
         {isHome ? (
           <Home health={health} auth={auth} onEnter={(id) => navigate(id || 'overview')} />
@@ -527,32 +578,47 @@ export default function App() {
             onToggleCollapsed={toggleCollapsed}
           />
           <div className="flex-1 min-w-0 flex flex-col">
-            <header className="h-14 flex-shrink-0 pl-14 md:pl-5 pr-3 sm:pr-5 glass-header flex items-center justify-between gap-3">
-              <div className="min-w-0 flex items-center gap-3">
-                <div className="min-w-0">
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-zinc-500 truncate">
-                    {selectedGuild?.name || 'EB Dashboard'}
-                    <span className="text-zinc-700"> / </span>
-                    <span className="text-zinc-400">V2</span>
-                  </p>
-                  <h2 className="text-sm font-semibold text-white truncate leading-tight">
+            <header className="min-h-16 flex-shrink-0 pl-14 md:pl-5 pr-3 sm:pr-5 py-2 glass-header flex items-center justify-between gap-3">
+              <div className="min-w-0 flex items-center gap-3 flex-1">
+                {selectedGuild ? (
+                  selectedGuild.icon
+                    ? <img src={selectedGuild.icon} alt="" className="w-9 h-9 rounded-2xl ring-1 ring-white/15 flex-shrink-0 hidden sm:block" />
+                    : <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-cyan-400/25 to-indigo-400/25 border border-white/10 hidden sm:flex items-center justify-center text-sm text-cyan-200 font-bold flex-shrink-0">
+                        {selectedGuild.name?.[0] || '?'}
+                      </div>
+                ) : null}
+                <div className="min-w-0 flex-1">
+                  <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.16em] text-zinc-500 truncate">
+                    <span className="truncate max-w-[140px] sm:max-w-none">{selectedGuild?.name || 'EB Dashboard'}</span>
+                    <span className="text-zinc-700 flex-shrink-0">/</span>
+                    <span className="text-zinc-400 flex-shrink-0">V2</span>
+                    {PAGE_HINTS[page] && (
+                      <span className="hidden xl:inline normal-case tracking-normal text-zinc-600 truncate font-normal">
+                        · {PAGE_HINTS[page]}
+                      </span>
+                    )}
+                  </nav>
+                  <h2 className="text-[15px] font-bold text-white truncate leading-tight tracking-tight">
                     {t(`nav.${page}`, PAGE_TITLES[page] || 'Dashboard')}
                   </h2>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
                 <button
                   onClick={() => setPaletteOpen(true)}
-                  className="hidden md:flex items-center gap-2 h-9 px-3 rounded-xl border border-white/10 bg-white/[0.03] text-zinc-500 hover:text-zinc-200 hover:border-cyan-400/30 transition-all min-w-[220px]"
+                  className="hidden md:flex items-center gap-2.5 h-10 px-3.5 rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.05] to-white/[0.02] text-zinc-500 hover:text-zinc-100 hover:border-cyan-300/35 hover:shadow-[0_0_24px_rgba(34,211,238,0.12)] transition-all min-w-[220px] lg:min-w-[260px] group"
+                  aria-label="Open command palette"
                 >
-                  <Search size={13} />
-                  <span className="text-xs flex-1 text-start">{t('shell.searchPlaceholder', 'Search pages, warn, music…')}</span>
-                  <kbd className="kbd">⌘K</kbd>
+                  <Search size={14} className="text-zinc-500 group-hover:text-cyan-300 transition-colors flex-shrink-0" />
+                  <span className="text-xs flex-1 text-start truncate">{t('shell.searchPlaceholder', 'Search pages, warn, music…')}</span>
+                  <span className="flex items-center gap-1 flex-shrink-0">
+                    <kbd className="kbd">⌘K</kbd>
+                  </span>
                 </button>
                 <button
                   onClick={() => setPaletteOpen(true)}
-                  className="md:hidden cyber-icon-button"
+                  className="md:hidden w-10 h-10 dock-glass rounded-2xl flex items-center justify-center text-zinc-400"
                   aria-label="Search"
                 >
                   <Search size={16} />
@@ -560,31 +626,35 @@ export default function App() {
 
                 {publicUrl && (
                   <div className="hidden lg:block">
-                    <CopyButton value={publicUrl} label="Copy URL" className="cyber-button flex items-center gap-1.5 text-xs py-1.5 px-3" />
+                    <CopyButton value={publicUrl} label={t('shell.copyUrl', 'Copy URL')} className="cyber-button flex items-center gap-1.5 text-xs py-2 px-3 !rounded-2xl" />
                   </div>
                 )}
 
-                <button
-                  onClick={toggleLocale}
-                  className="cyber-icon-button"
-                  aria-label={locale === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}
-                  title={locale === 'ar' ? 'English' : 'العربية'}
-                >
-                  <Languages size={16} />
-                </button>
-
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-medium ${
+                <div className="hidden sm:flex items-center gap-1 p-1 rounded-2xl border border-white/[0.07] bg-white/[0.02]">
+                  <LanguageMenu />
+                  <span className="w-px h-5 bg-white/[0.07]" />
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold" title={health?.uptime ? `Uptime ${formatUptime(health.uptime)}` : undefined}>
+                    <span className={`relative flex w-2 h-2`}>
+                      <span className={`absolute inline-flex h-full w-full rounded-full opacity-60 animate-ping ${health?.botOnline ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                      <span className={`relative inline-flex rounded-full h-2 w-2 ${health?.botOnline ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]' : 'bg-red-400'}`} />
+                    </span>
+                    <span className={health?.botOnline ? 'text-emerald-300' : 'text-red-300'}>
+                      {health?.botOnline ? t('common.online', 'Online') : t('common.offline', 'Offline')}
+                    </span>
+                    {health?.uptime ? <span className="hidden lg:inline text-zinc-500 font-normal tabular-nums">· {formatUptime(health.uptime)}</span> : null}
+                  </span>
+                  <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-zinc-400 text-[11px] tabular-nums" title="Connected servers">
+                    <Activity size={11} className="text-zinc-500" />
+                    {health?.guilds ?? 0}
+                  </span>
+                </div>
+                {/* Compact status for small screens */}
+                <span className={`sm:hidden inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-[11px] font-medium ${
                   health?.botOnline
                     ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300'
                     : 'border-red-500/25 bg-red-500/10 text-red-300'
                 }`}>
                   {health?.botOnline ? <Wifi size={11} /> : <WifiOff size={11} />}
-                  <span>{health?.botOnline ? t('common.online', 'Online') : t('common.offline', 'Offline')}</span>
-                  {health?.uptime ? <span className="hidden sm:inline text-zinc-500">· {formatUptime(health.uptime)}</span> : null}
-                </span>
-                <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-white/10 text-zinc-400 text-[11px]">
-                  <Activity size={11} />
-                  {health?.guilds ?? 0}
                 </span>
               </div>
             </header>
@@ -622,7 +692,7 @@ export default function App() {
             <main id="main" className={`flex-1 min-w-0 ${isLive ? 'overflow-hidden' : 'overflow-auto'}`}>
               {auth.oauthEnabled && !auth.loggedIn && auth.redirectUri && !auth.redirectUri.includes('localhost') && (
                 <div className="mx-4 sm:mx-6 mt-4 px-4 py-3 rounded-xl bg-cyan-500/10 border border-cyan-500/25 text-xs text-cyan-200">
-                  Add this Redirect URI in the Discord Developer Portal → OAuth2 → Redirects:
+                  {t('shell.oauthRedirect', 'Add this Redirect URI in the Discord Developer Portal → OAuth2 → Redirects:')}
                   <code className="block mt-1 text-[11px] text-cyan-300 break-all">{auth.redirectUri}</code>
                 </div>
               )}
@@ -630,22 +700,22 @@ export default function App() {
                 <div className="min-h-full flex items-center justify-center p-8">
                   <div className="cyber-card max-w-sm p-7 text-center">
                     <AlertTriangle size={28} className="mx-auto text-red-300 mb-3" />
-                    <p className="text-white font-semibold">System access required</p>
+                    <p className="text-white font-semibold">{t('denied.title', 'System access required')}</p>
                     <p className="text-sm text-zinc-500 mt-2">{musicPageDenied
-                      ? 'The Music desk is available only to configured DEVELOPER or SUPER_ADMIN identities.'
+                      ? t('denied.music', 'The Music desk is available only to configured DEVELOPER or SUPER_ADMIN identities.')
                       : botControlsDenied
-                        ? 'Bot Controls are available only to configured DEVELOPER or SUPER_ADMIN identities.'
+                        ? t('denied.botcontrols', 'Bot Controls are available only to configured DEVELOPER or SUPER_ADMIN identities.')
                       : settingsDenied
-                        ? 'Server Settings are available only to configured DEVELOPER or SUPER_ADMIN identities.'
-                      : 'This backend page is available only to configured SUPPORT, DEVELOPER, or SUPER_ADMIN identities.'}</p>
-                    <button onClick={() => navigate('overview')} className="cyber-button mt-5">Return to dashboard</button>
+                        ? t('denied.settings', 'Server Settings are available only to configured DEVELOPER or SUPER_ADMIN identities.')
+                      : t('denied.developer', 'This backend page is available only to configured SUPPORT, DEVELOPER, or SUPER_ADMIN identities.')}</p>
+                    <button onClick={() => navigate('overview')} className="cyber-button mt-5">{t('denied.back', 'Return to dashboard')}</button>
                   </div>
                 </div>
               ) : isDeveloperPage ? (
                 <div className="h-full animate-fade-in">
                   <PageErrorBoundary key={page}>
                     <Suspense fallback={<PageLoading />}>
-                      <PageComponent pageHint={PAGE_HINTS[page]} {...(initialTab === undefined ? {} : { initialTab })} />
+                      <PageComponent pageHint={PAGE_HINTS[page]} onNavigate={navigate} developerAccess={developerAccess} {...(initialTab === undefined ? {} : { initialTab })} />
                     </Suspense>
                   </PageErrorBoundary>
                 </div>

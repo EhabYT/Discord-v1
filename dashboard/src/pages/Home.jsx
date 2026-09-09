@@ -1,7 +1,8 @@
 import React from 'react';
 import { useI18n } from '../i18n.jsx';
+import LanguageMenu from '../components/LanguageMenu.jsx';
 import {
-  AlertTriangle, ArrowRight, BarChart3, Gift, Languages, LayoutDashboard, Music, Shield, Ticket,
+  AlertTriangle, ArrowRight, BarChart3, Gift, LayoutDashboard, Music, Shield, Ticket,
   Trophy, Users, Wifi, WifiOff, Zap, Command, Radio, Terminal, Sparkles,
   MessageSquare, SlidersHorizontal, Play, Hash, Lock, Lightbulb, Vote, Ghost, Megaphone,
 } from 'lucide-react';
@@ -59,7 +60,7 @@ function formatUptime(ms) {
 }
 
 export default function Home({ health, auth, onEnter }) {
-  const { locale, t, toggleLocale } = useI18n();
+  const { t } = useI18n();
   const online = !!health?.botOnline;
   const go = (id) => onEnter(id || 'overview');
   const inviteUrl = auth?.clientId
@@ -71,27 +72,27 @@ export default function Home({ health, auth, onEnter }) {
       <header className="sticky top-0 z-30 glass-header">
         <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <img src="/eb_logo.svg" alt="EB BOT" className="w-10 h-10 rounded-xl object-cover ring-1 ring-white/10" />
+            <span className="relative flex-shrink-0">
+              <span className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-cyan-400/30 via-sky-400/10 to-indigo-400/30 blur-md opacity-70 pointer-events-none" />
+              <img src="/eb_logo.svg" alt="EB BOT" className="relative w-10 h-10 rounded-xl object-cover ring-1 ring-white/15" />
+            </span>
             <div className="min-w-0">
-              <p className="text-sm font-bold text-white leading-none">EB BOT</p>
+              <p className="text-sm font-bold text-white leading-none tracking-tight">EB BOT</p>
               <p className="text-[10px] uppercase tracking-[0.16em] text-zinc-500 mt-1">Homepage</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={toggleLocale}
-              className="cyber-icon-button"
-              aria-label={locale === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}
-              title={locale === 'ar' ? 'English' : 'العربية'}
-            >
-              <Languages size={16} />
-            </button>
-            <span className={`hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-medium ${
-              online ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300' : 'border-red-500/25 bg-red-500/10 text-red-300'
+            <LanguageMenu />
+            <span className={`hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[11px] font-semibold ${
+              online ? 'border-emerald-400/25 bg-emerald-400/[0.08] text-emerald-300' : 'border-red-400/25 bg-red-400/[0.08] text-red-300'
             }`}>
+              <span className="relative flex w-1.5 h-1.5">
+                <span className={`absolute inline-flex h-full w-full rounded-full opacity-60 animate-ping ${online ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${online ? 'bg-emerald-400' : 'bg-red-400'}`} />
+              </span>
               {online ? <Wifi size={11} /> : <WifiOff size={11} />}
               {online ? t('common.online', 'Online') : t('common.offline', 'Offline')}
-              {health?.uptime ? <span className="hidden md:inline text-zinc-500">· {formatUptime(health.uptime * 1000)}</span> : null}
+              {health?.uptime ? <span className="hidden md:inline text-zinc-500 font-normal tabular-nums">· {formatUptime(health.uptime * 1000)}</span> : null}
             </span>
             {inviteUrl && (
               <a href={inviteUrl} target="_blank" rel="noreferrer" className="hidden sm:inline-flex cyber-button text-xs px-3 py-2">
@@ -120,15 +121,16 @@ export default function Home({ health, auth, onEnter }) {
         </div>
       )}
 
-      <section className="max-w-6xl mx-auto px-5 pt-12 sm:pt-16 pb-8">
-        <div className="grid lg:grid-cols-[1.15fr_0.85fr] gap-10 items-center">
+      <section className="max-w-6xl mx-auto px-5 pt-12 sm:pt-16 pb-8 relative">
+        <div className="absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-cyan-400/[0.06] via-indigo-400/[0.04] to-transparent blur-2xl pointer-events-none" aria-hidden="true" />
+        <div className="relative grid lg:grid-cols-[1.15fr_0.85fr] gap-10 items-center">
           <div className="animate-fade-in">
-            <p className="cyber-label mb-3 inline-flex items-center gap-1.5">
-              <Sparkles size={11} className="text-cyan-300" /> {t('home.kicker', 'Discord All-in-One')}
+            <p className="mb-3 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-200 px-2.5 py-1 rounded-full border border-cyan-300/25 bg-cyan-400/[0.08]">
+              <Sparkles size={11} className="text-cyan-200" /> {t('home.kicker', 'Discord All-in-One')}
             </p>
             <h1 className="text-4xl sm:text-6xl font-bold text-white tracking-tight leading-[1.02] mb-5">
               {t('home.titleA', 'Your server.')}<br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-200 via-sky-200 to-indigo-200">{t('home.titleB', 'One desk.')}</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-200 via-sky-200 to-indigo-300 drop-shadow-[0_0_28px_rgba(34,211,238,0.25)]">{t('home.titleB', 'One desk.')}</span>
             </h1>
             <p className="text-zinc-400 text-base sm:text-lg max-w-xl leading-relaxed mb-7">
               {t('home.subtitle', 'Moderation, music, XP, tickets and live analytics — in one place.')}
@@ -156,32 +158,45 @@ export default function Home({ health, auth, onEnter }) {
           </div>
 
           <div className="relative flex justify-center animate-slide-up">
-            <div className="absolute inset-6 rounded-full bg-cyan-400/15 blur-3xl pointer-events-none" />
-            <div className="relative">
+            <div className="absolute inset-6 rounded-full bg-gradient-to-br from-cyan-400/20 via-sky-400/10 to-indigo-400/20 blur-3xl pointer-events-none animate-glow-pulse" aria-hidden="true" />
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none" aria-hidden="true">
+              <div className="w-72 h-72 sm:w-96 sm:h-96 rounded-full border border-white/[0.05]" />
+              <div className="absolute w-60 h-60 sm:w-80 sm:h-80 rounded-full border border-cyan-300/[0.07]" />
+            </div>
+            <div className="relative animate-float-slow">
+              <span className="absolute -inset-3 rounded-[2.2rem] bg-gradient-to-br from-cyan-400/25 via-transparent to-indigo-400/25 blur-2xl opacity-60 pointer-events-none" aria-hidden="true" />
               <img
                 src="/eb_logo.svg"
                 alt="EB BOT"
-                className="relative w-64 h-64 sm:w-80 sm:h-80 rounded-[2rem] object-cover ring-1 ring-white/10 shadow-[0_30px_80px_rgba(0,0,0,0.55)]"
+                className="relative w-64 h-64 sm:w-80 sm:h-80 rounded-[2rem] object-cover ring-1 ring-white/15 shadow-[0_30px_80px_rgba(0,0,0,0.55),0_0_60px_rgba(34,211,238,0.12)]"
               />
-              <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 cyber-card px-3 py-1.5 flex items-center gap-2 whitespace-nowrap">
-                <span className={`w-1.5 h-1.5 rounded-full ${online ? 'bg-emerald-400 glow-dot' : 'bg-red-400'}`} />
-                <span className="text-[11px] text-zinc-300">{online ? '𝑬𝑩#8552 online' : 'Bot offline'}</span>
+              <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 glass-popover px-3 py-1.5 flex items-center gap-2 whitespace-nowrap">
+                <span className={`relative flex w-1.5 h-1.5`}>
+                  <span className={`absolute inline-flex h-full w-full rounded-full opacity-60 animate-ping ${online ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                  <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${online ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                </span>
+                <span className="text-[11px] font-medium text-zinc-200">{online ? '𝑬𝑩#8552 online' : 'Bot offline'}</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-14">
+        <div className="relative grid grid-cols-2 md:grid-cols-4 gap-3 mt-14">
           {[
-            { label: 'Status', value: online ? t('common.online', 'Online') : t('common.offline', 'Offline'), sub: health?.uptime ? formatUptime(health.uptime * 1000) : '—' },
-            { label: 'Server', value: health?.guilds ?? '—', sub: 'verbunden' },
-            { label: 'Commands', value: '100', sub: 'Slash bereit' },
-            { label: 'Dashboard', value: 'V2', sub: health?.maintenance ? 'maintenance' : 'live control' },
-          ].map((s) => (
-            <div key={s.label} className="cyber-card p-4">
-              <p className="text-[10px] uppercase tracking-[0.14em] text-zinc-500">{s.label}</p>
-              <p className="text-2xl font-bold text-white mt-1 tabular-nums">{s.value}</p>
-              <p className="text-[11px] text-zinc-600 mt-0.5">{s.sub}</p>
+            { label: t('home.statStatus', 'Status'), value: online ? t('common.online', 'Online') : t('common.offline', 'Offline'), sub: health?.uptime ? formatUptime(health.uptime * 1000) : '—', dot: online },
+            { label: t('home.statServers', 'Servers'), value: health?.guilds ?? '—', sub: t('home.statServersSub', 'connected') },
+            { label: t('home.statCommands', 'Commands'), value: '100', sub: t('home.statCommandsSub', 'slash ready') },
+            { label: t('home.statDashboard', 'Dashboard'), value: 'V2', sub: health?.maintenance ? t('home.statMaintenance', 'maintenance') : t('home.statLive', 'live control') },
+          ].map((s, i) => (
+            <div key={s.label} className="glass-panel mesh-glow p-4 animate-fade-in" style={{ animationDelay: `${i * 60}ms` }}>
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500 flex items-center gap-1.5">
+                {s.dot !== undefined && (
+                  <span className={`w-1.5 h-1.5 rounded-full ${s.dot ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]' : 'bg-red-400'}`} />
+                )}
+                {s.label}
+              </p>
+              <p className="text-2xl font-bold text-white mt-1 tabular-nums tracking-tight">{s.value}</p>
+              <p className="text-[11px] text-zinc-500 mt-0.5">{s.sub}</p>
             </div>
           ))}
         </div>
@@ -193,11 +208,12 @@ export default function Home({ health, auth, onEnter }) {
           <h2 className="text-2xl font-bold text-white">{t('home.howTitle', 'Three steps to get started.')}</h2>
         </div>
         <div className="grid md:grid-cols-3 gap-3">
-          {STEPS.map((s) => (
-            <div key={s.n} className="cyber-card p-5">
-              <p className="text-xs font-mono text-cyan-300 mb-3">{s.n}</p>
+          {STEPS.map((s, i) => (
+            <div key={s.n} className="glass-panel p-5 relative overflow-hidden animate-fade-in" style={{ animationDelay: `${i * 70}ms` }}>
+              <span className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-cyan-300/30 via-transparent to-transparent pointer-events-none" aria-hidden="true" />
+              <p className="text-xs font-mono font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-200 to-indigo-300 mb-3">{s.n}</p>
               <p className="text-sm font-semibold text-white">{t(`step.${s.n}.title`, s.title)}</p>
-              <p className="text-xs text-zinc-500 mt-1 leading-relaxed">{t(`step.${s.n}.text`, s.text)}</p>
+              <p className="text-xs text-zinc-400 mt-1 leading-relaxed">{t(`step.${s.n}.text`, s.text)}</p>
             </div>
           ))}
         </div>
@@ -214,13 +230,13 @@ export default function Home({ health, auth, onEnter }) {
           </button>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {FEATURES.map(({ id, icon: Icon, title, text }) => (
-            <button key={title} onClick={() => go(id)} className="cyber-card-hover p-4 text-start">
-              <span className="w-9 h-9 rounded-xl bg-cyan-400/10 border border-cyan-400/15 flex items-center justify-center text-cyan-300 mb-3">
-                <Icon size={16} />
+          {FEATURES.map(({ id, icon: Icon, title, text }, i) => (
+            <button key={title} onClick={() => go(id)} className="cyber-card-hover p-4 text-start group animate-fade-in" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
+              <span className="w-10 h-10 rounded-2xl bg-gradient-to-br from-cyan-400/20 to-indigo-400/10 border border-cyan-300/20 flex items-center justify-center text-cyan-200 mb-3 shadow-[0_0_18px_rgba(34,211,238,0.12)] group-hover:shadow-[0_0_26px_rgba(34,211,238,0.22)] transition-shadow">
+                <Icon size={17} />
               </span>
               <p className="text-sm font-semibold text-white">{t(`nav.${id}`, title)}</p>
-              <p className="text-xs text-zinc-500 mt-1 leading-relaxed">{t(`feature.${id}`, text)}</p>
+              <p className="text-xs text-zinc-400 mt-1 leading-relaxed">{t(`feature.${id}`, text)}</p>
             </button>
           ))}
         </div>
@@ -233,33 +249,38 @@ export default function Home({ health, auth, onEnter }) {
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
           {PREVIEW.map(({ id, icon: Icon, label, hint }) => (
-            <button key={id} onClick={() => go(id)} className="cyber-card-hover p-3 text-start">
-              <Icon size={15} className="text-cyan-300 mb-2" />
+            <button key={id} onClick={() => go(id)} className="cyber-card-hover p-3.5 text-start group">
+              <span className="w-8 h-8 rounded-xl flex items-center justify-center bg-white/[0.05] border border-white/[0.08] text-cyan-200 mb-2.5 group-hover:border-cyan-300/30 transition-colors">
+                <Icon size={15} />
+              </span>
               <p className="text-xs font-semibold text-white">{t(`nav.${id}`, label)}</p>
-              <p className="text-[10px] text-zinc-600">{hint}</p>
+              <p className="text-[10px] text-zinc-500">{t(`home.ph.${id}`, hint)}</p>
             </button>
           ))}
         </div>
       </section>
 
       <section className="max-w-6xl mx-auto px-5 pb-14">
-        <div className="cyber-card-accent p-6 sm:p-8">
-          <div className="flex items-center gap-2 mb-3">
-            <Hash size={14} className="text-cyan-300" />
-            <p className="cyber-label">In Discord</p>
+        <div className="cyber-card-accent mesh-glow p-6 sm:p-8 relative overflow-hidden">
+          <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-indigo-400/10 blur-3xl pointer-events-none" aria-hidden="true" />
+          <div className="relative flex items-center gap-2 mb-3">
+            <span className="w-7 h-7 rounded-lg flex items-center justify-center bg-cyan-400/15 border border-cyan-300/25">
+              <Hash size={14} className="text-cyan-200" />
+            </span>
+            <p className="cyber-label !text-cyan-200">In Discord</p>
           </div>
           <h2 className="text-xl font-bold text-white mb-2">{t('home.commandsTitle', '100 slash commands. One bot.')}</h2>
           <p className="text-xs text-zinc-500 mb-5">{t('home.commandsSub', 'Full commands with extra features in subcommands.')}</p>
           <div className="flex flex-wrap gap-2 mb-6">
             {COMMANDS.map((c) => (
-              <span key={c} className="font-mono text-xs px-3 py-1.5 rounded-lg bg-black/25 border border-white/10 text-cyan-200">{c}</span>
+              <span key={c} className="font-mono text-xs px-3 py-1.5 rounded-xl bg-black/30 border border-white/10 text-cyan-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] hover:border-cyan-300/30 transition-colors">{c}</span>
             ))}
           </div>
-          <div className="grid sm:grid-cols-2 gap-2">
+          <div className="grid sm:grid-cols-2 gap-2 relative">
             {PACKS.map((p) => (
-              <div key={p.name} className="rounded-xl bg-black/20 border border-white/[0.06] px-3 py-2.5">
-                <p className="font-mono text-xs text-cyan-200">{p.name}</p>
-                <p className="text-[11px] text-zinc-500 mt-0.5">{p.items}</p>
+              <div key={p.name} className="rounded-2xl bg-black/25 border border-white/[0.07] px-3.5 py-3 backdrop-blur">
+                <p className="font-mono text-xs font-semibold text-cyan-100">{p.name}</p>
+                <p className="text-[11px] text-zinc-400 mt-0.5">{p.items}</p>
               </div>
             ))}
           </div>
@@ -270,8 +291,12 @@ export default function Home({ health, auth, onEnter }) {
       </section>
 
       <section className="max-w-6xl mx-auto px-5 pb-16">
-        <div className="cyber-card p-8 sm:p-10 text-center">
-          <img src="/eb_logo.svg" alt="" className="w-16 h-16 mx-auto mb-4 rounded-2xl object-cover ring-1 ring-white/10" />
+        <div className="glass-panel mesh-glow gradient-border p-8 sm:p-12 text-center relative overflow-hidden">
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/50 to-transparent pointer-events-none" aria-hidden="true" />
+          <span className="relative inline-block mb-5">
+            <span className="absolute -inset-2 rounded-3xl bg-gradient-to-br from-cyan-400/25 to-indigo-400/25 blur-xl opacity-70 pointer-events-none" aria-hidden="true" />
+            <img src="/eb_logo.svg" alt="" className="relative w-16 h-16 mx-auto rounded-2xl object-cover ring-1 ring-white/15" />
+          </span>
           <h2 className="text-2xl font-bold text-white mb-2">{t('home.ready', 'Ready when you are.')}</h2>
           <p className="text-sm text-zinc-500 mb-6 max-w-md mx-auto">
             {t('home.readyText', 'Run your community from one fast, secure dashboard.')}

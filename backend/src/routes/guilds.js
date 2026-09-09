@@ -52,7 +52,7 @@ module.exports = (botClient) => {
             // A configured-but-unreachable database still fails closed, so a
             // real outage is never masked as empty configuration.
             const databaseOnline = !databaseConfigIssue();
-            const [automod, welcome, logging, djrole, xpEnabled, giveaways, commandsEnabled, tickets, rewards, customFilters, autoresponder] = await Promise.all([
+            const [automod, welcome, logging, djrole, xpEnabled, giveaways, commandsEnabled, ticketsRaw, rewards, customFilters, autoresponder] = await Promise.all([
                 db.get(`automod_${guildId}`),
                 db.get(`welcome_${guildId}`),
                 db.get(`logging_${guildId}`),
@@ -65,6 +65,14 @@ module.exports = (botClient) => {
                 db.get(`custom_filters_${guildId}`),
                 db.get(`autoresponder_${guildId}`)
             ]);
+            let tickets = ticketsRaw;
+            if (!tickets) {
+                const legacy = await db.get(`ticket_config_${guildId}`);
+                if (legacy) {
+                    tickets = legacy;
+                    try { await db.set(`tickets_${guildId}`, legacy); } catch { /* ignore migrate error */ }
+                }
+            }
 
             const activeGiveaways = (giveaways || []).filter(g => g.active).length;
 
@@ -338,6 +346,26 @@ module.exports = (botClient) => {
             if (body.logChannelId && !body.channelId && !current.channelId) {
                 merged.channelId = body.logChannelId;
             }
+            for (const key of ['roleId', 'unverifiedRoleId']) {
+                if (merged[key]) {
+                    try {
+                        verify.assertRoleManageable(req.guild, merged[key]);
+                    } catch (err) {
+                        const status = err.code === 'NOT_FOUND' ? 400 : 403;
+                        return res.status(status).json({ error: err.message, code: err.code || 'HIERARCHY', field: key });
+                    }
+                }
+            }
+            for (const id of merged.extraRoleIds || []) {
+                if (id && id !== merged.roleId) {
+                    try {
+                        verify.assertRoleManageable(req.guild, id);
+                    } catch (err) {
+                        const status = err.code === 'NOT_FOUND' ? 400 : 403;
+                        return res.status(status).json({ error: err.message, code: err.code || 'HIERARCHY', field: 'extraRoleIds' });
+                    }
+                }
+            }
             const saved = await verify.saveConfig(db, req.params.guildId, merged);
             res.json(saved);
         } catch (err) { next(err); }
@@ -363,24 +391,51 @@ module.exports = (botClient) => {
                 showGuildIcon: typeof req.body.showGuildIcon === 'boolean' ? req.body.showGuildIcon : current.showGuildIcon,
             });
             const channelId = req.body.channelId || cfg.channelId || cfg.logChannelId;
-            const result = await verify.postPanel(req.guild, cfg, channelId);
-            cfg.channelId = result.channelId;
-            cfg.messageId = result.messageId;
-            cfg.enabled = true;
-            await verify.saveConfig(db, req.params.guildId, cfg);
-            res.json({ success: true, ...result });
+            try {
+                const result = await verify.postPanel(req.guild, cfg, channelId);
+                cfg.channelId = result.channelId;
+                cfg.messageId = result.messageId;
+                cfg.enabled = true;
+                await verify.saveConfig(db, req.params.guildId, cfg);
+                res.json({ success: true, ...result });
+            } catch (err) {
+                if (err.code === 'HIERARCHY' || err.code === 'MANAGED_ROLE' || err.code === 'EVERYONE' || err.code === 'NO_PERMS') {
+                    return res.status(403).json({ error: err.message, code: err.code });
+                }
+                throw err;
+            }
         } catch (err) { next(err); }
     });
 
     router.post('/verification/members/:userId/verify', requirePerm(2), async (req, res, next) => {
         try {
             const cfg = await verify.getConfig(db, req.params.guildId);
-            if (!cfg.roleId) return res.status(400).json({ error: 'Set a verified role first' });
+            if (!cfg.roleId) return res.status(400).json({ error: 'Set a verified role first', code: 'NOT_SETUP' });
+            const problem = verify.setupProblem ? verify.setupProblem(cfg, req.guild) : null;
+            if (problem && problem.code !== 'DISABLED') {
+                const status = problem.code === 'NOT_FOUND' ? 400 : 403;
+                return res.status(status).json({ error: problem.message, code: problem.code });
+            }
             const member = await req.guild.members.fetch(req.params.userId).catch(() => null);
             if (!member) return res.status(404).json({ error: 'Member not found' });
             const actor = req.session?.user?.username || 'Dashboard';
-            const entry = await verify.applyVerification(member, cfg, { db, method: 'staff', actor });
-            res.json({ success: true, entry });
+            try {
+                const entry = await verify.applyVerification(member, cfg, { db, method: 'staff', actor });
+                res.json({ success: true, entry });
+            } catch (err) {
+                if (err.code === 'HIERARCHY' || err.code === 'MANAGED_ROLE' || err.code === 'EVERYONE' || err.code === 'NO_PERMS') {
+                    return res.status(403).json({ error: err.message, code: err.code });
+                }
+                if (err.code === 'NOT_FOUND') {
+                    return res.status(400).json({ error: err.message, code: err.code });
+                }
+                if (typeof err?.code === 'number' && verify.describeDiscordFailure) {
+                    const mapped = verify.describeDiscordFailure(err, req.guild.roles.cache.get(cfg.roleId));
+                    const status = mapped.code === 'NOT_FOUND' ? 404 : 403;
+                    return res.status(status).json({ error: mapped.message, code: mapped.code });
+                }
+                throw err;
+            }
         } catch (err) { next(err); }
     });
 
@@ -491,12 +546,31 @@ module.exports = (botClient) => {
                 cfg.lockedChannelIds = await verify.applyGateLock(req.guild, cfg);
                 cfg.lockApplied = true;
             }
-            const panel = await verify.postPanel(req.guild, cfg, cfg.channelId);
-            cfg.messageId = panel.messageId;
-            cfg.channelId = panel.channelId;
-            const saved = await verify.saveConfig(db, req.params.guildId, cfg);
-            res.json({ success: true, panel, config: saved });
+            try {
+                const panel = await verify.postPanel(req.guild, cfg, cfg.channelId);
+                cfg.messageId = panel.messageId;
+                cfg.channelId = panel.channelId;
+                const saved = await verify.saveConfig(db, req.params.guildId, cfg);
+                res.json({ success: true, panel, config: saved });
+            } catch (err) {
+                if (err.code === 'HIERARCHY' || err.code === 'MANAGED_ROLE' || err.code === 'EVERYONE' || err.code === 'NO_PERMS') {
+                    return res.status(403).json({ error: err.message, code: err.code });
+                }
+                throw err;
+            }
         } catch (err) { next(err); }
+    });
+
+    router.post('/verification/fix-hierarchy', requirePerm(3), rl.botMessaging(), async (req, res, next) => {
+        try {
+            const result = await verify.fixHierarchy(req.guild, db);
+            res.json({ success: true, ...result });
+        } catch (err) {
+            if (err.code === 'NO_PERMS' || err.code === 'FIX_FAILED' || err.code === 'NO_BOT_MEMBER' || err.code === 'HIERARCHY') {
+                return res.status(403).json({ error: err.message, code: err.code });
+            }
+            next(err);
+        }
     });
 
     const rr = require('eb-bot-shared/services/reaction-roles');
@@ -877,14 +951,42 @@ module.exports = (botClient) => {
         } catch (err) { next(err); }
     });
 
-    // GET /tickets — list open tickets
+    // GET /tickets — list open tickets (unified from both storage formats)
     router.get('/tickets', async (req, res, next) => {
         try {
             const { guildId } = req.params;
             const allKeys = await db.allByPrefix(`ticket_${guildId}_`);
-            const tickets = allKeys
-                .map(e => ({ id: e.id.replace(`ticket_${guildId}_`, ''), ...e.value }));
-            res.json(tickets);
+            const structured = allKeys
+                .map(e => ({ id: e.id.replace(`ticket_${guildId}_`, ''), ...e.value }))
+                .filter(t => t && typeof t === 'object');
+
+            // Fallback: include tickets tracked via opentickets_ map (legacy bot format)
+            const openMap = await db.get(`opentickets_${guildId}`) || {};
+            const mapped = Object.entries(openMap).map(([userId, channelId]) => {
+                const id = String(channelId);
+                // Avoid duplicate if already in structured list
+                if (structured.some(t => String(t.channelId) === id || String(t.id) === id)) return null;
+                return {
+                    id,
+                    channelId: id,
+                    userId: String(userId),
+                    status: 'open',
+                    createdAt: null
+                };
+            }).filter(Boolean);
+
+            // Enrich mapped entries with any existing ticket_ record if available, otherwise keep mapped
+            const combined = [...structured, ...mapped];
+            // Deduplicate by id/channelId
+            const seen = new Set();
+            const deduped = [];
+            for (const t of combined) {
+                const key = String(t.channelId || t.id);
+                if (seen.has(key)) continue;
+                seen.add(key);
+                deduped.push(t);
+            }
+            res.json(deduped);
         } catch (err) { next(err); }
     });
 
@@ -1432,20 +1534,65 @@ module.exports = (botClient) => {
         try {
             const { guildId } = req.params;
             const { categoryId, transcriptChannelId, supportRoleId, maxOpen } = req.body;
-            const config = await db.get(`tickets_${guildId}`) || { categoryId: null, transcriptChannelId: null };
+            const SNOWFLAKE = /^\d{17,20}$/;
+            const guild = req.guild;
+
+            // Validate inputs before persisting
+            if (categoryId !== undefined && categoryId !== null && String(categoryId).trim() !== '') {
+                const cid = String(categoryId).trim();
+                if (!SNOWFLAKE.test(cid)) return res.status(400).json({ error: 'Invalid category ID', code: 'INVALID_CATEGORY' });
+                const cat = guild.channels.cache.get(cid);
+                if (!cat) return res.status(404).json({ error: 'Category channel not found', code: 'NOT_FOUND' });
+                if (cat.type !== 4) return res.status(400).json({ error: 'Selected channel is not a category', code: 'INVALID_CATEGORY' });
+            }
+            if (transcriptChannelId !== undefined && transcriptChannelId !== null && String(transcriptChannelId).trim() !== '') {
+                const tid = String(transcriptChannelId).trim();
+                if (!SNOWFLAKE.test(tid)) return res.status(400).json({ error: 'Invalid transcript channel ID', code: 'INVALID_CHANNEL' });
+                const ch = guild.channels.cache.get(tid);
+                if (!ch) return res.status(404).json({ error: 'Transcript channel not found', code: 'NOT_FOUND' });
+                if (![0, 5].includes(ch.type)) return res.status(400).json({ error: 'Transcript channel must be a text channel', code: 'INVALID_CHANNEL' });
+            }
+            if (supportRoleId !== undefined && supportRoleId !== null && String(supportRoleId).trim() !== '') {
+                const rid = String(supportRoleId).trim();
+                if (!SNOWFLAKE.test(rid)) return res.status(400).json({ error: 'Invalid support role ID', code: 'INVALID_ROLE' });
+                const role = guild.roles.cache.get(rid);
+                if (!role) return res.status(404).json({ error: 'Support role not found', code: 'NOT_FOUND' });
+                if (role.managed) return res.status(400).json({ error: 'Support role is managed by an integration', code: 'MANAGED_ROLE' });
+                // Hierarchy check: bot must be able to see the role
+                const botMember = guild.members.me;
+                if (botMember && role.position >= botMember.roles.highest.position) {
+                    return res.status(403).json({ error: 'Support role is above the bot role', code: 'HIERARCHY' });
+                }
+            }
+            if (maxOpen !== undefined && maxOpen !== null && String(maxOpen).trim() !== '') {
+                const n = Number(maxOpen);
+                if (!Number.isInteger(n) || n < 1 || n > 10) return res.status(400).json({ error: 'Max open tickets must be between 1 and 10', code: 'INVALID_MAXOPEN' });
+            }
+
+            let config = await db.get(`tickets_${guildId}`);
+            if (!config) {
+                const legacy = await db.get(`ticket_config_${guildId}`);
+                config = legacy || { categoryId: null, transcriptChannelId: null };
+            }
             if (categoryId !== undefined) {
-                config.categoryId = categoryId;
-                config.category = categoryId;
+                const v = categoryId === '' || categoryId === null ? null : String(categoryId).trim() || null;
+                config.categoryId = v;
+                config.category = v;
             }
             if (transcriptChannelId !== undefined) {
-                config.transcriptChannelId = transcriptChannelId;
-                config.logChannel = transcriptChannelId;
+                const v = transcriptChannelId === '' || transcriptChannelId === null ? null : String(transcriptChannelId).trim() || null;
+                config.transcriptChannelId = v;
+                config.logChannel = v;
             }
             if (supportRoleId !== undefined) {
-                config.supportRoleId = supportRoleId;
-                config.supportRole = supportRoleId;
+                const v = supportRoleId === '' || supportRoleId === null ? null : String(supportRoleId).trim() || null;
+                config.supportRoleId = v;
+                config.supportRole = v;
             }
-            if (maxOpen !== undefined) config.maxOpen = maxOpen;
+            if (maxOpen !== undefined) {
+                config.maxOpen = maxOpen === '' || maxOpen === null ? 1 : Math.min(10, Math.max(1, Number(maxOpen) || 1));
+            }
+            config.enabled = true;
             await db.set(`tickets_${guildId}`, config);
             res.json(config);
         } catch (err) { next(err); }
@@ -1474,10 +1621,26 @@ module.exports = (botClient) => {
             const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
             const guild = req.guild;
             const channel = guild.channels.cache.get(channelId);
-            if (!channel) return res.status(400).json({ error: 'Channel not found' });
+            if (!channel) return res.status(400).json({ error: 'Channel not found', code: 'NOT_FOUND' });
+            if (![0, 5].includes(channel.type)) return res.status(400).json({ error: 'Panel channel must be a text channel', code: 'INVALID_CHANNEL' });
+
+            // Warn if ticket system not yet configured — panel would immediately error with "not configured"
+            const cfg = await db.get(`tickets_${guild.id}`) || await db.get(`ticket_config_${guild.id}`);
+            if (!cfg) {
+                // Allow posting but inform caller that setup is missing — dashboard will toast a hint
+                // Do not block; admin may want to post panel before full config.
+            }
+
+            if (title != null && String(title).length > 256) {
+                return res.status(400).json({ error: 'Title must be 256 characters or fewer', code: 'INVALID_TITLE' });
+            }
+            if (description != null && String(description).length > 4000) {
+                return res.status(400).json({ error: 'Description must be 4000 characters or fewer', code: 'INVALID_DESC' });
+            }
+
             const embed = new EmbedBuilder()
-                .setTitle(title || 'Support Tickets')
-                .setDescription(description || 'Click the button below to open a support ticket.')
+                .setTitle(String(title || 'Support Tickets').slice(0, 256))
+                .setDescription(String(description || 'Click the button below to open a support ticket.').slice(0, 4000))
                 .setColor(0x00FFFF)
                 .setFooter({ text: guild.name });
             const row = new ActionRowBuilder().addComponents(
@@ -1487,23 +1650,71 @@ module.exports = (botClient) => {
                     .setStyle(ButtonStyle.Primary)
                     .setEmoji('🎫')
             );
-            await channel.send({ embeds: [embed], components: [row] });
-            res.json({ success: true });
+            try {
+                await channel.send({ embeds: [embed], components: [row] });
+            } catch (sendErr) {
+                const msg = String(sendErr.message || '');
+                if (/Missing Permissions|Missing Access/i.test(msg)) {
+                    return res.status(403).json({ error: 'Bot lacks permission to send in that channel', code: 'NO_PERMS' });
+                }
+                throw sendErr;
+            }
+            res.json({ success: true, warned: !cfg ? 'Ticket system not yet configured — save configuration before members use the panel.' : undefined });
         } catch (err) { next(err); }
     });
 
-    // POST /tickets/:ticketId/close — mark a ticket closed
+    // POST /tickets/:ticketId/close — mark a ticket closed (dashboard)
     router.post('/tickets/:ticketId/close', requirePerm(2), async (req, res, next) => {
         try {
             const { guildId, ticketId } = req.params;
             const key = `ticket_${guildId}_${ticketId}`;
-            const ticket = await db.get(key);
-            if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+            let ticket = await db.get(key);
+            // Fallback to opentickets map if structured record missing (bot-created tickets)
+            let channelId = ticket?.channelId || ticket?.channel || ticketId;
+            let ownerId = ticket?.userId || null;
+            if (!ticket) {
+                const openMap = await db.get(`opentickets_${guildId}`) || {};
+                // Find owner by channelId
+                for (const [uid, cid] of Object.entries(openMap)) {
+                    if (String(cid) === String(ticketId) || String(cid) === String(channelId)) {
+                        ownerId = uid;
+                        channelId = String(cid);
+                        ticket = { userId: uid, channelId, status: 'open', id: ticketId };
+                        break;
+                    }
+                }
+                // Also try ticketId as channelId directly
+                if (!ticket) {
+                    const cid = String(ticketId);
+                    const ch = await req.guild.channels.fetch(cid).catch(() => null);
+                    if (ch && ch.name.startsWith('ticket-')) {
+                        ticket = { channelId: cid, status: 'open', id: ticketId };
+                        channelId = cid;
+                    }
+                }
+                if (!ticket) return res.status(404).json({ error: 'Ticket not found', code: 'NOT_FOUND' });
+            }
             ticket.status = 'closed';
             ticket.closedAt = Date.now();
+            ticket.closedBy = req.session?.user?.id || 'dashboard';
             await db.set(key, ticket);
-            const channelId = ticket.channelId || ticket.channel || ticketId;
-            const channel = await req.guild.channels.fetch(channelId).catch(() => null);
+
+            // Clean opentickets map
+            try {
+                const ext = await db.get(`opentickets_${guildId}`) || {};
+                let toDelete = ownerId;
+                if (!toDelete) {
+                    for (const [uid, cid] of Object.entries(ext)) {
+                        if (String(cid) === String(channelId)) { toDelete = uid; break; }
+                    }
+                }
+                if (toDelete && ext[toDelete]) {
+                    delete ext[toDelete];
+                    await db.set(`opentickets_${guildId}`, ext);
+                }
+            } catch { /* ignore */ }
+
+            const channel = await req.guild.channels.fetch(String(channelId)).catch(() => null);
             if (channel) await channel.delete('Closed from dashboard').catch(() => {});
             res.json({ success: true, ticket });
         } catch (err) { next(err); }

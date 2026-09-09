@@ -195,8 +195,9 @@ export default function Developer({ initialTab = 'overview' }) {
           badge="locked"
           badgeColor="red"
         />
-        <form onSubmit={unlock} className="cyber-card max-w-md p-6 space-y-4">
-          <p className="text-xs text-zinc-500 leading-relaxed">
+        <form onSubmit={unlock} className="glass-panel gradient-border max-w-md p-6 space-y-4 relative overflow-hidden">
+          <span className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-fuchsia-300/50 to-transparent pointer-events-none" aria-hidden="true" />
+          <p className="text-xs text-zinc-400 leading-relaxed">
             This internal panel provides system logs, processes, database diagnostics and command metadata.
             Secret values are never returned by the backend.
           </p>
@@ -258,14 +259,14 @@ export default function Developer({ initialTab = 'overview' }) {
         )}
       </PageHeader>
 
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Developer sections">
         {availableTabs.map(([id, label]) => (
           <button
             key={id}
+            role="tab"
+            aria-selected={tab === id}
             onClick={() => setTab(id)}
-            className={`text-[11px] px-2.5 py-1 rounded-lg border ${
-              tab === id ? 'border-fuchsia-400/40 bg-fuchsia-400/10 text-fuchsia-200' : 'border-white/10 text-zinc-500'
-            }`}
+            className={`eb-filter-pill !rounded-xl !text-[11px] ${tab === id ? 'is-active !border-fuchsia-300/40' : ''}`}
           >
             {label}
           </button>
@@ -275,24 +276,24 @@ export default function Developer({ initialTab = 'overview' }) {
       {tab === 'overview' && ov && (
         <div className="space-y-3">
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="cyber-card p-4">
-              <p className="text-[10px] uppercase tracking-widest text-zinc-600">Bot</p>
-              <p className="text-lg font-bold text-white mt-1">{ov.bot?.tag || '—'}</p>
+            <div className="glass-panel p-4">
+              <p className="eb-field-label !mb-1">Bot</p>
+              <p className="text-lg font-bold text-white mt-1 truncate tracking-tight">{ov.bot?.tag || '—'}</p>
               <Pill ok={!!ov.bot?.online} label={ov.bot?.online ? `${ov.bot.ping}ms · ${ov.bot.guilds} guilds` : 'offline'} />
             </div>
-            <div className="cyber-card p-4">
-              <p className="text-[10px] uppercase tracking-widest text-zinc-600">Public URL</p>
-              <p className="text-xs text-cyan-200 break-all mt-1">{ov.publicUrl || '—'}</p>
+            <div className="glass-panel p-4">
+              <p className="eb-field-label !mb-1">Public URL</p>
+              <p className="text-xs text-cyan-200 break-all mt-1 font-mono">{ov.publicUrl || '—'}</p>
             </div>
-            <div className="cyber-card p-4">
-              <p className="text-[10px] uppercase tracking-widest text-zinc-600">Heap</p>
-              <p className="text-lg font-bold text-white mt-1">{bytes(ov.memory?.heapUsed)}</p>
-              <p className="text-[11px] text-zinc-600">{bytes(ov.memory?.rss)} rss · {ov.node}</p>
+            <div className="glass-panel p-4">
+              <p className="eb-field-label !mb-1">Heap</p>
+              <p className="text-lg font-bold text-white mt-1 tabular-nums tracking-tight">{bytes(ov.memory?.heapUsed)}</p>
+              <p className="text-[11px] text-zinc-400 tabular-nums">{bytes(ov.memory?.rss)} rss · {ov.node}</p>
             </div>
-            <div className="cyber-card p-4">
-              <p className="text-[10px] uppercase tracking-widest text-zinc-600">Commands</p>
-              <p className="text-lg font-bold text-white mt-1">{ov.bot?.commands ?? '—'}</p>
-              <p className="text-[11px] text-zinc-600">slash loaded</p>
+            <div className="glass-panel p-4">
+              <p className="eb-field-label !mb-1">Commands</p>
+              <p className="text-lg font-bold text-white mt-1 tabular-nums tracking-tight">{ov.bot?.commands ?? '—'}</p>
+              <p className="text-[11px] text-zinc-400">slash loaded</p>
             </div>
           </div>
 

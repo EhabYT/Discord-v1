@@ -81,8 +81,16 @@ module.exports = {
         }
 
         if (subcommand === 'panel') {
-            const config = await db.get(`tickets_${interaction.guild.id}`);
-            if (!config) return safeReply(interaction, { content: '❌ Use `/ticket setup` first.', flags: [MessageFlags.Ephemeral] });
+            let config = await db.get(`tickets_${interaction.guild.id}`);
+            if (!config) {
+                const legacy = await db.get(`ticket_config_${interaction.guild.id}`);
+                config = legacy || null;
+            }
+            if (!config) {
+                // Auto-create minimal config so panel can still be posted
+                config = { enabled: true, categoryId: null, category: null };
+                try { await db.set(`tickets_${interaction.guild.id}`, config); } catch { /* ignore */ }
+            }
 
             const embed = new EmbedBuilder()
                 .setColor('#00fbff')

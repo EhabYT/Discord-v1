@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Radio, MessageSquare, UserPlus, UserMinus, Terminal, ShieldX, ShieldOff, Mic, MicOff, Trash2, Filter } from 'lucide-react';
+import { useI18n } from '../i18n.jsx';
+import { timeAgo } from '../lib/time.js';
 
 const EVENT_META = {
   message:        { label: 'Message',        color: 'text-blue-400',   bg: 'bg-blue-500/10',   border: 'border-blue-500/20',   icon: MessageSquare },
@@ -16,15 +18,8 @@ const EVENT_META = {
 const ALL_TYPES = Object.keys(EVENT_META);
 const MAX_EVENTS = 200;
 
-function timeAgo(ts) {
-  const s = Math.floor((Date.now() - ts) / 1000);
-  if (s < 5) return 'just now';
-  if (s < 60) return `${s}s ago`;
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-  return `${Math.floor(s / 3600)}h ago`;
-}
-
 function EventRow({ event }) {
+  const { t } = useI18n();
   const meta = EVENT_META[event.type] || { label: event.type, color: 'text-gray-400', bg: 'bg-white/5', border: 'border-white/10', icon: Radio };
   const Icon = meta.icon;
 
@@ -61,7 +56,7 @@ function EventRow({ event }) {
       </div>
 
       {/* Time */}
-      <span className="text-[10px] text-gray-600 flex-shrink-0 mt-1">{timeAgo(event.ts)}</span>
+      <span className="text-[10px] text-gray-600 flex-shrink-0 mt-1 tabular-nums">{timeAgo(event.ts, t)}</span>
     </div>
   );
 }
@@ -202,8 +197,8 @@ export default function LiveFeed({ guild }) {
         </div>
 
         {/* Type Filters */}
-        <div className="flex flex-wrap gap-1.5 mt-3">
-          <div className="flex items-center gap-1 text-[10px] text-gray-600 mr-1">
+        <div className="flex flex-wrap items-center gap-1.5 mt-3" role="group" aria-label="Filter event types">
+          <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mr-1">
             <Filter size={10} /> Filter:
           </div>
           {ALL_TYPES.map(type => {
@@ -214,9 +209,9 @@ export default function LiveFeed({ guild }) {
               <button
                 key={type}
                 onClick={() => toggleType(type)}
-                className={`px-2 py-0.5 rounded-full text-[10px] font-medium border transition-all ${
-                  active ? `${meta.bg} ${meta.border} ${meta.color}` : 'border-white/5 text-gray-600'
-                }`}
+                aria-pressed={active}
+                className={`eb-filter-pill !rounded-full !py-1 ${active ? 'is-active' : ''}`}
+                style={active ? { '--bar': meta.color } : undefined}
               >
                 {meta.label}
               </button>
@@ -224,13 +219,13 @@ export default function LiveFeed({ guild }) {
           })}
           <button
             onClick={() => setFilter(new Set(ALL_TYPES))}
-            className="px-2 py-0.5 rounded-full text-[10px] font-medium border border-white/5 text-gray-600 hover:text-gray-400 ml-1"
+            className="eb-filter-pill !rounded-full !py-1"
           >
             All
           </button>
           <button
             onClick={() => setFilter(new Set())}
-            className="px-2 py-0.5 rounded-full text-[10px] font-medium border border-white/5 text-gray-600 hover:text-gray-400"
+            className="eb-filter-pill !rounded-full !py-1"
           >
             None
           </button>

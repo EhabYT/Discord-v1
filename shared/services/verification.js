@@ -4,6 +4,7 @@ const {
     ButtonBuilder,
     ButtonStyle,
     MessageFlags,
+    PermissionFlagsBits,
 } = require('discord.js');
 const logger = require('../lib/logger');
 
@@ -226,9 +227,110 @@ function buildPanelPayload(guild, cfg) {
     };
 }
 
+function getRoleProblem(guild, roleId) {
+    const role = guild.roles.cache.get(roleId);
+    if (!role) return { role: null, error: 'Verified role not found (was it deleted? Ask an admin to pick a new one in Dashboard → Verification)', code: 'NOT_FOUND' };
+    if (role.id === guild.id) {
+        return { role, error: '@everyone cannot be used as the verified role', code: 'EVERYONE' };
+    }
+    if (role.managed) {
+        return { role, error: `**${role.name}** is managed by an integration (bot/boost) and cannot be assigned by anyone`, code: 'MANAGED_ROLE' };
+    }
+    const me = guild.members.me;
+    if (me && !me.permissions.has(PermissionFlagsBits.ManageRoles)) {
+        return { role, error: `I don't have the **Manage Roles** permission, so I can't assign **${role.name}**`, code: 'NO_PERMS' };
+    }
+    if (me && role.position >= me.roles.highest.position) {
+        return { role, error: `I cannot manage **${role.name}** — move the bot role above it in Server Settings → Roles`, code: 'HIERARCHY' };
+    }
+    return { role, error: null, code: null };
+}
+
+function assertRoleManageable(guild, roleId) {
+    const { role, error, code } = getRoleProblem(guild, roleId);
+    if (error) {
+        const err = new Error(error);
+        err.code = code;
+        if (role) err.roleName = role.name;
+        throw err;
+    }
+    return role;
+}
+
+function isConfigured(cfg) {
+    return !!(cfg && cfg.enabled && cfg.roleId);
+}
+
+function setupProblem(cfg, guild) {
+    if (!cfg || !cfg.roleId) {
+        return { code: 'NOT_SETUP', message: '❌ Verification is not set up yet. An admin needs to pick a verified role in Dashboard → Verification (Quick tab) or run /setupverification.' };
+    }
+    if (guild && cfg.roleId && !guild.roles.cache.has(cfg.roleId)) {
+        return { code: 'NOT_FOUND', message: '❌ The configured verified role was deleted. An admin needs to pick a new one in Dashboard → Verification.' };
+    }
+    if (!cfg.enabled) {
+        return { code: 'DISABLED', message: '❌ Verification is currently disabled. An admin can turn it on in Dashboard → Verification → Setup.' };
+    }
+    return null;
+}
+
+const ACTIONABLE_CODES = new Set(['HIERARCHY', 'NO_PERMS', 'MANAGED_ROLE', 'EVERYONE', 'NOT_FOUND']);
+
+function describeDiscordFailure(err, role) {
+    const name = role?.name ? `**${role.name}**` : 'the verified role';
+    const code = typeof err?.code === 'number' ? err.code : null;
+    if (code === 50013) {
+        const e = new Error(`I can't assign ${name} — check that I have the **Manage Roles** permission and my role is above it in Server Settings → Roles`);
+        e.code = 'HIERARCHY';
+        e.discordCode = code;
+        e.status = err?.status;
+        return e;
+    }
+    if (code === 50001) {
+        const e = new Error(`I can't access ${name} — check my permissions and role position in Server Settings → Roles`);
+        e.code = 'NO_PERMS';
+        e.discordCode = code;
+        e.status = err?.status;
+        return e;
+    }
+    if (code === 10011) {
+        const e = new Error('The configured verified role was deleted. An admin needs to pick a new one in Dashboard → Verification.');
+        e.code = 'NOT_FOUND';
+        e.discordCode = code;
+        return e;
+    }
+    if (code === 10007) {
+        const e = new Error('I could not find you as a server member. Try leaving and rejoining, then verify again.');
+        e.code = 'NOT_FOUND';
+        e.discordCode = code;
+        return e;
+    }
+    if (code !== null) {
+        const e = new Error(`Discord rejected the role change (code ${code}). Please try again and contact staff if it persists.`);
+        e.code = `DISCORD_${code}`;
+        e.discordCode = code;
+        e.status = err?.status;
+        e.expose = true;
+        return e;
+    }
+    return err;
+}
+
+function toActionableReply(err, cfg, member, guild) {
+    if (err && ACTIONABLE_CODES.has(err.code)) return `❌ ${err.message}`;
+    if (typeof err?.code === 'number') {
+        const role = guild?.roles?.cache?.get(cfg.roleId);
+        return `❌ ${describeDiscordFailure(err, role).message}`;
+    }
+    return replaceVars(cfg.failMessage, member, guild);
+}
+
 async function postPanel(guild, cfg, channelId) {
     const channel = guild.channels.cache.get(channelId || cfg.channelId);
     if (!channel) throw new Error('Channel not found');
+    if (cfg.roleId) {
+        assertRoleManageable(guild, cfg.roleId);
+    }
     const payload = buildPanelPayload(guild, cfg);
 
     if (cfg.messageId) {
@@ -253,13 +355,16 @@ async function staffLog(guild, cfg, embed) {
 async function applyVerification(member, cfg, { db, method = 'button', actor = null } = {}) {
     const guild = member.guild;
     if (cfg.roleId) {
-        const role = guild.roles.cache.get(cfg.roleId);
-        if (!role) throw new Error('Verified role not found');
-        const me = guild.members.me;
-        if (me && role.position >= me.roles.highest.position) {
-            throw new Error('Verified role is higher than the bot role');
+        let me = guild.members.me;
+        if (!me && typeof guild.members.fetchMe === 'function') {
+            try { me = await guild.members.fetchMe(); } catch { me = null; }
         }
-        await member.roles.add(role, `EB verification (${method})`);
+        const role = assertRoleManageable(guild, cfg.roleId);
+        try {
+            await member.roles.add(role, `EB verification (${method})`);
+        } catch (err) {
+            throw describeDiscordFailure(err, role);
+        }
     }
 
     if (cfg.removeUnverifiedOnVerify && cfg.unverifiedRoleId) {
@@ -272,7 +377,13 @@ async function applyVerification(member, cfg, { db, method = 'button', actor = n
         }
     }
 
-    await clearPending(db, guild.id, member.id);
+    // Bookkeeping must never turn a granted role into a "failed" reply.
+    // If the DB is down the member is still verified; log and continue.
+    try {
+        await clearPending(db, guild.id, member.id);
+    } catch (err) {
+        logger.warn('Verification pending cleanup failed', { error: err?.message, guild: guild.id, user: member.id });
+    }
 
     const entry = {
         userId: member.id,
@@ -283,7 +394,11 @@ async function applyVerification(member, cfg, { db, method = 'button', actor = n
         method,
         by: actor || member.user?.username || 'self',
     };
-    await appendLog(db, guild.id, entry);
+    try {
+        await appendLog(db, guild.id, entry);
+    } catch (err) {
+        logger.warn('Verification log append failed', { error: err?.message, guild: guild.id, user: member.id });
+    }
 
     const logEmbed = new EmbedBuilder()
         .setColor(cfg.embedColor || '#00fbff')
@@ -370,16 +485,32 @@ async function handleJoin(member, db) {
     return { pending: true };
 }
 
+async function resolveClickMember(interaction) {
+    const cached = interaction.member;
+    try {
+        const fresh = await interaction.guild?.members?.fetch(interaction.user.id);
+        if (fresh) return fresh;
+    } catch { /* fall back to cached member */ }
+    return cached;
+}
+
 async function handleVerifyClick(interaction, db) {
     const cfg = await getConfig(db, interaction.guildId);
-    if (!cfg.enabled || !cfg.roleId) {
+    const problem = setupProblem(cfg, interaction.guild);
+    if (problem) {
         return interaction.reply({
-            content: '❌ Verification system is not set up.',
+            content: problem.message,
             flags: [MessageFlags.Ephemeral],
         }).catch(() => {});
     }
 
-    const member = interaction.member;
+    let member = await resolveClickMember(interaction);
+    if (!member?.roles) {
+        return interaction.reply({
+            content: '❌ I could not find you as a server member. Try leaving and rejoining, then verify again.',
+            flags: [MessageFlags.Ephemeral],
+        }).catch(() => {});
+    }
     if (cfg.denyBots && interaction.user.bot) {
         return interaction.reply({ content: 'Bots cannot verify.', flags: [MessageFlags.Ephemeral] }).catch(() => {});
     }
@@ -412,9 +543,12 @@ async function handleVerifyClick(interaction, db) {
             flags: [MessageFlags.Ephemeral],
         });
     } catch (err) {
-        logger.error('Verification apply failed', { error: err.message });
+        logger.error('Verification apply failed', {
+            error: err?.message, code: err?.code, discordCode: err?.discordCode,
+            guild: interaction.guildId, user: interaction.user?.id, roleId: cfg.roleId,
+        });
         return interaction.reply({
-            content: replaceVars(cfg.failMessage, member, interaction.guild),
+            content: toActionableReply(err, cfg, member, interaction.guild),
             flags: [MessageFlags.Ephemeral],
         }).catch(() => {});
     }
@@ -450,6 +584,16 @@ async function handleCaptchaClick(interaction, db) {
     const b = Number(parts[3]);
     const picked = Number(parts[4]);
     const cfg = await getConfig(db, interaction.guildId);
+    const problem = setupProblem(cfg, interaction.guild);
+    if (problem) {
+        return interaction.update({
+            content: problem.message,
+            components: [],
+        }).catch(() => interaction.reply({
+            content: problem.message,
+            flags: [MessageFlags.Ephemeral],
+        }).catch(() => {}));
+    }
 
     if (!Number.isFinite(a) || !Number.isFinite(b) || picked !== a + b) {
         return interaction.update({
@@ -461,23 +605,34 @@ async function handleCaptchaClick(interaction, db) {
         }).catch(() => {}));
     }
 
-    if (hasBypass(interaction.member, cfg) || isVerified(interaction.member, cfg)) {
+    let captchaMember = await resolveClickMember(interaction);
+    if (!captchaMember?.roles) {
         return interaction.update({
-            content: replaceVars(cfg.alreadyMessage, interaction.member, interaction.guild),
+            content: '❌ I could not find you as a server member. Try leaving and rejoining, then verify again.',
+            components: [],
+        }).catch(() => {});
+    }
+
+    if (hasBypass(captchaMember, cfg) || isVerified(captchaMember, cfg)) {
+        return interaction.update({
+            content: replaceVars(cfg.alreadyMessage, captchaMember, interaction.guild),
             components: [],
         }).catch(() => {});
     }
 
     try {
-        await applyVerification(interaction.member, cfg, { db, method: 'captcha' });
+        await applyVerification(captchaMember, cfg, { db, method: 'captcha' });
         return interaction.update({
-            content: replaceVars(cfg.successMessage, interaction.member, interaction.guild),
+            content: replaceVars(cfg.successMessage, captchaMember, interaction.guild),
             components: [],
         });
     } catch (err) {
-        logger.error('Captcha verify failed', { error: err.message });
+        logger.error('Captcha verify failed', {
+            error: err?.message, code: err?.code, discordCode: err?.discordCode,
+            guild: interaction.guildId, user: interaction.user?.id, roleId: cfg.roleId,
+        });
         return interaction.update({
-            content: replaceVars(cfg.failMessage, interaction.member, interaction.guild),
+            content: toActionableReply(err, cfg, captchaMember, interaction.guild),
             components: [],
         }).catch(() => {});
     }
@@ -539,7 +694,7 @@ async function createRoles(guild, { which = 'both', verifiedName = 'Verified', u
     if (wantV) {
         const role = await guild.roles.create({
             name: String(verifiedName || 'Verified').slice(0, 100),
-            colors: { primary: 0x00fbff },
+            colors: { primaryColor: 0x00fbff },
             reason: 'EB verification — verified role',
             mentionable: false,
         });
@@ -548,7 +703,7 @@ async function createRoles(guild, { which = 'both', verifiedName = 'Verified', u
     if (wantU) {
         const role = await guild.roles.create({
             name: String(unverifiedName || 'Unverified').slice(0, 100),
-            colors: { primary: 0x6b7280 },
+            colors: { primaryColor: 0x6b7280 },
             hoist: false,
             reason: 'EB verification — join / pending role',
             mentionable: false,
@@ -596,6 +751,117 @@ async function removeGateLock(guild, cfg) {
         cleared.push(id);
     }
     return cleared;
+}
+
+async function fixHierarchy(guild, db) {
+    const cfg = await getConfig(db, guild.id);
+    const me = guild.members.me;
+    if (!me) {
+        const err = new Error('Bot member not found in guild cache — try again in a moment.');
+        err.code = 'NO_BOT_MEMBER';
+        throw err;
+    }
+    if (!me.permissions.has(PermissionFlagsBits.ManageRoles)) {
+        const err = new Error('I do not have the **Manage Roles** permission, so I cannot move or recreate roles. Grant it in Server Settings → Roles.');
+        err.code = 'NO_PERMS';
+        throw err;
+    }
+    const _botTop = me.roles.highest.position;
+    const targets = [];
+    if (cfg.roleId) {
+        const prob = getRoleProblem(guild, cfg.roleId);
+        if (prob.code === 'HIERARCHY') targets.push({ key: 'roleId', role: prob.role, id: cfg.roleId });
+    }
+    if (cfg.unverifiedRoleId) {
+        const prob = getRoleProblem(guild, cfg.unverifiedRoleId);
+        if (prob.code === 'HIERARCHY') targets.push({ key: 'unverifiedRoleId', role: prob.role, id: cfg.unverifiedRoleId });
+    }
+    for (const id of cfg.extraRoleIds || []) {
+        if (!id) continue;
+        const prob = getRoleProblem(guild, id);
+        if (prob.code === 'HIERARCHY') targets.push({ key: 'extraRoleIds', role: prob.role, id });
+    }
+    if (targets.length === 0) {
+        return { fixed: [], config: cfg, message: 'All verification roles are already below the bot.' };
+    }
+    const fixed = [];
+    const idToNew = new Map();
+    for (const t of targets) {
+        if (idToNew.has(t.id)) {
+            // Same physical role appears in multiple config slots (e.g. verified + extra).
+            // Reuse the clone we already created instead of making a second duplicate.
+            const reused = idToNew.get(t.id);
+            if (t.key === 'extraRoleIds') {
+                cfg.extraRoleIds = (cfg.extraRoleIds || []).map((x) => (x === t.id ? reused : x));
+            } else if (t.key === 'roleId') cfg.roleId = reused;
+            else if (t.key === 'unverifiedRoleId') cfg.unverifiedRoleId = reused;
+            continue;
+        }
+        let role = t.role;
+        let moved = false;
+        // Try to move the existing role just below the bot's top role.
+        try {
+            const targetPos = Math.max(1, guild.members.me.roles.highest.position - 1);
+            if (typeof role.setPosition === 'function') {
+                await role.setPosition(targetPos, { reason: 'EB auto-fix: move role below bot so Verify can assign it' });
+            } else if (typeof role.edit === 'function') {
+                await role.edit({ position: targetPos }, 'EB auto-fix: move role below bot');
+            } else {
+                throw new Error('no position API');
+            }
+            const after = guild.roles.cache.get(role.id);
+            const curBotTop = guild.members.me.roles.highest.position;
+            if (after && after.position < curBotTop) {
+                moved = true;
+                idToNew.set(t.id, t.id);
+                fixed.push({ roleId: role.id, name: role.name, method: 'moved', position: after.position });
+                continue;
+            }
+        } catch (_) {
+            // fall through to recreate clone
+        }
+        if (!moved) {
+            // Discord does not allow a bot to move a role that is already above it (Missing Permissions 50013).
+            // Clone the role at the bottom of the list, which will be below the bot in the common case, and swap config.
+            try {
+                const clone = await guild.roles.create({
+                    name: role.name,
+                    color: role.color,
+                    hoist: role.hoist,
+                    permissions: role.permissions?.bitfield ?? 0n,
+                    mentionable: role.mentionable,
+                    reason: 'EB auto-fix: recreate role below bot (original was above bot)',
+                });
+                // Best-effort nudge the clone just below the bot's top role.
+                try {
+                    const newBotTop = guild.members.me.roles.highest.position;
+                    if (clone.position >= newBotTop && typeof clone.setPosition === 'function') {
+                        await clone.setPosition(Math.max(1, newBotTop - 1)).catch(() => {});
+                    }
+                } catch { /* ignore nudge failure */ }
+                if (t.key === 'roleId') cfg.roleId = clone.id;
+                else if (t.key === 'unverifiedRoleId') cfg.unverifiedRoleId = clone.id;
+                else if (t.key === 'extraRoleIds') {
+                    cfg.extraRoleIds = (cfg.extraRoleIds || []).map((x) => (x === t.id ? clone.id : x));
+                }
+                idToNew.set(t.id, clone.id);
+                fixed.push({
+                    roleId: role.id,
+                    newRoleId: clone.id,
+                    name: role.name,
+                    method: 'recreated',
+                    note: `Created new "${clone.name}" below the bot. Delete the old "${role.name}" manually when ready.`,
+                });
+            } catch (err) {
+                const e = new Error(`Could not move or recreate **${role.name}**: ${err.message}. Move the bot role above it manually in Server Settings → Roles.`);
+                e.code = 'FIX_FAILED';
+                e.roleName = role.name;
+                throw e;
+            }
+        }
+    }
+    if (fixed.length) await saveConfig(db, guild.id, cfg);
+    return { fixed, config: cfg };
 }
 
 async function overview(guild, db) {
@@ -646,5 +912,12 @@ module.exports = {
     createRoles,
     applyGateLock,
     removeGateLock,
+    fixHierarchy,
+    getRoleProblem,
+    assertRoleManageable,
+    isConfigured,
+    setupProblem,
+    describeDiscordFailure,
+    toActionableReply,
     KEY,
 };

@@ -6,16 +6,16 @@ import PageHeader from '../components/PageHeader.jsx';
 import { useToast } from '../components/Toast.jsx';
 import api from '../api.js';
 
-function SectionCard({ icon: Icon, title, iconColor = 'text-cyan-400', badge, children }) {
+function SectionCard({ icon: Icon, title, iconColor = 'text-cyan-200', badge, children }) {
   return (
-    <div className="cyber-card p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <Icon size={15} className={iconColor} />
-        <h2 className="text-sm font-semibold text-white">{title}</h2>
-        {badge && <span className="ml-auto cyber-badge-cyan">{badge}</span>}
+    <section className="eb-section p-5">
+      <div className="eb-section-head mb-4">
+        <span className="eb-section-icon"><Icon size={15} className={iconColor} /></span>
+        <h2 className="text-sm font-bold text-white tracking-tight">{title}</h2>
+        {badge && <span className="ml-auto cyber-badge-cyan tabular-nums">{badge}</span>}
       </div>
       {children}
-    </div>
+    </section>
   );
 }
 

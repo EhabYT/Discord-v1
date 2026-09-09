@@ -125,15 +125,18 @@ export default function BotControls({ guild, guildData, setGuildData }) {
       </PageHeader>
 
       {dirty && (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-500/[0.08] border border-yellow-500/20 text-xs text-yellow-400">
-          <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 flex-shrink-0" />
+        <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-yellow-400/[0.07] border border-yellow-300/25 text-xs font-medium text-yellow-200" role="status">
+          <span className="relative flex w-1.5 h-1.5 flex-shrink-0">
+            <span className="absolute inline-flex h-full w-full rounded-full bg-yellow-300 opacity-60 animate-ping" />
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-yellow-300" />
+          </span>
           Unsaved changes — click Apply Presence to push them live
         </div>
       )}
 
       {/* Live preview */}
-      <div className="cyber-card p-4">
-        <p className="cyber-label mb-2">Live Preview</p>
+      <div className="glass-panel p-4">
+        <p className="eb-field-label">Live Preview</p>
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#2f3136] border border-white/[0.06]">
           <div className="relative flex-shrink-0">
             <div className="w-10 h-10 rounded-full overflow-hidden border border-white/10 flex-shrink-0">
@@ -162,18 +165,18 @@ export default function BotControls({ guild, guildData, setGuildData }) {
         <StatCard icon={Bot}      label="Latency"  value={botInfo?.ping != null ? `${botInfo.ping}ms` : '—'} sub="WebSocket" color="yellow" />
       </div>
 
-      <div className="cyber-card p-5 space-y-3">
+      <div className="glass-panel p-5 space-y-3">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <div className="flex items-center gap-2">
-              <Type size={14} className="text-cyan-400" />
-              <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Server Nickname</h2>
+            <div className="eb-section-head">
+              <span className="eb-section-icon !w-7 !h-7"><Type size={14} /></span>
+              <h2 className="text-[11px] font-bold text-zinc-300 uppercase tracking-[0.12em]">Server Nickname</h2>
             </div>
-            <p className="text-xs text-zinc-500 mt-1">
+            <p className="text-xs text-zinc-400 mt-1.5 ml-9">
               How the bot appears in {guild?.name || 'this server'}. Blank + Save resets to the global username.
             </p>
           </div>
-          <span className="cyber-badge-cyan">{currentNick ? `Now: ${currentNick}` : 'Default name'}</span>
+          <span className="cyber-badge-cyan tabular-nums">{currentNick ? `Now: ${currentNick}` : 'Default name'}</span>
         </div>
         <div className="flex gap-2">
           <input
@@ -204,25 +207,27 @@ export default function BotControls({ guild, guildData, setGuildData }) {
       </div>
 
       {/* Status selector */}
-      <div className="cyber-card p-5">
-        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Online Status</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+      <div className="glass-panel p-5">
+        <h2 className="eb-field-label !mb-3">Online Status</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2" role="radiogroup" aria-label="Online status">
           {STATUS_OPTIONS.map(opt => (
             <button
               key={opt.value}
+              role="radio"
+              aria-checked={status === opt.value}
               onClick={() => { setStatus(opt.value); setDirty(true); }}
-              className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all duration-200 ${
+              className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all duration-200 ${
                 status === opt.value
-                  ? 'border-cyan-500/50 bg-cyan-500/[0.08]'
-                  : 'border-white/[0.06] bg-white/[0.02] hover:border-white/12'
+                  ? 'border-cyan-300/50 bg-gradient-to-b from-cyan-400/[0.14] to-cyan-400/[0.05] shadow-[0_0_24px_rgba(34,211,238,0.12)]'
+                  : 'border-white/[0.06] bg-white/[0.02] hover:border-white/15 hover:bg-white/[0.04]'
               }`}
             >
               <div className={`w-4 h-4 rounded-full ${opt.color} ${status === opt.value ? opt.glow : ''}`} />
               <div className="text-center">
-                <p className={`text-xs font-semibold ${status === opt.value ? 'text-cyan-300' : 'text-gray-400'}`}>
+                <p className={`text-xs font-semibold ${status === opt.value ? 'text-cyan-200' : 'text-zinc-300'}`}>
                   {opt.label}
                 </p>
-                <p className="text-[10px] text-gray-600 mt-0.5">{opt.desc}</p>
+                <p className="text-[10px] text-zinc-500 mt-0.5">{opt.desc}</p>
               </div>
             </button>
           ))}
@@ -230,17 +235,19 @@ export default function BotControls({ guild, guildData, setGuildData }) {
       </div>
 
       {/* Activity type */}
-      <div className="cyber-card p-5">
-        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Activity Type</h2>
-        <div className="flex flex-wrap gap-2">
+      <div className="glass-panel p-5">
+        <h2 className="eb-field-label !mb-3">Activity Type</h2>
+        <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Activity type">
           {ACTIVITY_TYPES.map(({ value, label, icon: Icon }) => (
             <button
               key={value}
+              role="radio"
+              aria-checked={actType === value}
               onClick={() => { setActType(value); setDirty(true); }}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg border text-xs font-medium transition-all duration-200 ${
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-semibold transition-all duration-200 ${
                 actType === value
-                  ? 'border-cyan-500/50 bg-cyan-500/[0.12] text-cyan-300'
-                  : 'border-white/[0.06] bg-white/[0.02] text-gray-500 hover:text-gray-300 hover:border-white/12'
+                  ? 'border-cyan-300/50 bg-cyan-400/[0.12] text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,0.12)]'
+                  : 'border-white/[0.06] bg-white/[0.02] text-zinc-400 hover:text-zinc-100 hover:border-white/15'
               }`}
             >
               <Icon size={13} />
@@ -251,24 +258,25 @@ export default function BotControls({ guild, guildData, setGuildData }) {
       </div>
 
       {/* Activity text */}
-      <div className="cyber-card p-5">
-        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Activity Text</h2>
+      <div className="glass-panel p-5">
+        <h2 className="eb-field-label !mb-3">Activity Text</h2>
         <input
           type="text"
           value={actText}
           onChange={e => { setActText(e.target.value); setDirty(true); }}
           placeholder="e.g. over your server  |  /help for commands  |  music 🎵"
           maxLength={128}
+          aria-describedby="acttext-count"
           className="cyber-input mb-2"
         />
-        <div className="flex items-center justify-between">
-          <p className="text-[10px] text-gray-600">{actText.length}/128</p>
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <p id="acttext-count" className="text-[10px] text-zinc-500 tabular-nums">{actText.length}/128</p>
           <div className="flex gap-1.5 flex-wrap justify-end">
             {PRESETS.map((p, i) => (
               <button
                 key={i}
                 onClick={() => { setActType(p.type); setActText(p.text); setDirty(true); }}
-                className="text-[10px] px-2.5 py-1 rounded-md border border-white/[0.08] bg-white/[0.03] text-gray-500 hover:text-cyan-400 hover:border-cyan-500/30 transition-colors"
+                className="text-[10px] font-medium px-2.5 py-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] text-zinc-400 hover:text-cyan-200 hover:border-cyan-300/30 transition-colors"
               >
                 {p.label}
               </button>

@@ -94,6 +94,37 @@ export const SEARCHABLE_PAGES = NAV.filter((item) => item.id);
 
 export const DOCK_PAGES = ['overview', 'members', 'music', 'tickets'];
 
+// Premium navigation IA: stable group order for collapsible sections and
+// the command-palette grouping. Keys must match `group` above.
+export const GROUP_ORDER = [
+  'Guild Settings',
+  'Moderation',
+  'AutoMod',
+  'Tickets',
+  'Music',
+  'Roles',
+  'Logging',
+  'Bot Control',
+  'System',
+  'Logs',
+  'API',
+  'Database',
+  'Monitoring',
+  'Security',
+];
+
+// Mnemonic shortcuts shown in the sidebar + palette (no global binding yet,
+// except ⌘K / / which opens the palette). Single chars stay unbound to avoid
+// colliding with typing; displayed as discovery hints.
+export const SHORTCUT_BY_ID = {
+  overview: '⌘1',
+  analytics: '⌘2',
+  livefeed: '⌘3',
+  members: '⌘4',
+  tickets: '⌘5',
+  music: '⌘6',
+};
+
 // Single source of truth for "may this identity see this nav entry?".
 // Applies to area sections, group pages, and palette entries alike, so the
 // sidebar, command palette, and App.jsx guards can never diverge again.

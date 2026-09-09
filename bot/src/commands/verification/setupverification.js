@@ -34,13 +34,12 @@ module.exports = {
         const description = interaction.options.getString('description') || 'Please click the button below to verify yourself and gain access to the server.';
         const buttonLabel = interaction.options.getString('button_label') || 'Verify';
 
-        // Check if bot has permission to manage roles and if the role is lower than the bot's highest role
-        if (!interaction.guild.members.me.permissions.has(PermissionFlagsBits.ManageRoles)) {
-            return interaction.reply({ content: '❌ I do not have permission to manage roles.', flags: [MessageFlags.Ephemeral] });
-        }
-
-        if (role.position >= interaction.guild.members.me.roles.highest.position) {
-            return interaction.reply({ content: '❌ I cannot assign this role because it is higher than or equal to my highest role.', flags: [MessageFlags.Ephemeral] });
+        // Validate the role is actually assignable (perms, managed, hierarchy).
+        try {
+            const verify = require('../../../../shared/services/verification');
+            verify.assertRoleManageable(interaction.guild, role.id);
+        } catch (err) {
+            return interaction.reply({ content: `❌ ${err.message}`, flags: [MessageFlags.Ephemeral] });
         }
 
         try {
@@ -72,8 +71,21 @@ module.exports = {
                         .setEmoji('✅')
                 );
 
-            // Send to the specified channel
-            await channel.send({ embeds: [embed], components: [row] });
+            // Send to the specified channel and remember the panel so /panel edits
+            // and dashboard updates reuse the same message instead of orphaning
+            // dead Verify buttons that later reply "not set up".
+            const sent = await channel.send({ embeds: [embed], components: [row] });
+            const latest = await verify.getConfig(db, interaction.guild.id);
+            await verify.saveConfig(db, interaction.guild.id, {
+                ...latest,
+                enabled: true,
+                roleId: role.id,
+                channelId: channel.id,
+                messageId: sent.id,
+                title,
+                description,
+                buttonLabel,
+            });
 
             await interaction.reply({ content: `✅ Verification system setup successfully in ${channel}. Users will receive the ${role} role.`, flags: [MessageFlags.Ephemeral] });
 

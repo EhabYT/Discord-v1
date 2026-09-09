@@ -169,45 +169,46 @@ export default function Progression({ guild, guildData }) {
               label="Enable XP System" description="Track text activity to award XP and levels" />
           </div>
 
-          <div className="cyber-card p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Zap size={14} className="text-cyan-400" />
-              <h2 className="text-sm font-semibold text-white">Global XP Multiplier</h2>
-              <span className="ml-auto text-lg font-bold text-cyan-400">{parseFloat(multiplier).toFixed(1)}×</span>
+          <div className="glass-panel p-4">
+            <div className="eb-section-head mb-3">
+              <span className="eb-section-icon !w-7 !h-7"><Zap size={14} /></span>
+              <h2 className="text-sm font-bold text-white tracking-tight">Global XP Multiplier</h2>
+              <span className="ml-auto text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-200 to-indigo-300 tabular-nums">{parseFloat(multiplier).toFixed(1)}×</span>
             </div>
             <input type="range" min="0.1" max="5" step="0.1" value={multiplier}
               onChange={e => setMultiplier(parseFloat(e.target.value))}
-              className="w-full accent-cyan-400 h-2 rounded-full cursor-pointer" />
-            <div className="flex justify-between text-[10px] text-gray-600 mt-1">
+              aria-label="Global XP multiplier"
+              className="eb-range w-full cursor-pointer" />
+            <div className="flex justify-between text-[10px] text-zinc-500 mt-1 tabular-nums">
               <span>0.1× (slower)</span><span>1× (normal)</span><span>5× (faster)</span>
             </div>
           </div>
 
-          <div className="cyber-card p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Bell size={14} className="text-cyan-400" />
-              <h2 className="text-sm font-semibold text-white">Level-up Announcements</h2>
+          <div className="glass-panel p-4">
+            <div className="eb-section-head mb-3">
+              <span className="eb-section-icon !w-7 !h-7"><Bell size={14} /></span>
+              <h2 className="text-sm font-bold text-white tracking-tight">Level-up Announcements</h2>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2" role="radiogroup" aria-label="Level-up announcement mode">
               {[
                 { id: 'here',     icon: Hash,    label: 'Same channel as message',  desc: 'Posts wherever the user sent their message' },
                 { id: 'channel',  icon: Volume2, label: 'Dedicated channel',         desc: 'All level-ups go to one specific channel' },
                 { id: 'disabled', icon: BellOff, label: 'Disabled',                  desc: 'Level-ups happen silently' },
               ].map(opt => (
                 <label key={opt.id}
-                  className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                  className={`flex items-start gap-3 p-3 rounded-2xl border cursor-pointer transition-all duration-150 ${
                     announceMode === opt.id
-                      ? 'border-cyan-500/40 bg-cyan-500/[0.08]'
-                      : 'border-white/[0.05] bg-white/[0.02] hover:border-white/10'
+                      ? 'border-cyan-300/40 bg-gradient-to-r from-cyan-400/[0.12] to-indigo-400/[0.06] shadow-[0_0_20px_rgba(34,211,238,0.1)]'
+                      : 'border-white/[0.06] bg-white/[0.02] hover:border-white/15 hover:bg-white/[0.04]'
                   }`}>
                   <input type="radio" name="announce" value={opt.id}
                     checked={announceMode === opt.id}
                     onChange={() => setAnnounceMode(opt.id)}
-                    className="accent-cyan-400 mt-0.5 flex-shrink-0" />
-                  <opt.icon size={14} className={`mt-0.5 flex-shrink-0 ${announceMode === opt.id ? 'text-cyan-400' : 'text-gray-500'}`} />
+                    className="accent-cyan-300 mt-0.5 flex-shrink-0" />
+                  <opt.icon size={14} className={`mt-0.5 flex-shrink-0 ${announceMode === opt.id ? 'text-cyan-200' : 'text-zinc-500'}`} />
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-white">{opt.label}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{opt.desc}</p>
+                    <p className="text-xs text-zinc-400 mt-0.5">{opt.desc}</p>
                   </div>
                 </label>
               ))}
@@ -220,11 +221,11 @@ export default function Progression({ guild, guildData }) {
             )}
           </div>
 
-          <div className="cyber-card p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Hash size={14} className="text-cyan-400" />
-              <h2 className="text-sm font-semibold text-white">Ignored Channels</h2>
-              <span className="text-[10px] text-gray-600 ml-1">No XP earned here</span>
+          <div className="glass-panel p-4">
+            <div className="eb-section-head mb-3">
+              <span className="eb-section-icon !w-7 !h-7"><Hash size={14} /></span>
+              <h2 className="text-sm font-bold text-white tracking-tight">Ignored Channels</h2>
+              <span className="text-[10px] font-medium text-zinc-500 ml-1">No XP earned here</span>
             </div>
             <select className="cyber-select w-full mb-3"
               onChange={e => { addIgnored(e.target.value); e.target.value = ''; }}

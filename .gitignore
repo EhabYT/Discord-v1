@@ -19,6 +19,7 @@ database/ephemeral-fallback.json
 # Runtime logs & tunnel state
 logs/*
 !logs/.gitkeep
+fullstack.log
 .dashboard-url
 PUBLIC_DASHBOARD.txt
 
@@ -26,11 +27,10 @@ PUBLIC_DASHBOARD.txt
 node_modules/
 dashboard/node_modules/
 
-# Build output — uncomment if you build the SPA during deploy
-dashboard/public/assets/
-dashboard/public/eb_logo.png
-dashboard/public/eb_logo.svg
-dashboard/public/fonts/
+# Build output — pure Vite artifact (publicDir: static → outDir: public,
+# emptyOutDir: true). Rebuilt by postinstall on deploy and by
+# `npm run build:dashboard` locally. Never track; it churns every build.
+dashboard/public/
 
 # OS / editor
 .DS_Store

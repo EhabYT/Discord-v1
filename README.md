@@ -11,7 +11,7 @@ Express, React, Socket.IO/SSE, and Supabase PostgreSQL.
 - Music player, queue, filters, lyrics, and autoplay
 - XP, levels, rewards, points, leaderboards, and engagement commands
 - Tickets, verification, reaction roles, giveaways, polls, suggestions, and confessions
-- English/Arabic Dashboard shell with persistent LTR/RTL switching
+- English/Arabic/German/French/Spanish/Turkish Dashboard shell with persistent locale and LTR/RTL switching
 - Discord OAuth with persistent PostgreSQL sessions
 - Guild-isolated HTTP, Socket.IO, and SSE access
 - Separate role-scoped Developer Control Center
@@ -284,7 +284,7 @@ React 19 + Vite, served from the same origin as the Express API.
 - Owner-only embed builder and auto-responder
 
 The V2 shell, Homepage, System Status, OAuth feedback, and navigation support
-English and Arabic with RTL/LTR switching. Detailed feature pages retain English
+English, Arabic, German, French, Spanish, and Turkish with RTL/LTR switching. Detailed feature pages retain English
 fallback text where translation is not yet complete.
 
 ### Build

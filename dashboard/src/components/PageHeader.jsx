@@ -9,11 +9,11 @@ const BADGE_STYLES = {
 };
 
 const ICON_STYLES = {
-  cyan:   { bg: 'bg-cyan-500/10',   text: 'text-cyan-300',   glow: '0 0 20px rgba(0,255,255,0.15)' },
-  green:  { bg: 'bg-green-500/10',  text: 'text-green-300',  glow: '0 0 20px rgba(34,197,94,0.15)' },
-  yellow: { bg: 'bg-yellow-500/10', text: 'text-yellow-300', glow: '0 0 20px rgba(234,179,8,0.15)' },
-  red:    { bg: 'bg-red-500/10',    text: 'text-red-300',    glow: '0 0 20px rgba(239,68,68,0.15)' },
-  purple: { bg: 'bg-purple-500/10', text: 'text-purple-300', glow: '0 0 20px rgba(168,85,247,0.15)' },
+  cyan:   { bg: 'bg-gradient-to-br from-cyan-400/25 to-sky-500/10',   text: 'text-cyan-200',   glow: '0 0 24px rgba(34,211,238,0.22)', ring: 'rgba(103,232,249,0.3)' },
+  green:  { bg: 'bg-gradient-to-br from-green-400/25 to-emerald-500/10',  text: 'text-green-200',  glow: '0 0 24px rgba(34,197,94,0.22)', ring: 'rgba(74,222,128,0.3)' },
+  yellow: { bg: 'bg-gradient-to-br from-yellow-400/25 to-amber-500/10', text: 'text-yellow-200', glow: '0 0 24px rgba(234,179,8,0.22)', ring: 'rgba(250,204,21,0.3)' },
+  red:    { bg: 'bg-gradient-to-br from-red-400/25 to-rose-500/10',    text: 'text-red-200',    glow: '0 0 24px rgba(239,68,68,0.22)', ring: 'rgba(248,113,113,0.3)' },
+  purple: { bg: 'bg-gradient-to-br from-purple-400/25 to-indigo-500/10', text: 'text-purple-200', glow: '0 0 24px rgba(168,85,247,0.22)', ring: 'rgba(192,132,252,0.3)' },
 };
 
 export default function PageHeader({
@@ -33,33 +33,39 @@ export default function PageHeader({
   const resolvedIconText = iconColor || iconStyle.text;
 
   return (
-    <div className="mb-1">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-3.5 min-w-0">
+    <div className="glass-panel mesh-glow p-5 animate-fade-in">
+      <div className="flex items-start justify-between gap-4 flex-wrap relative">
+        <div className="flex items-center gap-4 min-w-0">
           {Icon && (
-            <div
-              className={`w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 ${resolvedIconBg} ${resolvedIconText}`}
-              style={{ boxShadow: `${iconStyle.glow}, inset 0 1px 0 rgba(255,255,255,0.08)` }}
-            >
-              <Icon size={20} />
+            <div className="relative flex-shrink-0">
+              <div
+                className="absolute -inset-1.5 rounded-[1.1rem] blur-lg opacity-50 pointer-events-none"
+                style={{ background: `linear-gradient(135deg, ${iconStyle.ring}, transparent 70%)` }}
+              />
+              <div
+                className={`relative w-12 h-12 rounded-2xl flex items-center justify-center border ${resolvedIconBg} ${resolvedIconText}`}
+                style={{ boxShadow: `${iconStyle.glow}, inset 0 1px 0 rgba(255,255,255,0.14)`, borderColor: iconStyle.ring }}
+              >
+                <Icon size={21} />
+              </div>
             </div>
           )}
           <div className="min-w-0">
             {crumb && (
-              <p className="text-[10px] uppercase tracking-[0.16em] text-zinc-500 mb-0.5 truncate">{crumb}</p>
+              <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-500 mb-1 truncate font-semibold">{crumb}</p>
             )}
             <div className="flex items-center gap-2.5 flex-wrap">
-              <h1 className="text-[1.35rem] font-bold text-white leading-tight tracking-tight">
+              <h1 className="text-[1.45rem] font-bold text-white leading-tight tracking-tight">
                 {title}
               </h1>
               {badge && (
-                <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold tracking-wide ${BADGE_STYLES[badgeColor] || BADGE_STYLES.cyan}`}>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold tracking-wide tabular-nums ${BADGE_STYLES[badgeColor] || BADGE_STYLES.cyan}`}>
                   {badge}
                 </span>
               )}
             </div>
             {subtitle && (
-              <p className="text-zinc-500 text-xs mt-0.5 leading-relaxed">{subtitle}</p>
+              <p className="text-zinc-400 text-xs mt-1 leading-relaxed max-w-2xl">{subtitle}</p>
             )}
           </div>
         </div>
@@ -70,7 +76,6 @@ export default function PageHeader({
           </div>
         )}
       </div>
-      <div className="mt-5 h-px bg-gradient-to-r from-cyan-400/25 via-indigo-400/10 to-transparent" />
     </div>
   );
 }

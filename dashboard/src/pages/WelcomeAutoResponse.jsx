@@ -89,15 +89,15 @@ function DiscordPreview({ text, embed, guildName }) {
 /* ── Section wrapper ────────────────────────────────────────────── */
 function Section({ title, icon: Icon, children, className = '' }) {
   return (
-    <div className={`cyber-card p-5 space-y-4 ${className}`}>
+    <section className={`eb-section p-5 space-y-4 ${className}`}>
       {title && (
-        <div className="flex items-center gap-2 pb-2 border-b border-white/[0.05]">
-          {Icon && <Icon size={13} className="text-cyan-400" />}
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{title}</h2>
+        <div className="flex items-center gap-2.5 pb-3 border-b border-white/[0.06]">
+          {Icon && <span className="eb-section-icon !w-7 !h-7"><Icon size={13} /></span>}
+          <h2 className="text-[11px] font-bold text-zinc-300 uppercase tracking-[0.12em]">{title}</h2>
         </div>
       )}
       {children}
-    </div>
+    </section>
   );
 }
 

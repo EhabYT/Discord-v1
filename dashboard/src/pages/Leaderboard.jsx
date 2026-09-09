@@ -111,10 +111,12 @@ export default function Leaderboard({ guild }) {
       </div>
 
       {/* Tabs */}
-      <div className="seg-tabs">
+      <div className="seg-tabs" role="tablist" aria-label="Leaderboard type">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
+            role="tab"
+            aria-selected={tab === id}
             onClick={() => setTab(id)}
             className={tab === id ? 'seg-tab-active' : 'seg-tab'}
           >
@@ -133,16 +135,16 @@ export default function Leaderboard({ guild }) {
             return (
               <div
                 key={entry.userId}
-                className={`cyber-card flex flex-col items-center py-4 px-3 gap-2 border ${RANK_STYLES[rank - 1]} ${rank === 1 ? 'relative -top-2' : ''}`}
+                className={`glass-panel ${rank === 1 ? 'mesh-glow gradient-border' : ''} flex flex-col items-center py-4 px-3 gap-2 border ${RANK_STYLES[rank - 1]} ${rank === 1 ? 'relative -top-2' : ''}`}
               >
-                <div className="text-lg font-black">{['🥇','🥈','🥉'][rank-1]}</div>
+                <div className="text-lg font-black" aria-hidden="true">{['🥇','🥈','🥉'][rank-1]}</div>
                 {entry.avatar
                   ? <img src={entry.avatar} alt="" className="w-12 h-12 rounded-full ring-2 ring-current object-cover" />
-                  : <div className="w-12 h-12 rounded-full bg-cyan-500/20 flex items-center justify-center text-lg font-bold text-cyan-400">{entry.username?.[0]?.toUpperCase()}</div>
+                  : <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-400/25 to-indigo-400/25 border border-white/10 flex items-center justify-center text-lg font-bold text-cyan-200">{entry.username?.[0]?.toUpperCase()}</div>
                 }
                 <p className="text-xs font-semibold text-white text-center truncate w-full">{entry.username}</p>
-                <p className="text-sm font-bold">{stat.primary}</p>
-                <p className="text-[10px] text-gray-500">{stat.secondary}</p>
+                <p className="text-sm font-bold tabular-nums">{stat.primary}</p>
+                <p className="text-[10px] text-zinc-400">{stat.secondary}</p>
               </div>
             );
           })}
@@ -150,24 +152,25 @@ export default function Leaderboard({ guild }) {
       )}
 
       {/* Full List */}
-      <div className="cyber-card overflow-hidden">
+      <div className="glass-panel overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16 gap-3">
-            <div className="w-5 h-5 border-2 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin" />
-            <span className="text-sm text-gray-500">Loading rankings...</span>
+            <div className="w-5 h-5 border-2 border-cyan-300/30 border-t-cyan-200 rounded-full animate-spin" />
+            <span className="text-sm text-zinc-400">Loading rankings...</span>
           </div>
         ) : data.length === 0 ? (
-          <div className="text-center py-16 text-gray-600">
-            <Trophy size={32} className="mx-auto mb-3 opacity-30" />
-            <p className="text-sm">No data yet — members need to be active first.</p>
+          <div className="empty-state px-4">
+            <div className="empty-state-icon"><Trophy size={22} className="text-cyan-300/80" /></div>
+            <p className="empty-state-title">No data yet</p>
+            <p className="empty-state-sub">Members need to be active first.</p>
           </div>
         ) : (
-          <div className="divide-y divide-white/5">
+          <div className="divide-y divide-white/[0.05]">
             {visible.map((entry, i) => {
               const stat = statValue(entry);
-              const rankStyle = i < 3 ? RANK_STYLES[i] : 'text-gray-500';
+              const rankStyle = i < 3 ? RANK_STYLES[i] : 'text-zinc-500 border-white/10';
               return (
-                <div key={entry.userId} className="flex items-center gap-4 px-5 py-3 hover:bg-white/[0.02] transition-colors">
+                <div key={entry.userId} className="eb-row flex items-center gap-4 px-5 py-3">
                   {/* Rank */}
                   <div className={`w-7 h-7 rounded-full border flex items-center justify-center text-xs font-bold flex-shrink-0 ${rankStyle}`}>
                     {i + 1}

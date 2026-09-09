@@ -11,16 +11,16 @@ import api from '../api.js';
 
 function Section({ icon: Icon, title, desc, children }) {
   return (
-    <div className="cyber-card p-5 space-y-4">
+    <section className="eb-section p-5 space-y-4">
       <div>
-        <div className="flex items-center gap-2">
-          <Icon size={15} className="text-cyan-400" />
-          <h2 className="text-sm font-semibold text-white">{title}</h2>
+        <div className="eb-section-head">
+          <span className="eb-section-icon"><Icon size={15} /></span>
+          <h2 className="text-sm font-bold text-white tracking-tight">{title}</h2>
         </div>
-        {desc && <p className="text-xs text-gray-600 mt-1 ml-5">{desc}</p>}
+        {desc && <p className="text-xs text-zinc-400 mt-1.5 ml-10 leading-relaxed">{desc}</p>}
       </div>
       {children}
-    </div>
+    </section>
   );
 }
 

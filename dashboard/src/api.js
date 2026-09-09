@@ -10,15 +10,23 @@ function messageFromBody(status, text) {
   ) {
     return 'Tunnel down (Error 1033). Reload in a few seconds for a new public URL.';
   }
+  // Prefer the backend's own message. Error JSON bodies carry deliberate,
+  // sanitized operator guidance (role hierarchy, rate limits with codes,
+  // maintenance text, validation failures) — masking them behind a generic
+  // "Permission denied." cost operators every actionable detail. The generic
+  // labels below are only a fallback for empty or non-JSON bodies
+  // (proxies, HTML error pages).
+  try {
+    const j = JSON.parse(t);
+    const msg = (j && typeof j.error === 'string' && j.error)
+      || (j && typeof j.message === 'string' && j.message)
+      || '';
+    if (msg.trim()) return msg.replace(/\s+/g, ' ').trim().slice(0, 300);
+  } catch { /* html or empty → fall through to the generic labels */ }
   if (status === 429) return 'Too many requests — wait a moment.';
   if (status === 401) return 'Not authenticated.';
   if (status === 403) return 'Permission denied.';
   if (status === 404) return 'Not found.';
-  try {
-    const j = JSON.parse(t);
-    if (j && typeof j.error === 'string' && j.error) return j.error;
-    if (j && typeof j.message === 'string' && j.message) return j.message;
-  } catch { /* html or empty */ }
   if (status >= 500) return `Server error (${status}).`;
   if (t.trim().startsWith('<')) return `Request failed (HTTP ${status}).`;
   const clipped = t.replace(/\s+/g, ' ').trim().slice(0, 180);

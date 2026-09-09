@@ -1,37 +1,49 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { AlertTriangle, Trash2, X } from 'lucide-react';
 
 export default function ConfirmModal({ open, title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', variant = 'danger', onConfirm, onCancel }) {
+  const cancelRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    cancelRef.current?.focus();
+    const onKey = (e) => { if (e.key === 'Escape') onCancel?.(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onCancel]);
+
   if (!open) return null;
   const isDanger = variant === 'danger';
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
-      <div className="relative cyber-card border-white/10 p-6 w-full max-w-sm animate-scale-in shadow-2xl">
+    <div className="fixed inset-0 z-[90] flex items-center justify-center p-4" role="alertdialog" aria-modal="true" aria-label={title}>
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-md animate-fade-in" onClick={onCancel} />
+      <div className="palette-glass gradient-border relative p-6 w-full max-w-sm animate-palette-in">
         <button
+          ref={cancelRef}
           onClick={onCancel}
-          className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-lg text-gray-600 hover:text-gray-300 hover:bg-white/[0.08] transition-all"
+          aria-label="Close dialog"
+          className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-xl text-zinc-500 hover:text-zinc-100 hover:bg-white/[0.07] transition-all"
         >
           <X size={14} />
         </button>
-        <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 mx-auto border
-          ${isDanger ? 'bg-red-500/10 border-red-500/25' : 'bg-yellow-500/10 border-yellow-500/25'}`}>
+        <div className={`relative p-3 rounded-2xl flex items-center justify-center mb-4 mx-auto border w-fit
+          ${isDanger ? 'bg-gradient-to-br from-red-400/25 to-rose-500/10 border-red-300/25 shadow-[0_0_24px_rgba(239,68,68,0.2)]' : 'bg-gradient-to-br from-amber-300/25 to-yellow-500/10 border-amber-300/25 shadow-[0_0_24px_rgba(250,204,21,0.2)]'}`}>
           {isDanger
-            ? <Trash2 size={20} className="text-red-400" />
-            : <AlertTriangle size={20} className="text-yellow-400" />}
+            ? <Trash2 size={20} className="text-red-200" />
+            : <AlertTriangle size={20} className="text-amber-200" />}
         </div>
-        <h2 className="text-base font-bold text-white text-center mb-2">{title}</h2>
-        <p className="text-sm text-gray-400 text-center mb-6 leading-relaxed">{message}</p>
+        <h2 className="text-base font-bold text-white text-center mb-2 tracking-tight">{title}</h2>
+        <p className="text-sm text-zinc-400 text-center mb-6 leading-relaxed">{message}</p>
         <div className="flex gap-2">
-          <button onClick={onCancel} className="cyber-button flex-1 text-sm py-2">
+          <button onClick={onCancel} className="cyber-button flex-1 text-sm py-2.5 !rounded-xl">
             {cancelLabel}
           </button>
           <button
             onClick={onConfirm}
-            className={`flex-1 text-sm rounded-lg px-4 py-2 font-semibold transition-all duration-200 active:scale-95
+            className={`flex-1 text-sm rounded-xl px-4 py-2.5 font-semibold transition-all duration-200 active:scale-95
               ${isDanger
-                ? 'bg-red-500 hover:bg-red-400 text-white shadow-red-glow'
-                : 'bg-yellow-500 hover:bg-yellow-400 text-black'}`}
+                ? 'bg-gradient-to-r from-red-400 to-rose-400 hover:from-red-300 hover:to-rose-300 text-white shadow-[0_0_24px_rgba(239,68,68,0.3)]'
+                : 'bg-gradient-to-r from-amber-200 to-yellow-300 hover:from-amber-100 hover:to-yellow-200 text-black'}`}
           >
             {confirmLabel}
           </button>

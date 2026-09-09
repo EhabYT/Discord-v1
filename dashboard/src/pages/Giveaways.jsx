@@ -466,11 +466,12 @@ export default function Giveaways({ guild, guildData, permLevel }) {
 
       {/* Defaults settings */}
       {showSettings && draft && (
-        <div className="cyber-card p-5 border-purple-500/25 animate-slide-up">
-          <h2 className="text-sm font-bold text-white mb-1 flex items-center gap-2">
-            <SlidersHorizontal size={14} className="text-purple-300" /> Default Settings
-          </h2>
-          <p className="text-[11px] text-gray-600 mb-4">Pre-fill every new giveaway form. Existing giveaways are untouched.</p>
+        <div className="glass-panel p-5 !border-purple-300/25 animate-slide-up">
+          <div className="eb-section-head mb-1">
+            <span className="eb-section-icon !border-purple-300/25"><SlidersHorizontal size={14} className="text-purple-200" /></span>
+            <h2 className="text-sm font-bold text-white tracking-tight">Default Settings</h2>
+          </div>
+          <p className="text-[11px] text-zinc-400 mb-4 ml-10">Pre-fill every new giveaway form. Existing giveaways are untouched.</p>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -568,10 +569,11 @@ export default function Giveaways({ guild, guildData, permLevel }) {
 
       {/* Create Form */}
       {showForm && (
-        <div className="cyber-card p-5 border-cyan-500/30 shadow-[0_0_24px_rgba(0,255,255,0.04)] animate-slide-up">
-          <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-            <Gift size={14} className="text-cyan-400" /> Launch a Giveaway
-          </h2>
+        <div className="glass-panel mesh-glow p-5 !border-cyan-300/25 animate-slide-up relative overflow-hidden">
+          <div className="eb-section-head mb-4">
+            <span className="eb-section-icon"><Gift size={14} /></span>
+            <h2 className="text-sm font-bold text-white tracking-tight">Launch a Giveaway</h2>
+          </div>
           <div className="space-y-4">
             {/* Prize + Description */}
             <div>

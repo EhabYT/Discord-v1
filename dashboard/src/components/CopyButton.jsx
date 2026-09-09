@@ -21,8 +21,15 @@ export default function CopyButton({
   };
 
   return (
-    <button type="button" onClick={run} className={className || 'cyber-button flex items-center gap-1.5 text-xs py-1.5 px-3'}>
-      {ok ? <Check size={12} className="text-emerald-300" /> : <Copy size={12} />}
+    <button
+      type="button"
+      onClick={run}
+      aria-live="polite"
+      className={className || 'cyber-button flex items-center gap-1.5 text-xs py-1.5 px-3'}
+    >
+      {ok
+        ? <Check size={12} className="text-emerald-300" aria-hidden="true" />
+        : <Copy size={12} aria-hidden="true" />}
       {ok ? copiedLabel : label}
     </button>
   );

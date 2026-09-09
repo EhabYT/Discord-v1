@@ -26,6 +26,7 @@ class MemoryDatabase {
         this.data = new Map();
         this.persist = persist === true && !isTestProcess;
         this.snapshotPath = snapshotPath;
+        this._lastMtimeMs = 0;
         if (this.persist) this.loadSnapshot();
     }
     loadSnapshot() {
@@ -36,15 +37,39 @@ class MemoryDatabase {
             if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
                 for (const [key, value] of Object.entries(parsed)) this.data.set(String(key), value);
             }
+            try {
+                const stat = fs.statSync(this.snapshotPath);
+                this._lastMtimeMs = stat.mtimeMs || 0;
+            } catch { /* ignore */ }
         } catch {
             // A corrupt snapshot must never prevent startup; start empty.
         }
+    }
+    _maybeReload() {
+        if (!this.persist) return;
+        try {
+            const stat = fs.statSync(this.snapshotPath);
+            const mtime = stat.mtimeMs || 0;
+            if (mtime > this._lastMtimeMs) {
+                const raw = fs.readFileSync(this.snapshotPath, 'utf8');
+                const parsed = JSON.parse(raw);
+                this.data.clear();
+                if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                    for (const [key, value] of Object.entries(parsed)) this.data.set(String(key), value);
+                }
+                this._lastMtimeMs = mtime;
+            }
+        } catch { /* reload is best-effort; keep in-memory on failure */ }
     }
     saveSnapshot() {
         if (!this.persist) return;
         try {
             fs.mkdirSync(path.dirname(this.snapshotPath), { recursive: true });
             fs.writeFileSync(this.snapshotPath, JSON.stringify(Object.fromEntries(this.data)), 'utf8');
+            try {
+                const stat = fs.statSync(this.snapshotPath);
+                this._lastMtimeMs = stat.mtimeMs || 0;
+            } catch { /* ignore */ }
         } catch {
             // Persistence is best-effort; the in-memory state stays authoritative.
         }
@@ -54,6 +79,7 @@ class MemoryDatabase {
         return fn(this);
     }
     get(key) {
+        if (this.persist) this._maybeReload();
         return Promise.resolve(this.data.has(String(key)) ? structuredClone(this.data.get(String(key))) : null);
     }
     set(key, value) {
@@ -67,9 +93,11 @@ class MemoryDatabase {
         return Promise.resolve(existed);
     }
     all() {
+        if (this.persist) this._maybeReload();
         return Promise.resolve([...this.data.entries()].map(([id, value]) => ({ id, value: structuredClone(value) })));
     }
     scanPrefix(prefix, options = {}) {
+        if (this.persist) this._maybeReload();
         const normalized = normalizePrefixOptions(prefix, options);
         const matches = [...this.data.entries()]
             .filter(([id]) => id.startsWith(normalized.prefix) && (!normalized.cursor || id > normalized.cursor))
@@ -82,6 +110,7 @@ class MemoryDatabase {
         });
     }
     allByPrefix(prefix, options = {}) {
+        if (this.persist) this._maybeReload();
         return collectPrefixRows(this, prefix, options);
     }
     deletePrefix(prefix) {

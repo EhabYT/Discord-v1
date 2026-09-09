@@ -253,7 +253,7 @@ export default function Logs({ guild, guildData }) {
       </div>
 
       {/* Category filter pills */}
-      <div className="flex gap-1.5 mb-4 flex-wrap">
+      <div className="flex gap-1.5 mb-4 flex-wrap" role="group" aria-label="Filter log categories">
         {CATEGORIES.map(cat => {
           const count = cat.id === 'all' ? logs.length : logs.filter(l => l.category === cat.id).length;
           const isActive = filter === cat.id;
@@ -261,15 +261,12 @@ export default function Logs({ guild, guildData }) {
             <button
               key={cat.id}
               onClick={() => setFilter(cat.id)}
-              className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all font-medium ${
-                isActive
-                  ? `${cat.bg} ${cat.border} ${cat.color}`
-                  : 'border-white/[0.07] text-gray-600 hover:text-gray-400 hover:border-white/12'
-              }`}
+              aria-pressed={isActive}
+              className={`eb-filter-pill ${isActive ? 'is-active' : ''}`}
             >
               {cat.label}
               {count > 0 && (
-                <span className={`text-[10px] tabular-nums ${isActive ? 'opacity-70' : 'opacity-50'}`}>
+                <span className="text-[10px] tabular-nums opacity-70">
                   {count}
                 </span>
               )}
@@ -279,10 +276,10 @@ export default function Logs({ guild, guildData }) {
       </div>
 
       {/* Log stream */}
-      <div className="cyber-card p-4">
+      <div className="glass-panel p-4">
         <div className="flex items-center gap-2 mb-3">
-          <ScrollText size={14} className="text-cyan-400" />
-          <span className="text-xs font-semibold text-white">Event Stream</span>
+          <span className="eb-panel-icon !w-7 !h-7"><ScrollText size={14} /></span>
+          <span className="text-xs font-bold text-white">Event Stream</span>
           {paused && (
             <span className="cyber-badge-yellow ml-1">Paused</span>
           )}

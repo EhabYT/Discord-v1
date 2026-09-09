@@ -20,31 +20,33 @@ function MiniBar({ value, max, color }) {
 function BarChart({ data, dataKey, color, label }) {
   const max = Math.max(...data.map(d => d[dataKey] || 0), 1);
   const now = new Date().getHours();
+  const total = data.reduce((s, d) => s + (d[dataKey] || 0), 0);
 
   return (
-    <div className="cyber-card p-4">
+    <div className="glass-panel p-4">
       <div className="flex items-center gap-2 mb-4">
-        <div className="w-3 h-3 rounded-full" style={{ background: color, boxShadow: `0 0 6px ${color}` }} />
-        <span className="text-xs font-semibold text-white">{label}</span>
-        <span className="ml-auto text-xs text-gray-600">{data.reduce((s, d) => s + (d[dataKey] || 0), 0)} total</span>
+        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: color, boxShadow: `0 0 10px ${color}` }} />
+        <span className="text-xs font-bold text-white">{label}</span>
+        <span className="ml-auto text-[11px] text-zinc-400 tabular-nums">{total} total</span>
       </div>
-      <div className="flex items-end gap-0.5 h-24">
+      <div className="flex items-end gap-1 h-24" role="img" aria-label={`${label}: ${total} total`}>
         {data.map((d, i) => (
           <div key={i} className="flex flex-col items-center flex-1 gap-1 relative group">
-            <div className="absolute -top-6 left-1/2 -translate-x-1/2 hidden group-hover:block bg-gray-900 border border-white/10 text-[10px] text-white px-1.5 py-0.5 rounded whitespace-nowrap z-10">
+            <div className="eb-chart-tip">
               {d.label}: {d[dataKey]}
             </div>
             <div className="w-full flex items-end justify-center" style={{ height: 80 }}>
               <div
-                className="w-full rounded-t-sm transition-all duration-500"
+                className="eb-chart-bar min-h-[2px]"
                 style={{
+                  '--bar': color,
                   height: `${Math.max(2, max > 0 ? (d[dataKey] / max) * 100 : 0)}%`,
-                  background: i === now ? color : `${color}60`,
-                  boxShadow: i === now && d[dataKey] > 0 ? `0 0 8px ${color}` : 'none'
+                  opacity: i === now ? 1 : 0.45,
+                  boxShadow: i === now && d[dataKey] > 0 ? `0 0 10px ${color}66` : 'none',
                 }}
               />
             </div>
-            {i % 4 === 0 && <span className="text-[8px] text-gray-700">{d.label?.split(':')[0]}</span>}
+            {i % 4 === 0 && <span className="text-[8px] text-zinc-600 tabular-nums">{d.label?.split(':')[0]}</span>}
           </div>
         ))}
       </div>

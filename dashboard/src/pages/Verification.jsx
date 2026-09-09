@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   BadgeCheck, Save, Send, Settings, Users, ScrollText, Loader,
   Shield, Clock, Search, UserCheck, UserX, Trash2, Info, Eye,
-  Hash, RefreshCw, KeyRound, Sparkles,
+  Hash, RefreshCw, KeyRound, Sparkles, AlertTriangle,
 } from 'lucide-react';
 import CyanToggle from '../components/CyanToggle.jsx';
 import PageHeader from '../components/PageHeader.jsx';
@@ -10,6 +10,8 @@ import StatCard from '../components/StatCard.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import ConfirmModal from '../components/ConfirmModal.jsx';
 import { useToast } from '../components/Toast.jsx';
+import { useI18n } from '../i18n.jsx';
+import { timeAgo } from '../lib/time.js';
 import api from '../api.js';
 
 const DEFAULT_CFG = {
@@ -61,14 +63,14 @@ const STYLES = ['Success', 'Primary', 'Secondary', 'Danger'];
 
 function Section({ title, icon: Icon, children, extra }) {
   return (
-    <div className="cyber-card p-5 space-y-4">
-      <div className="flex items-center gap-2 pb-2 border-b border-white/[0.05]">
-        {Icon && <Icon size={13} className="text-cyan-400" />}
-        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{title}</h2>
+    <section className="eb-section p-5 space-y-4">
+      <div className="flex items-center gap-2.5 pb-3 border-b border-white/[0.06]">
+        {Icon && <span className="eb-section-icon !w-7 !h-7"><Icon size={13} /></span>}
+        <h2 className="text-[11px] font-bold text-zinc-300 uppercase tracking-[0.12em]">{title}</h2>
         {extra && <div className="ml-auto">{extra}</div>}
       </div>
       {children}
-    </div>
+    </section>
   );
 }
 
@@ -94,15 +96,6 @@ function RoleMulti({ roles, value, onChange, exclude = [] }) {
       {roles.length === 0 && <p className="px-3 py-2 text-[11px] text-zinc-600">No roles</p>}
     </div>
   );
-}
-
-function timeAgo(ts) {
-  if (!ts) return '—';
-  const s = Math.max(0, Math.floor((Date.now() - ts) / 1000));
-  if (s < 60) return `${s}s ago`;
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
-  return `${Math.floor(s / 86400)}d ago`;
 }
 
 function countdown(ts) {
@@ -170,6 +163,7 @@ function PanelPreview({ cfg, guildName }) {
 
 export default function Verification({ guild, guildData }) {
   const toast = useToast();
+  const { t } = useI18n();
   const [tab, setTab] = useState('quick');
   const [extraRoles, setExtraRoles] = useState([]);
   const [cfg, setCfg] = useState(DEFAULT_CFG);
@@ -189,6 +183,13 @@ export default function Verification({ guild, guildData }) {
 
   const channels = guildData?.guild?.channels?.filter((c) => c.type === 0) || [];
   const roles = [...(guildData?.guild?.roles || []), ...extraRoles].filter((r, i, arr) => arr.findIndex((x) => x.id === r.id) === i);
+  const botTop = guildData?.guild?.botHighestPosition ?? null;
+  const botCanManage = guildData?.guild?.botCanManageRoles;
+  const verifiedRole = roles.find((r) => r.id === cfg.roleId);
+  const verifiedAboveBot = botTop != null && verifiedRole && typeof verifiedRole.position === 'number' && verifiedRole.position >= botTop;
+  const unverifiedRole = roles.find((r) => r.id === cfg.unverifiedRoleId);
+  const unverifiedAboveBot = botTop != null && unverifiedRole && typeof unverifiedRole.position === 'number' && unverifiedRole.position >= botTop;
+  const verifiedRoleMissing = cfg.roleId && !verifiedRole;
 
   const load = useCallback(async () => {
     if (!guild?.id) return;
@@ -325,6 +326,28 @@ export default function Verification({ guild, guildData }) {
     setBusyId('');
   };
 
+  const fixHierarchy = async () => {
+    setBusyId('fix-hierarchy');
+    try {
+      const r = await api.post(`/api/guild/${guild.id}/verification/fix-hierarchy`);
+      if (r.config) setCfg((c) => ({ ...c, ...r.config }));
+      if (r.fixed?.length) {
+        const names = r.fixed.map((f) => f.name || f.roleId).join(', ');
+        const methods = r.fixed.map((f) => (f.method === 'moved' ? 'moved' : 'recreated')).join('/');
+        toast.success(`Fixed ${r.fixed.length} role(s) (${methods}): ${names}`);
+        if (r.fixed.some((f) => f.newRoleId)) {
+          toast.info('Old role still exists — delete it manually after confirming members have the new one.');
+        }
+      } else {
+        toast.success(r.message || 'Hierarchy already correct');
+      }
+      load();
+    } catch (e) {
+      toast.error(e.message || 'Auto-fix failed — move the bot role above it manually in Server Settings → Roles.');
+    }
+    setBusyId('');
+  };
+
   const wipeLog = async () => {
     try {
       await api.delete(`/api/guild/${guild.id}/verification/log`);
@@ -395,6 +418,76 @@ export default function Verification({ guild, guildData }) {
         <StatCard icon={Clock} label="Pending" value={stats.pending ?? pending.length} sub={cfg.kickUnverifiedMinutes ? `kick after ${cfg.kickUnverifiedMinutes}m` : 'no auto-kick'} color="purple" />
         <StatCard icon={KeyRound} label="Roles" value={cfg.roleId ? 'Ready' : 'Set role'} sub={cfg.unverifiedRoleId ? 'join role set' : 'no join role'} color={cfg.roleId ? 'cyan' : 'red'} />
       </div>
+
+      {botCanManage === false && (
+        <div className="rounded-xl border border-red-400/30 bg-red-400/10 p-3 flex gap-2">
+          <AlertTriangle size={14} className="text-red-400 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-red-200 leading-relaxed">
+            The bot does not have the <strong>Manage Roles</strong> permission, so Verify clicks cannot assign any role.
+          </p>
+        </div>
+      )}
+      {verifiedAboveBot && (
+        <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 flex gap-3 items-start">
+          <AlertTriangle size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0 space-y-2">
+            <p className="text-xs text-amber-200 leading-relaxed">
+              <strong>{verifiedRole.name}</strong> is above the bot&apos;s highest role. Move the bot role above it in Server Settings → Roles, or every Verify click will fail.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                disabled={busyId === 'fix-hierarchy'}
+                onClick={fixHierarchy}
+                className="cyber-button-solid text-[11px] px-3 py-1.5 disabled:opacity-50"
+              >
+                {busyId === 'fix-hierarchy' ? 'Fixing…' : 'Try auto-fix'}
+              </button>
+              <span className="text-[11px] text-amber-300/70">Tries to move it below the bot; if Discord blocks it, recreates it below the bot instead. Old role can be deleted manually.</span>
+            </div>
+          </div>
+        </div>
+      )}
+      {unverifiedAboveBot && (
+        <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 flex gap-3 items-start">
+          <AlertTriangle size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0 space-y-2">
+            <p className="text-xs text-amber-200 leading-relaxed">
+              <strong>{unverifiedRole.name}</strong> (Unverified) is above the bot&apos;s highest role and the gate cannot hide channels from it. Move the bot role above it or every join will miss the Unverified role.
+            </p>
+            <button
+              disabled={busyId === 'fix-hierarchy'}
+              onClick={fixHierarchy}
+              className="cyber-button-solid text-[11px] px-3 py-1.5 disabled:opacity-50"
+            >
+              {busyId === 'fix-hierarchy' ? 'Fixing…' : 'Try auto-fix'}
+            </button>
+          </div>
+        </div>
+      )}
+      {verifiedRoleMissing && (
+        <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 flex gap-2">
+          <AlertTriangle size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-200 leading-relaxed">
+            The saved verified role is no longer available (deleted or managed). Pick a new one below and re-post the panel — old Verify buttons will say “not set up” until then.
+          </p>
+        </div>
+      )}
+      {cfg.enabled && !cfg.roleId && (
+        <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 flex gap-2">
+          <AlertTriangle size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-200 leading-relaxed">
+            Verification is on but no verified role is set. Pick one in Setup → Roles — Verify clicks reply “not set up” until then.
+          </p>
+        </div>
+      )}
+      {!cfg.enabled && cfg.roleId && (
+        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 flex gap-2">
+          <Info size={14} className="text-zinc-400 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-zinc-400 leading-relaxed">
+            Verification is disabled, so the Verify button replies that it is not set up. Enable it in Setup → Gate or use Quick → Enable + post panel.
+          </p>
+        </div>
+      )}
 
       <div className="seg-tabs">
         {TABS.map(({ id, label, icon: Icon }) => (
@@ -531,7 +624,11 @@ export default function Verification({ guild, guildData }) {
                 <label className="cyber-label mb-1.5">Verified role *</label>
                 <select value={cfg.roleId || ''} onChange={(e) => set({ roleId: e.target.value || null })} className="cyber-select">
                   <option value="">— Required —</option>
-                  {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                  {roles.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}{botTop != null && typeof r.position === 'number' && r.position >= botTop ? ' ⚠ (above bot)' : ''}
+                    </option>
+                  ))}
                 </select>
                 <p className="text-[11px] text-zinc-600 mt-1">Granted when the member passes</p>
               </div>
@@ -840,8 +937,8 @@ export default function Verification({ guild, guildData }) {
                         : <div className="w-8 h-8 rounded-full bg-violet-500/15 text-violet-300 text-xs font-bold flex items-center justify-center">{(p.username || '?')[0]}</div>}
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold text-white truncate">{p.displayName || p.username}</p>
-                        <p className="text-[10px] text-zinc-600">
-                          joined {timeAgo(p.joinedAt)}
+                        <p className="text-[10px] text-zinc-600 tabular-nums">
+                          joined {timeAgo(p.joinedAt, t)}
                           {left && <span className={left === 'overdue' ? ' text-red-400' : ' text-amber-300'}> · kick {left}</span>}
                         </p>
                       </div>
@@ -887,7 +984,7 @@ export default function Verification({ guild, guildData }) {
                       : <div className="w-8 h-8 rounded-full bg-cyan-500/15 text-cyan-300 text-xs font-bold flex items-center justify-center">{(e.username || '?')[0]}</div>}
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-white truncate">{e.displayName || e.username}</p>
-                      <p className="text-[10px] text-zinc-600">{e.by || 'self'} · {timeAgo(e.at)}</p>
+                      <p className="text-[10px] text-zinc-600 tabular-nums">{e.by || 'self'} · {timeAgo(e.at, t)}</p>
                     </div>
                     <span className="text-[10px] px-2 py-0.5 rounded-full border border-cyan-500/25 text-cyan-300 capitalize">{e.method || 'button'}</span>
                     <button

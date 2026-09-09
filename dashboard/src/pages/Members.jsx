@@ -73,7 +73,7 @@ function ActionMenu({ member, guildId, onAction, onOpenNotes }) {
         Staff <ChevronDown size={10} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="absolute right-0 mt-1 w-64 cyber-card shadow-xl z-30 p-3 space-y-2">
+        <div className="absolute right-0 mt-2 w-64 glass-popover shadow-2xl z-30 p-3 space-y-2 animate-palette-in" role="menu" aria-label={`Staff actions for ${member.displayName || member.username}`} style={{ transformOrigin: 'top right' }}>
           <div className="flex gap-1.5 flex-wrap">
             {ACTIONS.map((a) => {
               const Icon = a.icon;

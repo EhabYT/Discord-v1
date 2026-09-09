@@ -48,10 +48,18 @@ export default function TicketSystem({ guild, guildData }) {
   const save = async () => {
     setSaving(true);
     try {
-      await api.post(`/api/guild/${guild.id}/tickets`, config);
+      const payload = {
+        categoryId: config.categoryId,
+        transcriptChannelId: config.transcriptChannelId,
+        supportRoleId: config.supportRoleId,
+        maxOpen: config.maxOpen,
+      };
+      const saved = await api.post(`/api/guild/${guild.id}/tickets`, payload);
+      // Merge canonical server response (normalizes '' -> null)
+      setConfig(prev => ({ ...prev, ...saved }));
       toast.success('Ticket configuration saved!');
-    } catch {
-      toast.error('Failed to save configuration.');
+    } catch (err) {
+      toast.error(err.message || 'Failed to save configuration.');
     }
     setSaving(false);
   };
@@ -60,14 +68,15 @@ export default function TicketSystem({ guild, guildData }) {
     if (!config.panelChannelId) { toast.warning('Select a channel to post the panel in.'); return; }
     setPosting(true);
     try {
-      await api.post(`/api/guild/${guild.id}/tickets/panel`, {
+      const res = await api.post(`/api/guild/${guild.id}/tickets/panel`, {
         channelId: config.panelChannelId,
         title: config.panelTitle,
         description: config.panelDescription,
       });
-      toast.success('Ticket panel posted successfully!');
-    } catch {
-      toast.error('Failed to post the panel.');
+      if (res?.warned) toast.warning(res.warned);
+      else toast.success('Ticket panel posted successfully!');
+    } catch (err) {
+      toast.error(err.message || 'Failed to post the panel.');
     }
     setPosting(false);
   };
@@ -75,10 +84,10 @@ export default function TicketSystem({ guild, guildData }) {
   const closeTicket = async (ticketId) => {
     try {
       await api.post(`/api/guild/${guild.id}/tickets/${ticketId}/close`);
-      setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, status: 'closed' } : t));
+      setTickets(prev => prev.map(t => String(t.id) === String(ticketId) ? { ...t, status: 'closed' } : t));
       toast.success('Ticket closed.');
-    } catch {
-      toast.error('Failed to close ticket.');
+    } catch (err) {
+      toast.error(err.message || 'Failed to close ticket.');
     }
     setConfirmClose(null);
   };
@@ -91,6 +100,18 @@ export default function TicketSystem({ guild, guildData }) {
 
   const openCount   = tickets.filter(t => t.status === 'open' || !t.status).length;
   const closedCount = tickets.filter(t => t.status === 'closed').length;
+  const isConfigured = !!(config.categoryId || guildData?.tickets?.categoryId || guildData?.tickets?.category);
+
+  const visibleTickets = tickets.filter((t) => {
+    if (ticketFilter === 'open' && !(t.status === 'open' || !t.status)) return false;
+    if (ticketFilter === 'closed' && t.status !== 'closed') return false;
+    if (ticketQuery) {
+      const q = ticketQuery.toLowerCase();
+      const hay = `${t.id || ''} ${t.userId || ''} ${t.channelId || ''} ${t.channelName || ''}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
 
   return (
     <div className="page-shell-sm animate-fade-in">
@@ -102,21 +123,28 @@ export default function TicketSystem({ guild, guildData }) {
         badgeColor="green"
       />
 
+      {!isConfigured && (
+        <div className="flex items-center gap-2 px-3 py-2.5 mb-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
+          <AlertCircle size={14} className="flex-shrink-0" />
+          <span>Ticket system is not configured — select a category and click <b>Save Configuration</b> before members use the ticket button.</span>
+        </div>
+      )}
+
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-3 mb-5">
         {[
           { label: 'Total Tickets',  value: tickets.length,  color: 'text-white' },
-          { label: 'Open',           value: openCount,        color: 'text-green-400' },
-          { label: 'Closed',         value: closedCount,      color: 'text-gray-500' },
-        ].map(s => (
-          <div key={s.label} className="cyber-card p-3.5 text-center">
-            <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
-            <p className="text-xs text-gray-600 mt-0.5">{s.label}</p>
+          { label: 'Open',           value: openCount,        color: 'text-emerald-300' },
+          { label: 'Closed',         value: closedCount,      color: 'text-zinc-400' },
+        ].map((s, i) => (
+          <div key={s.label} className="glass-panel p-3.5 text-center animate-fade-in" style={{ animationDelay: `${i * 50}ms` }}>
+            <p className={`text-2xl font-bold tabular-nums tracking-tight ${s.color}`}>{s.value}</p>
+            <p className="text-[11px] font-medium text-zinc-400 mt-0.5">{s.label}</p>
           </div>
         ))}
       </div>
 
-      <div className="seg-tabs mb-1">
+      <div className="seg-tabs mb-1" role="tablist" aria-label="Ticket sections">
         {[
           { id: 'config',  label: 'Configuration', icon: Settings },
           { id: 'panel',   label: 'Create Panel',  icon: Plus },
@@ -124,19 +152,21 @@ export default function TicketSystem({ guild, guildData }) {
         ].map(t => (
           <button
             key={t.id}
+            role="tab"
+            aria-selected={tab === t.id}
             onClick={() => setTab(t.id)}
             className={tab === t.id ? 'seg-tab-active' : 'seg-tab'}
           >
             <t.icon size={13} />
             {t.label}
-            {t.badge ? <span className="cyber-badge-green">{t.badge}</span> : null}
+            {t.badge ? <span className="cyber-badge-green tabular-nums">{t.badge}</span> : null}
           </button>
         ))}
       </div>
 
       {/* Configuration tab */}
       {tab === 'config' && (
-        <div className="cyber-card p-5 animate-fade-in">
+        <div className="glass-panel p-5 animate-fade-in">
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <label className="text-xs text-gray-500 block mb-1.5">Ticket Category</label>
@@ -282,19 +312,15 @@ export default function TicketSystem({ guild, guildData }) {
             </div>
           </div>
 
-          {tickets.length === 0 ? (
+          {visibleTickets.length === 0 ? (
             <div className="text-center py-12">
               <Ticket size={28} className="text-gray-700 mx-auto mb-2" />
-              <p className="text-sm text-gray-600">No tickets found</p>
-              <p className="text-xs text-gray-700 mt-1">Create a ticket panel so members can open tickets</p>
+              <p className="text-sm text-gray-600">{tickets.length === 0 ? 'No tickets found' : 'No matches'}</p>
+              <p className="text-xs text-gray-700 mt-1">{tickets.length === 0 ? 'Create a ticket panel so members can open tickets' : 'Try a different search or filter'}</p>
             </div>
           ) : (
             <div className="space-y-2">
-              {tickets.filter((t) => {
-                if (ticketFilter === 'open') return t.status === 'open' || !t.status;
-                if (ticketFilter === 'closed') return t.status === 'closed';
-                return true;
-              }).map((ticket, i) => (
+              {visibleTickets.map((ticket, i) => (
                 <div
                   key={ticket.id || i}
                   className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:border-white/[0.12] transition-all"

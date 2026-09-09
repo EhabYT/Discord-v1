@@ -131,11 +131,11 @@ export default function MusicController({ guild }) {
       />
 
       <div className="grid gap-4 items-start lg:grid-cols-5">
-        <div className="lg:col-span-3 cyber-card p-5 min-w-0">
+        <div className="lg:col-span-3 glass-panel mesh-glow p-5 min-w-0 relative overflow-hidden">
           {loading ? (
             <div className="flex items-center gap-3 h-20">
-              <Loader2 size={18} className="animate-spin text-cyan-400" />
-              <span className="text-sm text-gray-500">Loading...</span>
+              <Loader2 size={18} className="animate-spin text-cyan-200" />
+              <span className="text-sm text-zinc-400">Loading player…</span>
             </div>
           ) : !hasTrack ? (
             <EmptyState
@@ -147,11 +147,14 @@ export default function MusicController({ guild }) {
             <>
               <div className="flex gap-4 mb-4">
                 {data.current?.thumbnail && (
-                  <img src={data.current.thumbnail} alt="" className="w-16 h-16 rounded-lg object-cover ring-1 ring-cyan-500/30 flex-shrink-0" />
+                  <span className="relative flex-shrink-0">
+                    <span className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-cyan-400/30 to-indigo-400/20 blur-md opacity-70 pointer-events-none" aria-hidden="true" />
+                    <img src={data.current.thumbnail} alt="" className="relative w-16 h-16 rounded-xl object-cover ring-1 ring-white/15" />
+                  </span>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-white truncate">{data.current?.title}</p>
-                  <p className="text-xs text-gray-500 mt-0.5 truncate">{data.current?.author}</p>
+                  <p className="text-sm font-bold text-white truncate tracking-tight">{data.current?.title}</p>
+                  <p className="text-xs text-zinc-400 mt-0.5 truncate">{data.current?.author}</p>
                   <div className="flex items-center gap-2 mt-2">
                     <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${data.current?.source === 'spotify' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
                       {data.current?.source?.toUpperCase()}
@@ -187,7 +190,8 @@ export default function MusicController({ guild }) {
                 <button
                   onClick={() => action('pause', {}, paused ? 'Resumed' : 'Paused')}
                   title={paused ? 'Resume' : 'Pause'}
-                  className="w-12 h-12 rounded-full bg-cyan-500 hover:bg-cyan-400 text-black flex items-center justify-center transition-all shadow-cyan-glow"
+                  aria-label={paused ? 'Resume playback' : 'Pause playback'}
+                  className="p-3.5 rounded-full bg-gradient-to-br from-cyan-200 via-cyan-300 to-sky-400 hover:from-cyan-100 hover:to-sky-300 text-black flex items-center justify-center transition-all shadow-[0_0_32px_rgba(34,211,238,0.4)] hover:shadow-[0_0_44px_rgba(34,211,238,0.55)] active:scale-95"
                 >
                   {actionPending === 'pause' ? <Loader2 size={20} className="animate-spin" /> : paused ? <Play size={20} /> : <Pause size={20} />}
                 </button>
