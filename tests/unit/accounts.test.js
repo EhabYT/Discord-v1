@@ -1,5 +1,6 @@
 const assert = require('assert');
-const { AccountStore, normalizeUsername, ACCOUNT_SCHEMA_SQL } = require('../../database/accounts');
+const { AccountStore, normalizeUsername, sanitizePreferences, ACCOUNT_SCHEMA_SQL } = require('../../database/accounts');
+const { BIO_MAX_LENGTH, normalizeBio, normalizePreferences } = require('../../shared/services/account-validation');
 
 class FakePool {
     constructor() {
@@ -51,6 +52,24 @@ class FakePool {
             identity.provider_avatar_url = params[1];
             return { rows: [] };
         }
+        if (/SELECT username_changed_at FROM accounts/.test(sql)) {
+            const account = this.accounts.get(String(params[0]));
+            return { rows: account ? [{ username_changed_at: account.username_changed_at || null }] : [] };
+        }
+        if (/UPDATE accounts SET display_name/.test(sql)) {
+            const account = this.accounts.get(String(params[2]));
+            assert(account, 'updateProfile must target a known account');
+            account.display_name = params[0];
+            account.username = params[1];
+            if (params.length > 3) account.bio = params[3];
+            return { rows: [] };
+        }
+        if (/UPDATE accounts SET preferences/.test(sql)) {
+            const account = this.accounts.get(String(params[0]));
+            assert(account, 'updatePreferences must target a known account');
+            account.preferences = JSON.parse(params[1]);
+            return { rows: [] };
+        }
         if (/INSERT INTO account_security_events/.test(sql)) {
             this.events.push({ id: params[0], accountId: params[1], requestId: params[2] });
             return { rows: [] };
@@ -98,6 +117,41 @@ class FakePool {
     );
     assert.strictEqual(pool.events.length, 2, 'explicit linking creates one security event');
     assert.strictEqual(pool.releases, 4, 'transaction clients must always release');
+
+    assert.match(ACCOUNT_SCHEMA_SQL, /ADD COLUMN IF NOT EXISTS bio/);
+    assert.match(ACCOUNT_SCHEMA_SQL, /ADD COLUMN IF NOT EXISTS preferences/);
+
+    assert.strictEqual(BIO_MAX_LENGTH, 160);
+    assert.strictEqual(normalizeBio('  hello  '), 'hello');
+    assert.strictEqual(normalizeBio(''), '');
+    assert.strictEqual(normalizeBio(null), '');
+    assert.strictEqual(normalizeBio(undefined), undefined);
+    assert.strictEqual(normalizeBio('x'.repeat(160)).length, 160);
+    assert.strictEqual(normalizeBio('x'.repeat(161)), null);
+
+    const defaults = { theme: 'dark', language: 'en', timeZone: '', notifications: { email: true, push: true, marketing: false } };
+    assert.deepStrictEqual(normalizePreferences(null), defaults);
+    assert.deepStrictEqual(normalizePreferences(undefined), defaults);
+    assert.deepStrictEqual(normalizePreferences({ theme: 'light', language: 'de', timeZone: 'Europe/Berlin', notifications: { email: false, push: true, marketing: true } }),
+        { theme: 'light', language: 'de', timeZone: 'Europe/Berlin', notifications: { email: false, push: true, marketing: true } });
+    assert.deepStrictEqual(normalizePreferences({ theme: 'banana', language: 'xx', extra: 'drop-me' }), defaults);
+    assert.strictEqual(normalizePreferences({ timeZone: 'Mars/Olympus' }), null);
+    assert.deepStrictEqual(
+        normalizePreferences({ notifications: { push: false } }, { theme: 'light', timeZone: 'Europe/Berlin', notifications: { email: false } }),
+        { theme: 'light', language: 'en', timeZone: 'Europe/Berlin', notifications: { email: false, push: false, marketing: false } });
+    assert.deepStrictEqual(sanitizePreferences({ theme: 'system', notifications: [1, 2] }), { ...defaults, theme: 'system' });
+    assert.deepStrictEqual(sanitizePreferences(null), defaults);
+
+    const untouched = await store.updateProfile(localId, { displayName: 'Local Renamed', username: 'local_user' });
+    assert.strictEqual(untouched.account.displayName, 'Local Renamed');
+    assert.strictEqual(untouched.account.bio, null, 'absent bio must leave the stored value unchanged');
+    const withBio = await store.updateProfile(localId, { displayName: 'Local Renamed', username: 'local_user', bio: '  night owl  ' });
+    assert.strictEqual(withBio.account.bio, '  night owl  ', 'store persists the normalized route value verbatim');
+    const cleared = await store.updateProfile(localId, { displayName: 'Local Renamed', username: 'local_user', bio: '' });
+    assert.strictEqual(cleared.account.bio, null);
+
+    const prefs = await store.updatePreferences(localId, { theme: 'system', language: 'fr', timeZone: '', notifications: { email: true, push: false, marketing: false } });
+    assert.deepStrictEqual(prefs.preferences, { theme: 'system', language: 'fr', timeZone: '', notifications: { email: true, push: false, marketing: false } });
 
     console.log('Account foundation tests passed.');
 })().catch(err => {

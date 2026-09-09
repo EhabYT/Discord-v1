@@ -22,7 +22,7 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
     assert.match(authRoutes, /attachMfaChallenge/, 'MFA accounts must not become authenticated after password only');
 
     const accountRoutes = read('backend/src/routes/account.js');
-    for (const endpoint of ['/profile', '/email/change', '/password/change', '/mfa/enroll', '/mfa/confirm', '/mfa/disable', '/recovery-codes/regenerate', '/sessions', '/sessions/revoke-others', '/sessions/revoke-all', '/activity', '/reauthenticate', '/deactivate', '/avatar']) {
+    for (const endpoint of ['/profile', '/preferences', '/email/change', '/password/change', '/mfa/enroll', '/mfa/confirm', '/mfa/disable', '/recovery-codes/regenerate', '/sessions', '/sessions/revoke-others', '/sessions/revoke-all', '/activity', '/reauthenticate', '/deactivate', '/avatar']) {
         assert(accountRoutes.includes(`'${endpoint}'`) || accountRoutes.includes(`'${endpoint}/:id'`), `missing account endpoint ${endpoint}`);
     }
     assert.match(accountRoutes, /hasRecentReauthentication/, 'deactivation must require recent reauthentication');
@@ -36,6 +36,7 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 
     const profile = read('dashboard/src/pages/Profile.jsx');
     const security = read('dashboard/src/pages/AccountSecurity.jsx');
+    const hub = read('dashboard/src/pages/AccountSettings.jsx');
     for (const source of [profile, security]) {
         assert.match(source, /cyber-card/);
         assert.match(source, /sm:/, 'account pages must retain mobile-first responsive classes');
@@ -44,6 +45,27 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
     assert.match(security, /Active sessions/);
     assert.match(security, /Security activity/);
     assert.match(security, /Danger Zone/);
+
+    // Profile pages render exclusively through locale dictionaries: every
+    // t('profile.*') / t('aset.*') key used must exist in all five
+    // non-English dictionaries so no locale ever shows a raw key or falls
+    // back to English silently.
+    const i18n = read('dashboard/src/i18n.jsx');
+    const used = new Set();
+    for (const source of [profile, hub]) {
+        for (const m of source.matchAll(/t\('((?:profile|aset)\.[A-Za-z]+)'/g)) used.add(m[1]);
+    }
+    assert(used.size > 120, `profile i18n key coverage looks thin (${used.size} keys)`);
+    const dicts = {};
+    for (const m of i18n.matchAll(/const (AR|DE|FR|ES|TR) = \{([\s\S]*?)\n\};/g)) dicts[m[1]] = m[2];
+    assert.deepStrictEqual(Object.keys(dicts).sort(), ['AR', 'DE', 'ES', 'FR', 'TR'], 'all five locale dictionaries must exist');
+    const missing = [];
+    for (const key of [...used].sort()) {
+        for (const [name, body] of Object.entries(dicts)) {
+            if (!body.includes(`'${key}'`)) missing.push(`${name}:${key}`);
+        }
+    }
+    assert.deepStrictEqual(missing, [], `missing locale entries: ${missing.join(', ')}`);
 
     const authMiddleware = read('backend/src/middleware/auth.js');
     const guildMiddleware = read('backend/src/middleware/guild-access.js');

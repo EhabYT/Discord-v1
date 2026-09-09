@@ -23,6 +23,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS accounts_email_lower
     ON accounts (LOWER(email)) WHERE email IS NOT NULL;
 ALTER TABLE accounts ADD COLUMN IF NOT EXISTS username_changed_at TIMESTAMPTZ;
 ALTER TABLE accounts ADD COLUMN IF NOT EXISTS avatar_key TEXT;
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS bio VARCHAR(160);
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS preferences JSONB NOT NULL DEFAULT '{}'::jsonb;
 
 CREATE TABLE IF NOT EXISTS account_credentials (
     account_id UUID PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
@@ -148,6 +150,8 @@ function safeAccount(row) {
         emailVerified: !!row.email_verified_at,
         mfaEnabled: !!row.mfa_enabled,
         avatarUrl: row.avatar_url || row.provider_avatar_url || null,
+        bio: typeof row.bio === 'string' && row.bio ? row.bio : null,
+        preferences: sanitizePreferences(row.preferences),
         status: row.status,
         createdAt: row.created_at,
         linkedDiscord: row.provider_user_id ? {
@@ -155,6 +159,30 @@ function safeAccount(row) {
             username: row.provider_username || null,
             avatar: row.provider_avatar_url || null,
         } : null,
+    };
+}
+
+// Defensive read-path projection for the JSONB preferences column. The write
+// path (PUT /api/account/preferences) normalizes via the shared validation
+// module; this keeps rows written by older releases or wedged clients from
+// ever leaking unexpected shapes to sessions. No shared import here on
+// purpose: the database package stays dependency-free.
+function sanitizePreferences(value) {
+    const raw = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    const themes = new Set(['light', 'dark', 'system']);
+    const languages = new Set(['en', 'ar', 'de', 'fr', 'es', 'tr']);
+    const notifications = raw.notifications && typeof raw.notifications === 'object' && !Array.isArray(raw.notifications)
+        ? raw.notifications
+        : {};
+    return {
+        theme: themes.has(raw.theme) ? raw.theme : 'dark',
+        language: languages.has(raw.language) ? raw.language : 'en',
+        timeZone: typeof raw.timeZone === 'string' ? raw.timeZone.slice(0, 64) : '',
+        notifications: {
+            email: notifications.email !== false,
+            push: notifications.push !== false,
+            marketing: notifications.marketing === true,
+        },
     };
 }
 
@@ -209,7 +237,7 @@ class AccountStore {
         return `user_${crypto.randomBytes(6).toString('hex')}`.slice(0, 24);
     }
 
-    async updateProfile(accountId, { displayName, username }) {
+    async updateProfile(accountId, { displayName, username, bio }) {
         await this.ready();
         const current = await this.byId(accountId);
         if (!current) return { account: null, usernameCooldown: false };
@@ -221,10 +249,23 @@ class AccountStore {
                 return { account: current, usernameCooldown: true };
             }
         }
-        await this.pool.query(`UPDATE accounts SET display_name = $1, username = $2,
-            username_changed_at = CASE WHEN username <> $2 THEN NOW() ELSE username_changed_at END,
-            updated_at = NOW() WHERE id = $3`, [displayName, username, accountId]);
+        if (bio === undefined) {
+            await this.pool.query(`UPDATE accounts SET display_name = $1, username = $2,
+                username_changed_at = CASE WHEN username <> $2 THEN NOW() ELSE username_changed_at END,
+                updated_at = NOW() WHERE id = $3`, [displayName, username, accountId]);
+        } else {
+            await this.pool.query(`UPDATE accounts SET display_name = $1, username = $2, bio = $4,
+                username_changed_at = CASE WHEN username <> $2 THEN NOW() ELSE username_changed_at END,
+                updated_at = NOW() WHERE id = $3`, [displayName, username, accountId, bio || null]);
+        }
         return { account: await this.byId(accountId), usernameCooldown: false };
+    }
+
+    async updatePreferences(accountId, preferences) {
+        await this.ready();
+        await this.pool.query('UPDATE accounts SET preferences = $2::jsonb, updated_at = NOW() WHERE id = $1',
+            [accountId, JSON.stringify(preferences)]);
+        return this.byId(accountId);
     }
 
     async credentialByAccount(accountId) {
@@ -690,4 +731,4 @@ function getAccountStore() {
     return sharedStore;
 }
 
-module.exports = { ACCOUNT_SCHEMA_SQL, normalizeUsername, hashAccountToken, safeAccount, AccountStore, getAccountStore };
+module.exports = { ACCOUNT_SCHEMA_SQL, normalizeUsername, hashAccountToken, safeAccount, sanitizePreferences, AccountStore, getAccountStore };

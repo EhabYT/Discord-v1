@@ -37,6 +37,8 @@ CREATE TABLE IF NOT EXISTS public.accounts (
     avatar_url TEXT,
     avatar_key TEXT,
     username_changed_at TIMESTAMPTZ,
+    bio VARCHAR(160),
+    preferences JSONB NOT NULL DEFAULT '{}'::jsonb,
     status VARCHAR(16) NOT NULL DEFAULT 'active'
         CHECK (status IN ('active', 'deactivated', 'deleted')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -46,6 +48,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS accounts_username_lower ON public.accounts (LO
 CREATE UNIQUE INDEX IF NOT EXISTS accounts_email_lower ON public.accounts (LOWER(email)) WHERE email IS NOT NULL;
 ALTER TABLE public.accounts ADD COLUMN IF NOT EXISTS avatar_key TEXT;
 ALTER TABLE public.accounts ADD COLUMN IF NOT EXISTS username_changed_at TIMESTAMPTZ;
+ALTER TABLE public.accounts ADD COLUMN IF NOT EXISTS bio VARCHAR(160);
+ALTER TABLE public.accounts ADD COLUMN IF NOT EXISTS preferences JSONB NOT NULL DEFAULT '{}'::jsonb;
 
 CREATE TABLE IF NOT EXISTS public.account_credentials (
     account_id UUID PRIMARY KEY REFERENCES public.accounts(id) ON DELETE CASCADE,

@@ -3,7 +3,7 @@ const multer = require('multer');
 const { getAccountStore } = require('eb-bot-database/accounts');
 const { getPool } = require('eb-bot-database');
 const { requireAccount } = require('../middleware/auth');
-const { normalizeDisplayName, normalizeLocalUsername, normalizeEmail } = require('eb-bot-shared/services/account-validation');
+const { normalizeDisplayName, normalizeLocalUsername, normalizeEmail, normalizeBio, normalizePreferences } = require('eb-bot-shared/services/account-validation');
 const { validatePassword, hashPassword, verifyPassword } = require('eb-bot-shared/services/passwords');
 const { hasRecentReauthentication, markReauthenticated } = require('eb-bot-shared/services/account-sessions');
 const { sendEmailChangeVerification } = require('eb-bot-shared/services/account-mail');
@@ -88,13 +88,20 @@ module.exports = () => {
             if (!displayName || !username) {
                 return res.status(400).json({ error: 'Enter a valid display name and username', code: 'VALIDATION_ERROR' });
             }
+            let bio;
+            if (req.body && Object.prototype.hasOwnProperty.call(req.body, 'bio')) {
+                bio = normalizeBio(req.body.bio);
+                if (bio === null) {
+                    return res.status(400).json({ error: 'Bio must be at most 160 characters', code: 'VALIDATION_ERROR' });
+                }
+            }
             const store = getAccountStore();
             const rate = await store.consumeAuthLimit(`profile-change:${req.accountId}`, {
                 max: 10, windowMs: 24 * 60 * 60 * 1000, blockMs: 24 * 60 * 60 * 1000,
             });
             if (!rate.allowed) return res.status(429).json({ error: 'Too many profile changes', code: 'RATE_LIMITED' });
             let result;
-            try { result = await store.updateProfile(req.accountId, { displayName, username }); }
+            try { result = await store.updateProfile(req.accountId, { displayName, username, bio }); }
             catch (err) {
                 if (err.code === '23505') return res.status(409).json({ error: 'That username is unavailable', code: 'USERNAME_UNAVAILABLE' });
                 throw err;
@@ -103,6 +110,27 @@ module.exports = () => {
             attachAccount(req.session, result.account);
             await saveSession(req.session);
             return res.json({ account: result.account });
+        } catch (err) { return next(err); }
+    });
+
+    // Dashboard preferences (theme, language, timezone, notification toggles).
+    // Presentation-only data: no reauthentication challenge, but rate-limited
+    // like profile changes so a runaway client cannot churn the row.
+    router.put('/preferences', requireAccount, async (req, res, next) => {
+        try {
+            const store = getAccountStore();
+            const rate = await store.consumeAuthLimit(`preferences-change:${req.accountId}`, {
+                max: 30, windowMs: 60 * 60 * 1000, blockMs: 60 * 60 * 1000,
+            });
+            if (!rate.allowed) return res.status(429).json({ error: 'Too many preference changes', code: 'RATE_LIMITED' });
+            const current = await store.byId(req.accountId);
+            if (!current) return res.status(404).json({ error: 'Account not found', code: 'ACCOUNT_NOT_FOUND' });
+            const next = normalizePreferences(req.body, current.preferences);
+            if (next === null) return res.status(400).json({ error: 'Unknown timezone', code: 'VALIDATION_ERROR' });
+            const account = await store.updatePreferences(req.accountId, next);
+            attachAccount(req.session, account);
+            await saveSession(req.session);
+            return res.json({ account });
         } catch (err) { return next(err); }
     });
 
