@@ -29,6 +29,7 @@ export default function CyanToggle({ enabled, onChange, label, description, disa
         aria-label={typeof label === 'string' ? label : undefined}
         className={clsx(
           'relative w-11 h-6 rounded-full flex-shrink-0 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070A0F]',
+          'after:absolute after:-inset-3 after:rounded-lg after:content-[""]',
           enabled
             ? 'bg-gradient-to-r from-cyan-300 to-sky-400'
             : 'bg-white/[0.08] border border-white/[0.15] hover:border-white/25',

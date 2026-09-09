@@ -34,28 +34,29 @@ export default function PageHeader({
 
   return (
     <div className="glass-panel mesh-glow p-5 animate-fade-in">
-      <div className="flex items-start justify-between gap-4 flex-wrap relative">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 relative">
         <div className="flex items-center gap-4 min-w-0">
           {Icon && (
             <div className="relative flex-shrink-0">
               <div
                 className="absolute -inset-1.5 rounded-[1.1rem] blur-lg opacity-50 pointer-events-none"
                 style={{ background: `linear-gradient(135deg, ${iconStyle.ring}, transparent 70%)` }}
+                aria-hidden="true"
               />
               <div
                 className={`relative w-12 h-12 rounded-2xl flex items-center justify-center border ${resolvedIconBg} ${resolvedIconText}`}
                 style={{ boxShadow: `${iconStyle.glow}, inset 0 1px 0 rgba(255,255,255,0.14)`, borderColor: iconStyle.ring }}
               >
-                <Icon size={21} />
+                <Icon size={21} aria-hidden="true" />
               </div>
             </div>
           )}
           <div className="min-w-0">
             {crumb && (
-              <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-500 mb-1 truncate font-semibold">{crumb}</p>
+              <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-400 mb-1 truncate font-semibold">{crumb}</p>
             )}
             <div className="flex items-center gap-2.5 flex-wrap">
-              <h1 className="text-[1.45rem] font-bold text-white leading-tight tracking-tight">
+              <h1 className="text-[1.45rem] font-bold text-white leading-tight tracking-tight break-words">
                 {title}
               </h1>
               {badge && (
@@ -65,13 +66,13 @@ export default function PageHeader({
               )}
             </div>
             {subtitle && (
-              <p className="text-zinc-400 text-xs mt-1 leading-relaxed max-w-2xl">{subtitle}</p>
+              <p className="text-zinc-400 text-xs mt-1 leading-relaxed max-w-2xl break-words">{subtitle}</p>
             )}
           </div>
         </div>
 
         {children && (
-          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap w-full sm:w-auto [&>button]:min-h-[40px] [&>a]:min-h-[40px] [&>a]:inline-flex [&>a]:items-center">
             {children}
           </div>
         )}

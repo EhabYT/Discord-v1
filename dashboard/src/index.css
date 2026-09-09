@@ -154,14 +154,16 @@
     box-shadow: inset 0 1px 0 rgba(103,232,249,0.14), 0 0 36px rgba(34,211,238,0.08), 0 16px 44px rgba(0,0,0,0.3);
   }
   .cyber-button {
-    @apply bg-white/5 hover:bg-white/[0.09] border border-white/10 hover:border-cyan-300/40 text-zinc-400 hover:text-cyan-100 rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200;
+    @apply bg-white/5 hover:bg-white/[0.09] border border-white/10 hover:border-cyan-300/40 text-zinc-300 hover:text-cyan-100 rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
     backdrop-filter: blur(12px);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+    min-height: 2.5rem;
   }
   .cyber-button-solid {
     @apply active:scale-95 text-black font-semibold rounded-xl px-4 py-2 text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100;
     background: linear-gradient(135deg, #A5F3FC 0%, #67e8f9 35%, #22d3ee 70%, #818cf8 130%);
     box-shadow: 0 0 26px rgba(34,211,238,0.3), inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -1px 0 rgba(0,0,0,0.12);
+    min-height: 2.5rem;
   }
   .cyber-button-solid:hover:not(:disabled) {
     background: linear-gradient(135deg, #cffafe 0%, #67e8f9 45%, #22d3ee 80%, #818cf8 140%);
@@ -169,10 +171,12 @@
     transform: translateY(-1px);
   }
   .cyber-button-danger {
-    @apply bg-red-500/[0.08] hover:bg-red-500/[0.15] border border-red-500/25 hover:border-red-500/50 text-red-400 hover:text-red-300 rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200;
+    @apply bg-red-500/[0.08] hover:bg-red-500/[0.15] border border-red-500/25 hover:border-red-500/50 text-red-300 hover:text-red-200 rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+    min-height: 2.5rem;
   }
   .cyber-button-success {
-    @apply bg-green-500/[0.08] hover:bg-green-500/[0.15] border border-green-500/25 hover:border-green-500/50 text-green-400 hover:text-green-300 rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200;
+    @apply bg-green-500/[0.08] hover:bg-green-500/[0.15] border border-green-500/25 hover:border-green-500/50 text-green-300 hover:text-green-200 rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+    min-height: 2.5rem;
   }
   .cyber-icon-button {
     @apply w-9 h-9 flex items-center justify-center rounded-xl text-zinc-500 hover:text-cyan-200 hover:bg-white/[0.08] transition-all duration-150;
@@ -184,6 +188,7 @@
     background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.03));
     border-color: rgba(255,255,255,0.09);
     backdrop-filter: blur(10px);
+    min-height: 2.5rem;
   }
   .cyber-input:hover { border-color: rgba(255,255,255,0.16); }
   .cyber-input:focus {
@@ -202,6 +207,7 @@
     background-position: right 0.7rem center;
     appearance: none;
     padding-right: 2.2rem;
+    min-height: 2.5rem;
   }
   .cyber-select:hover { border-color: rgba(255,255,255,0.16); }
   .cyber-select:focus { border-color: rgba(103,232,249,0.55); box-shadow: 0 0 0 3px rgba(34,211,238,0.12), 0 0 20px rgba(34,211,238,0.08); }
@@ -245,8 +251,9 @@
   .glow-border { box-shadow: 0 0 24px rgba(34, 211, 238, 0.08); }
   .glow-dot { box-shadow: 0 0 6px currentColor; }
   .sidebar-item {
-    @apply flex items-center gap-3 px-3 py-2 rounded-xl text-zinc-500 hover:text-zinc-100 hover:bg-white/[0.06] transition-all duration-150 cursor-pointer text-sm font-medium relative;
+    @apply flex items-center gap-3 px-3 py-2 rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06] transition-all duration-150 cursor-pointer text-sm font-medium relative;
     border: 1px solid transparent;
+    min-height: 2.5rem;
   }
   .sidebar-item:hover { border-color: rgba(255,255,255,0.06); }
   .sidebar-item-active {
@@ -282,12 +289,28 @@
     border: 1px solid rgba(255,255,255,0.1);
     color: #a1a1aa;
   }
-  /* Global contrast remediation: gray-600 (#4b5563) / gray-700 (#374151)
-     predate the dark theme and fall below WCAG AA on #05070B. They appear in
-     ~30 legacy pages, so remap them centrally to zinc-range equivalents
-     instead of editing every page. */
+  /* Global contrast remediation: gray/zinc 500-700 predate the dark theme
+     and fall below WCAG AA on #05070B (~2-3.5:1). They appear in ~100 legacy
+     spots (secondary text, icons, placeholders, table heads), so remap them
+     centrally to zinc-range equivalents instead of editing every page.
+     Muted text stays visually muted but now passes AA for normal text. */
+  .text-gray-500 { color: #a1a1aa; }
   .text-gray-600 { color: #a1a1aa; }
   .text-gray-700 { color: #86868f; }
+  .text-zinc-600 { color: #a1a1aa; }
+  .text-zinc-700 { color: #86868f; }
+  /* Placeholders render at reduced opacity on top of the color above, so give
+     them an explicit AA-safe tone instead of inheriting zinc-600. */
+  input::placeholder, textarea::placeholder { color: #8b8b94; opacity: 1; }
+  .placeholder\:text-zinc-600::placeholder { color: #8b8b94; opacity: 1; }
+  /* Minimum touch target for icon-only controls (WCAG 2.5.8: 24px min,
+     Apple HIG preferred 44px). Pages opt in via .touch-32 for dense lists. */
+  .touch-32 { min-width: 2rem; min-height: 2rem; }
+  html[dir='rtl'] .cyber-select {
+    background-position: left 0.7rem center;
+    padding-right: 0.75rem;
+    padding-left: 2.2rem;
+  }
   html[dir='rtl'] .sidebar-item-active {
     box-shadow: inset -2px 0 0 #67e8f9, inset 0 1px 0 rgba(255,255,255,0.08), 0 0 24px rgba(34,211,238,0.1), 0 8px 20px rgba(0,0,0,0.25);
   }
@@ -391,15 +414,48 @@
     border-radius: 99px;
     background: rgba(255,255,255,0.08);
     outline: none;
+    min-height: 1.75rem;
+    background-clip: content-box;
+    padding: 0.6rem 0;
+    cursor: pointer;
   }
   input[type='range'].eb-range::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     background: #67e8f9;
     box-shadow: 0 0 12px rgba(34,211,238,0.55);
     cursor: pointer;
+    border: 3px solid #06121a;
+  }
+  input[type='range'].eb-range::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #67e8f9;
+    box-shadow: 0 0 12px rgba(34,211,238,0.55);
+    cursor: pointer;
+    border: 3px solid #06121a;
+  }
+  /* Native controls: keep them tappable without redesigning every page. */
+  input[type='checkbox'], input[type='radio'] {
+    min-width: 1rem;
+    min-height: 1rem;
+    accent-color: #22d3ee;
+  }
+  input[type='color'] {
+    min-width: 3rem;
+    min-height: 2.5rem;
+    padding: 0.25rem;
+    border-radius: 0.75rem;
+    cursor: pointer;
+  }
+  /* Dense icon-only preset swatches (embed builder, giveaways): keep the
+     visual size but expand the hit area to 32px via border trick. */
+  .swatch-sm {
+    min-width: 2rem;
+    min-height: 2rem;
   }
 }
 

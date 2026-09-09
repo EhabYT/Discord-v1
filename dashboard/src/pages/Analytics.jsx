@@ -46,7 +46,7 @@ function BarChart({ data, dataKey, color, label }) {
                 }}
               />
             </div>
-            {i % 4 === 0 && <span className="text-[8px] text-zinc-600 tabular-nums">{d.label?.split(':')[0]}</span>}
+            {i % 4 === 0 && <span className="text-[10px] text-zinc-500 tabular-nums" aria-hidden="true">{d.label?.split(':')[0]}</span>}
           </div>
         ))}
       </div>

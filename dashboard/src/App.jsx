@@ -140,7 +140,16 @@ function getHashPage() {
   if (pathRoutes[window.location.pathname]) return pathRoutes[window.location.pathname];
   const h = window.location.hash.replace('#', '').trim();
   if (!h || h === 'home') return 'home';
-  return PAGES[h] ? h : 'overview';
+  if (PAGES[h]) return h;
+  // Unknown hash: fall back to Overview but normalize the URL so the address
+  // bar never disagrees with the visible page (previously #typo silently
+  // rendered Overview while the URL kept the invalid hash).
+  try {
+    const url = new URL(window.location.href);
+    url.hash = 'overview';
+    window.history.replaceState({}, '', url);
+  } catch { window.location.hash = 'overview'; }
+  return 'overview';
 }
 
 function rememberGuild(id) {
@@ -164,22 +173,22 @@ function formatUptime(seconds) {
 function PageLoading() {
   const { t } = useI18n();
   return (
-    <div className="page-shell" aria-label={t('shell.loadingPage', 'Loading page')} aria-busy="true">
+    <div className="page-shell" aria-label={t('shell.loadingPage', 'Loading page')} aria-busy="true" role="status">
       <div className="glass-panel mesh-glow p-5 flex items-center gap-4 mb-2">
-        <div className="skeleton h-11 w-11 !rounded-2xl flex-shrink-0" />
+        <div className="skeleton h-11 w-11 !rounded-2xl flex-shrink-0" aria-hidden="true" />
         <div className="space-y-2 flex-1">
-          <div className="skeleton h-5 w-52 max-w-full" />
-          <div className="skeleton h-3 w-80 max-w-full" />
+          <div className="skeleton h-5 w-52 max-w-full" aria-hidden="true" />
+          <div className="skeleton h-3 w-80 max-w-full" aria-hidden="true" />
         </div>
-        <div className="skeleton h-8 w-24 hidden sm:block" />
+        <div className="skeleton h-8 w-24 hidden sm:block" aria-hidden="true" />
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[0, 1, 2, 3].map((n) => (
           <div key={n} className="cyber-card p-4 flex items-center gap-3">
-            <div className="skeleton h-11 w-11 !rounded-2xl flex-shrink-0" />
+            <div className="skeleton h-11 w-11 !rounded-2xl flex-shrink-0" aria-hidden="true" />
             <div className="space-y-2 flex-1">
-              <div className="skeleton h-3 w-16" />
-              <div className="skeleton h-5 w-20" />
+              <div className="skeleton h-3 w-16" aria-hidden="true" />
+              <div className="skeleton h-5 w-20" aria-hidden="true" />
             </div>
           </div>
         ))}
@@ -187,12 +196,33 @@ function PageLoading() {
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {[0, 1, 2, 3, 4, 5].map((n) => (
           <div key={n} className="cyber-card p-5 space-y-4">
-            <div className="skeleton h-10 w-10 !rounded-xl" />
-            <div className="skeleton h-4 w-2/3" />
-            <div className="skeleton h-3 w-full" />
-            <div className="skeleton h-3 w-4/5" />
+            <div className="skeleton h-10 w-10 !rounded-xl" aria-hidden="true" />
+            <div className="skeleton h-4 w-2/3" aria-hidden="true" />
+            <div className="skeleton h-3 w-full" aria-hidden="true" />
+            <div className="skeleton h-3 w-4/5" aria-hidden="true" />
           </div>
         ))}
+      </div>
+      <span className="sr-only">{t('shell.loadingPage', 'Loading page')}</span>
+    </div>
+  );
+}
+
+function AuthLoading() {
+  const { t } = useI18n();
+  return (
+    <div className="min-h-screen flex items-center justify-center p-6" aria-label={t('shell.loadingPage', 'Loading page')} aria-busy="true" role="status">
+      <div className="w-full max-w-sm space-y-4">
+        <div className="skeleton h-12 w-12 !rounded-2xl mx-auto" aria-hidden="true" />
+        <div className="skeleton h-5 w-40 mx-auto" aria-hidden="true" />
+        <div className="cyber-card p-6 space-y-3">
+          <div className="skeleton h-4 w-24" aria-hidden="true" />
+          <div className="skeleton h-10 w-full !rounded-xl" aria-hidden="true" />
+          <div className="skeleton h-4 w-24" aria-hidden="true" />
+          <div className="skeleton h-10 w-full !rounded-xl" aria-hidden="true" />
+          <div className="skeleton h-10 w-full !rounded-xl" aria-hidden="true" />
+        </div>
+        <span className="sr-only">{t('shell.loadingPage', 'Loading page')}</span>
       </div>
     </div>
   );
@@ -309,20 +339,22 @@ function MobileDock({ page, onNavigate, onSearch, canSeeMusicDesk }) {
           if (!item) return null;
           const Icon = item.icon;
           const active = page === id;
+          const label = t(`nav.${id}`, item.label);
           return (
             <button
               key={id}
               onClick={() => onNavigate(id)}
               aria-current={active ? 'page' : undefined}
-              aria-label={t(`nav.${id}`, item.label)}
-              className={`relative flex-1 flex flex-col items-center justify-center gap-1 py-2 rounded-2xl text-[10px] font-medium transition-all duration-200 active:scale-95 ${
+              aria-label={label}
+              title={label}
+              className={`relative flex-1 min-w-0 min-h-[52px] flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-2xl text-[10px] font-medium transition-all duration-200 active:scale-95 ${
                 active
                   ? 'text-cyan-100 bg-gradient-to-b from-cyan-400/20 to-indigo-400/10 border border-cyan-300/25 shadow-[0_0_20px_rgba(34,211,238,0.15)]'
-                  : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.05] border border-transparent'
+                  : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.05] border border-transparent'
               }`}
             >
-              <Icon size={17} className={active ? 'text-cyan-200' : undefined} />
-              {t(`nav.${id}`, item.label).split(' ')[0]}
+              <Icon size={17} className={active ? 'text-cyan-200' : undefined} aria-hidden="true" />
+              <span className="max-w-full truncate leading-tight">{label}</span>
               {active && (
                 <span className="absolute -top-0.5 w-8 h-0.5 rounded-full bg-gradient-to-r from-cyan-300 to-indigo-300 shadow-[0_0_8px_rgba(103,232,249,0.9)]" />
               )}
@@ -332,12 +364,12 @@ function MobileDock({ page, onNavigate, onSearch, canSeeMusicDesk }) {
         <button
           onClick={onSearch}
           aria-label={t('common.search', 'Search')}
-          className="flex-1 flex flex-col items-center justify-center gap-1 py-2 rounded-2xl text-[10px] font-medium text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.05] border border-transparent transition-all active:scale-95"
+          className="flex-1 min-w-0 min-h-[52px] flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-2xl text-[10px] font-medium text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.05] border border-transparent transition-all active:scale-95"
         >
           <span className="w-[34px] h-[26px] rounded-xl flex items-center justify-center bg-white/[0.05] border border-white/10">
-            <Search size={14} />
+            <Search size={14} aria-hidden="true" />
           </span>
-          {t('common.search', 'Search')}
+          <span className="max-w-full truncate leading-tight">{t('common.search', 'Search')}</span>
         </button>
       </div>
     </nav>
@@ -455,7 +487,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const t = setInterval(() => {
+    const poll = () => {
       api.get('/api/health')
         .then((nextHealth) => {
           setHealth(nextHealth);
@@ -464,8 +496,21 @@ export default function App() {
         // Preserve the last known status instead of making the whole header
         // flicker offline during one transient failed poll.
         .catch(() => setApiReachable(false));
-    }, 15000);
+    };
+    const t = setInterval(poll, 15000);
     return () => clearInterval(t);
+  }, []);
+
+  const retryHealth = useCallback(() => {
+    // Inline retry keeps guild selection, scroll, and form state — a full
+    // page reload was overkill for one failed health poll.
+    setApiReachable(null);
+    api.get('/api/health')
+      .then((nextHealth) => {
+        setHealth(nextHealth);
+        setApiReachable(true);
+      })
+      .catch(() => setApiReachable(false));
   }, []);
 
   useEffect(() => {
@@ -532,19 +577,19 @@ export default function App() {
             <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-cyan-300 animate-spin" />
           </div>
           <p className="text-cyan-200 text-sm font-semibold glow-text">{t('shell.starting', 'Starting EB Dashboard')}</p>
-          <p className="text-zinc-500 text-xs mt-1">{t('shell.connecting', 'Connecting to the bot…')}</p>
+          <p className="text-zinc-400 text-xs mt-1">{t('shell.connecting', 'Connecting to the bot…')}</p>
         </div>
       </div>
     );
   }
 
-  if (accountProtectedPage && !account) return <PageLoading />;
+  if (accountProtectedPage && !account) return <AuthLoading />;
 
   if (['login', 'register', 'forgotPassword', 'resetPassword', 'verifyEmail'].includes(page)) {
     return (
       <ToastProvider>
         <PageErrorBoundary key={page}>
-          <Suspense fallback={<PageLoading />}><PageComponent /></Suspense>
+          <Suspense fallback={<AuthLoading />}><PageComponent /></Suspense>
         </PageErrorBoundary>
       </ToastProvider>
     );
@@ -593,7 +638,7 @@ export default function App() {
                     <span className="text-zinc-700 flex-shrink-0">/</span>
                     <span className="text-zinc-400 flex-shrink-0">V2</span>
                     {PAGE_HINTS[page] && (
-                      <span className="hidden xl:inline normal-case tracking-normal text-zinc-600 truncate font-normal">
+                      <span className="hidden xl:inline normal-case tracking-normal text-zinc-500 truncate font-normal">
                         · {PAGE_HINTS[page]}
                       </span>
                     )}
@@ -607,11 +652,11 @@ export default function App() {
               <div className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
                 <button
                   onClick={() => setPaletteOpen(true)}
-                  className="hidden md:flex items-center gap-2.5 h-10 px-3.5 rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.05] to-white/[0.02] text-zinc-500 hover:text-zinc-100 hover:border-cyan-300/35 hover:shadow-[0_0_24px_rgba(34,211,238,0.12)] transition-all min-w-[220px] lg:min-w-[260px] group"
+                  className="hidden md:flex items-center gap-2.5 h-10 px-3.5 rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.05] to-white/[0.02] text-zinc-400 hover:text-zinc-100 hover:border-cyan-300/35 hover:shadow-[0_0_24px_rgba(34,211,238,0.12)] transition-all min-w-[220px] lg:min-w-[260px] group"
                   aria-label="Open command palette"
                 >
-                  <Search size={14} className="text-zinc-500 group-hover:text-cyan-300 transition-colors flex-shrink-0" />
-                  <span className="text-xs flex-1 text-start truncate">{t('shell.searchPlaceholder', 'Search pages, warn, music…')}</span>
+                  <Search size={14} className="text-zinc-400 group-hover:text-cyan-300 transition-colors flex-shrink-0" />
+                  <span className="text-xs flex-1 text-start truncate">{t('shell.searchPlaceholder', 'Search pages, members, music…')}</span>
                   <span className="flex items-center gap-1 flex-shrink-0">
                     <kbd className="kbd">⌘K</kbd>
                   </span>
@@ -641,10 +686,10 @@ export default function App() {
                     <span className={health?.botOnline ? 'text-emerald-300' : 'text-red-300'}>
                       {health?.botOnline ? t('common.online', 'Online') : t('common.offline', 'Offline')}
                     </span>
-                    {health?.uptime ? <span className="hidden lg:inline text-zinc-500 font-normal tabular-nums">· {formatUptime(health.uptime)}</span> : null}
+                    {health?.uptime ? <span className="hidden lg:inline text-zinc-400 font-normal tabular-nums">· {formatUptime(health.uptime)}</span> : null}
                   </span>
                   <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-zinc-400 text-[11px] tabular-nums" title="Connected servers">
-                    <Activity size={11} className="text-zinc-500" />
+                    <Activity size={11} className="text-zinc-400" />
                     {health?.guilds ?? 0}
                   </span>
                 </div>
@@ -678,7 +723,7 @@ export default function App() {
             {browserOnline && apiReachable === false && (
               <div className="px-4 sm:px-6 py-2 text-xs text-amber-200 bg-amber-500/10 border-b border-amber-500/20 flex items-center justify-between gap-3">
                 <span>{t('shell.apiUnavailable', 'Dashboard API is unreachable. The service may be restarting.')}</span>
-                <button onClick={() => window.location.reload()} className="flex-shrink-0 px-2.5 py-1 rounded-lg border border-amber-400/25 hover:bg-amber-400/10 font-semibold">
+                <button onClick={retryHealth} className="flex-shrink-0 min-h-[32px] px-3 py-1 rounded-lg border border-amber-400/25 hover:bg-amber-400/10 font-semibold">
                   {t('common.retry', 'Retry')}
                 </button>
               </div>

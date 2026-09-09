@@ -28,7 +28,9 @@ export function ToastProvider({ children }) {
 
   const push = useCallback((message, type = 'info', duration = 3800) => {
     const id = ++_id;
-    setToasts(p => [...p, { id, message, type, out: false }]);
+    // Cap the stack so rapid errors (e.g. polling failures) can't cover the
+    // screen: keep the newest 4, drop the oldest first.
+    setToasts(p => [...p.slice(-3), { id, message, type, out: false }]);
     setTimeout(() => dismiss(id), duration);
     return id;
   }, [dismiss]);
@@ -52,16 +54,17 @@ export function ToastProvider({ children }) {
         {toasts.map(t => {
           const v = VARIANTS[t.type] || VARIANTS.info;
           const Icon = v.icon;
+          const isError = t.type === 'error';
           return (
             <div
               key={t.id}
-              role="status"
+              role={isError ? 'alert' : 'status'}
               className={`relative pointer-events-auto w-full flex items-start gap-3 pl-3 pr-2.5 py-3 rounded-2xl border backdrop-blur-2xl
                 bg-gradient-to-b from-[#131C2A]/95 to-[#0A0F17]/95 ${v.border}
                 ${t.out ? 'animate-toast-out' : 'animate-toast-in'}`}
               style={{ boxShadow: `inset 0 1px 0 rgba(255,255,255,0.08), 0 20px 50px rgba(0,0,0,0.5), ${v.glow}` }}
             >
-              <span className={`w-8 h-8 rounded-xl flex items-center justify-center bg-white/[0.05] border border-white/10 flex-shrink-0 ${v.icon_cls}`}>
+              <span className={`w-8 h-8 rounded-xl flex items-center justify-center bg-white/[0.05] border border-white/10 flex-shrink-0 ${v.icon_cls}`} aria-hidden="true">
                 <Icon size={15} />
               </span>
               <p className="text-[13px] text-zinc-100 flex-1 leading-snug pt-1">{t.message}</p>

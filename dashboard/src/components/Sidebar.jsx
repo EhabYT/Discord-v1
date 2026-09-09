@@ -156,14 +156,18 @@ export default function Sidebar({
         >
           <div className="p-2 border-b border-white/[0.06]">
             <div className="relative">
-              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-600" />
+              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
               <input
-                autoFocus
+                ref={(el) => {
+                  // Autofocus only on precise pointers: on touch devices it
+                  // pops the keyboard and covers the server list (bad UX).
+                  if (el && window.matchMedia?.('(pointer: fine)').matches) el.focus();
+                }}
                 value={guildQuery}
                 onChange={(e) => setGuildQuery(e.target.value)}
                 placeholder={t('side.findServer', 'Find a server… (name or id)')}
                 aria-label={t('side.findServer', 'Find a server… (name or id)')}
-                className="cyber-input pl-7 py-1.5 text-xs"
+                className="cyber-input pl-7 py-2 min-h-[40px] text-xs"
               />
             </div>
           </div>
@@ -195,7 +199,7 @@ export default function Sidebar({
                   aria-selected={selected}
                   onClick={() => { setSelectedGuild(g); setGuildOpen(false); setGuildQuery(''); }}
                   className={clsx(
-                    'w-full flex items-center gap-2.5 px-2.5 py-2 text-xs rounded-xl transition-all text-left border border-transparent',
+                    'w-full flex items-center gap-2.5 px-2.5 py-2.5 min-h-[48px] text-xs rounded-xl transition-all text-left border border-transparent',
                     selected ? 'text-cyan-200 bg-cyan-400/[0.09] border-cyan-300/20' : 'text-zinc-300 hover:bg-white/[0.05] hover:border-white/[0.06]'
                   )}
                 >
@@ -205,7 +209,7 @@ export default function Sidebar({
                   }
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-semibold">{g.name}</span>
-                    <span className="block text-[10px] text-zinc-600 tabular-nums truncate">{g.id}{g.memberCount ? ` · ${Number(g.memberCount).toLocaleString()} ${t('ov.members', 'members')}` : ''}</span>
+                    <span className="block text-[10px] text-zinc-500 tabular-nums truncate">{g.id}{g.memberCount ? ` · ${Number(g.memberCount).toLocaleString()} ${t('ov.members', 'members')}` : ''}</span>
                   </span>
                   {selected && <Check size={13} className="text-cyan-300 flex-shrink-0" />}
                 </button>
@@ -233,8 +237,8 @@ export default function Sidebar({
         )}
       >
         <span className="relative flex-shrink-0">
-          <Icon size={15} className={isActive ? 'text-cyan-200' : 'text-zinc-500 group-hover:text-zinc-200 transition-colors'} />
-          {isActive && <span className="absolute -right-1 -top-1 w-1.5 h-1.5 rounded-full bg-cyan-300 shadow-[0_0_8px_rgba(103,232,249,0.9)] animate-glow-pulse" />}
+          <Icon size={15} className={isActive ? 'text-cyan-200' : 'text-zinc-400 group-hover:text-zinc-100 transition-colors'} aria-hidden="true" />
+          {isActive && <span className="absolute -right-1 -top-1 w-1.5 h-1.5 rounded-full bg-cyan-300 shadow-[0_0_8px_rgba(103,232,249,0.9)] animate-glow-pulse" aria-hidden="true" />}
         </span>
         {!compact && <span className="truncate flex-1 text-left">{t(`nav.${id}`, label)}</span>}
         {!compact && shortcut && (
@@ -373,10 +377,10 @@ export default function Sidebar({
 
           {sections.map((section, si) => (
             <div key={`section-${si}`}>
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] px-3 pt-3 pb-1 flex items-center gap-1.5 text-zinc-600">
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] px-3 pt-3 pb-1 flex items-center gap-1.5 text-zinc-500">
                 {section.meta.minLevel && <Crown size={9} className="text-amber-500" />}
                 {t(`section.${section.meta.section}`, section.meta.section)}
-                <span className="ml-auto text-[9px] font-semibold tabular-nums text-zinc-700">
+                <span className="ml-auto text-[9px] font-semibold tabular-nums text-zinc-500">
                   {section.groups.reduce((n, g) => n + g.items.length, 0)}
                 </span>
               </p>
@@ -389,13 +393,13 @@ export default function Sidebar({
                     <button
                       onClick={() => toggleGroup(key)}
                       aria-expanded={!isCollapsed}
-                      className="nav-group-toggle"
+                      className="nav-group-toggle min-h-[32px]"
                     >
-                      <ChevronDown size={11} className={clsx('transition-transform duration-200 text-zinc-600', isCollapsed && '-rotate-90')} />
+                      <ChevronDown size={11} className={clsx('transition-transform duration-200 text-zinc-500', isCollapsed && '-rotate-90')} />
                       <span className="flex-1 text-left truncate">{t(`group.${group.name}`, group.name)}</span>
                       <span className={clsx(
                         'text-[9px] font-bold tabular-nums px-1.5 py-0.5 rounded-md border',
-                        hasActive ? 'text-cyan-200 border-cyan-300/25 bg-cyan-400/10' : 'text-zinc-600 border-white/[0.06] bg-white/[0.02]'
+                        hasActive ? 'text-cyan-200 border-cyan-300/25 bg-cyan-400/10' : 'text-zinc-500 border-white/[0.06] bg-white/[0.02]'
                       )}>
                         {group.items.length}
                       </span>
@@ -459,7 +463,7 @@ export default function Sidebar({
               </a>
             ) : null}
 
-            <p className="hidden md:flex items-center justify-center gap-1.5 text-[10px] text-zinc-600">
+            <p className="hidden md:flex items-center justify-center gap-1.5 text-[10px] text-zinc-500">
               <kbd className="kbd">⌘K</kbd> {t('side.or', 'or')} <kbd className="kbd">/</kbd> {t('side.toJump', 'to jump')}
             </p>
 

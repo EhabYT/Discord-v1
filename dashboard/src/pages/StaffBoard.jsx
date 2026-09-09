@@ -148,9 +148,11 @@ export default function StaffBoard({ guild, guildData }) {
                 <div className="min-w-0">
                   <p className="text-xs font-semibold text-white truncate">{x.title}</p>
                   <p className="text-xs text-zinc-400 mt-1 line-clamp-3">{x.message}</p>
-                  <p className="text-[10px] text-zinc-600 mt-1">{new Date(x.createdAt).toLocaleString()} · {x.authorTag}</p>
+                  <p className="text-[10px] text-zinc-500 mt-1">{new Date(x.createdAt).toLocaleString()} · {x.authorTag}</p>
                 </div>
-                <button onClick={() => setConfirm({ kind: 'ann', id: x.id })} className="text-zinc-600 hover:text-red-400"><Trash2 size={13} /></button>
+                <button onClick={() => setConfirm({ kind: 'ann', id: x.id })} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0" title="Delete announcement" aria-label={`Delete announcement ${x.title || ''}`}>
+                  <Trash2 size={13} aria-hidden="true" />
+                </button>
               </div>
             ))}
         </div>
@@ -171,7 +173,7 @@ export default function StaffBoard({ guild, guildData }) {
                   <p className="text-xs font-semibold text-white truncate">{x.username}</p>
                   <p className="text-[11px] text-zinc-500 truncate">{x.reason}</p>
                 </div>
-                <button onClick={() => setConfirm({ kind: 'afk', id: x.userId })} className="cyber-button text-[11px]">Clear</button>
+                <button onClick={() => setConfirm({ kind: 'afk', id: x.userId })} className="cyber-button text-[11px] min-h-[36px]" aria-label={`Clear AFK status for ${x.username || ''}`}>Clear</button>
               </div>
             ))}
         </div>
@@ -201,7 +203,9 @@ export default function StaffBoard({ guild, guildData }) {
                   <p className="text-xs text-white truncate">{x.reason}</p>
                   <p className="text-[10px] text-zinc-600">{new Date(x.expiresAt).toLocaleString()}</p>
                 </div>
-                <button onClick={() => setConfirm({ kind: 'rem', userId: x.userId, index: x.index })} className="text-zinc-600 hover:text-red-400"><Trash2 size={13} /></button>
+                <button onClick={() => setConfirm({ kind: 'rem', userId: x.userId, index: x.index })} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0" title="Remove reminder" aria-label="Remove reminder">
+                  <Trash2 size={13} aria-hidden="true" />
+                </button>
               </div>
             ))}
         </div>

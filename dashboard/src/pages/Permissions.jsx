@@ -162,9 +162,9 @@ export default function Permissions({ guild, guildData }) {
                   <LevelBadge level={perm.level} />
                 )}
                 {isAdmin && (
-                  <button onClick={() => handleRemove(perm.roleId)} disabled={saving}
-                    className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-colors">
-                    <Trash2 size={14} />
+                  <button onClick={() => handleRemove(perm.roleId)} disabled={saving} aria-label={`Remove permissions for role`}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0">
+                    <Trash2 size={14} aria-hidden="true" />
                   </button>
                 )}
               </div>

@@ -121,7 +121,7 @@ function PanelPreview({ cfg, guildName }) {
         <img src="/eb_logo.svg" alt="" className="w-10 h-10 rounded-full object-cover ring-1 ring-white/10 flex-shrink-0" />
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-2 mb-2">
-            <span className="text-sm font-semibold text-white">𝑬𝑩</span>
+            <span className="text-sm font-semibold text-white">EB</span>
             <span className="text-[10px] text-zinc-500">BOT</span>
           </div>
           <div className="rounded-r-lg overflow-hidden" style={{ borderLeft: `4px solid ${cfg.embedColor || '#00fbff'}` }}>
@@ -316,6 +316,8 @@ export default function Verification({ guild, guildData }) {
         channelId: cfg.channelId,
         mode: cfg.mode,
         lockServer,
+        roleId: cfg.roleId || undefined,
+        unverifiedRoleId: cfg.unverifiedRoleId || undefined,
       });
       if (r.config) setCfg((c) => ({ ...c, ...r.config }));
       toast.success(lockServer ? 'Gate live + server locked' : 'Gate live, panel posted');
@@ -484,7 +486,7 @@ export default function Verification({ guild, guildData }) {
         <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 flex gap-2">
           <Info size={14} className="text-zinc-400 flex-shrink-0 mt-0.5" />
           <p className="text-xs text-zinc-400 leading-relaxed">
-            Verification is disabled, so the Verify button replies that it is not set up. Enable it in Setup → Gate or use Quick → Enable + post panel.
+            Verification is disabled, so the Verify button replies that it is disabled. Enable it in Setup → Gate or use Quick → Go live.
           </p>
         </div>
       )}
@@ -519,6 +521,26 @@ export default function Verification({ guild, guildData }) {
 
           <Section title="2 · Roles" icon={BadgeCheck}>
             <div className="grid sm:grid-cols-2 gap-2">
+              <div>
+                <label className="cyber-label mb-1.5">Verified role *</label>
+                <select value={cfg.roleId || ''} onChange={(e) => set({ roleId: e.target.value || null })} className="cyber-select">
+                  <option value="">— Pick existing —</option>
+                  {roles.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}{botTop != null && typeof r.position === 'number' && r.position >= botTop ? ' ⚠ (above bot)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="cyber-label mb-1.5">Unverified role</label>
+                <select value={cfg.unverifiedRoleId || ''} onChange={(e) => set({ unverifiedRoleId: e.target.value || null })} className="cyber-select">
+                  <option value="">— None —</option>
+                  {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-2">
               <button disabled={busyId.startsWith('role')} onClick={() => createRole('verified')} className="cyber-button text-xs">
                 {busyId === 'role-verified' ? 'Creating…' : cfg.roleId ? 'Recreate Verified' : 'Create Verified'}
               </button>
@@ -532,6 +554,7 @@ export default function Verification({ guild, guildData }) {
             <p className="text-[11px] text-zinc-600">
               Verified: {cfg.roleId ? roles.find((r) => r.id === cfg.roleId)?.name || cfg.roleId : '—'}
               {' · '}Unverified: {cfg.unverifiedRoleId ? roles.find((r) => r.id === cfg.unverifiedRoleId)?.name || cfg.unverifiedRoleId : '—'}
+              {' · '}Remember to Save before Go live if you picked existing roles.
             </p>
           </Section>
 
@@ -905,14 +928,14 @@ export default function Verification({ guild, guildData }) {
               <div className="flex gap-1.5">
                 <button
                   onClick={() => setConfirm({ kind: 'overdue' })}
-                  className="cyber-button text-[10px] px-2 py-1"
+                  className="cyber-button text-[11px] px-3 min-h-[36px]"
                   disabled={busyId === 'kick'}
                 >
                   Kick overdue
                 </button>
                 <button
                   onClick={() => setConfirm({ kind: 'all' })}
-                  className="cyber-button-danger text-[10px] px-2 py-1"
+                  className="cyber-button-danger text-[11px] px-3 min-h-[36px]"
                   disabled={busyId === 'kick'}
                 >
                   Kick all pending
@@ -921,8 +944,8 @@ export default function Verification({ guild, guildData }) {
             }
           >
             <div className="relative">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Filter pending…" className="cyber-input pl-9 text-xs" />
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Filter pending…" aria-label="Filter pending members" className="cyber-input pl-9 text-xs" />
             </div>
             {filteredPending.length === 0 ? (
               <EmptyState icon={UserCheck} title="No pending members" subtitle="New joins appear here when the gate is on." />

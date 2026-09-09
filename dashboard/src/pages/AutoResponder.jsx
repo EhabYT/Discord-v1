@@ -148,7 +148,7 @@ export default function AutoResponder({ guild, guildData, permLevel }) {
             <div className="flex items-start gap-2">
               <img src="/eb_logo.svg" alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0 ring-1 ring-white/10" />
               <div className="flex-1 min-w-0">
-                <span className="text-xs text-white font-semibold">𝑬𝑩 </span>
+                <span className="text-xs text-white font-semibold">EB </span>
                 <span className="text-[10px] text-gray-600">Today</span>
                 <p className="text-xs text-gray-200 mt-0.5">{newResponse}</p>
               </div>
@@ -169,10 +169,10 @@ export default function AutoResponder({ guild, guildData, permLevel }) {
       {/* Trigger list */}
       <div className="cyber-card p-5">
         <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Configured Triggers</h2>
+          <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Configured Triggers</h2>
           <div className="flex items-center gap-2">
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Filter…" className="cyber-input text-xs h-8 w-40" />
-            <span className="text-xs text-gray-600">
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Filter…" aria-label="Filter triggers" className="cyber-input text-xs w-40 min-h-[40px]" />
+            <span className="text-xs text-zinc-400 tabular-nums">
               {triggers.length} {triggers.length === 1 ? 'trigger' : 'triggers'}
             </span>
           </div>
@@ -180,9 +180,9 @@ export default function AutoResponder({ guild, guildData, permLevel }) {
 
         {triggers.length === 0 ? (
           <div className="text-center py-10">
-            <Zap size={28} className="text-gray-700 mx-auto mb-2" />
-            <p className="text-sm text-gray-600 font-medium">No triggers configured</p>
-            <p className="text-xs text-gray-700 mt-1">Add a trigger above to get started.</p>
+            <Zap size={28} className="text-zinc-500 mx-auto mb-2" aria-hidden="true" />
+            <p className="text-sm text-zinc-300 font-medium">No triggers configured</p>
+            <p className="text-xs text-zinc-400 mt-1">Add a trigger above to get started.</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -201,7 +201,7 @@ export default function AutoResponder({ guild, guildData, permLevel }) {
                   <div className="min-w-0">
                     <p className="text-[10px] text-gray-600 uppercase tracking-wide mb-0.5">Trigger</p>
                     <p className="text-xs text-cyan-400 font-mono truncate">
-                      {item.trigger}{item.exact ? <span className="ml-1 text-[9px] text-zinc-500">exact</span> : null}
+                      {item.trigger}{item.exact ? <span className="ml-1 text-[10px] text-zinc-400">exact</span> : null}
                     </p>
                   </div>
                   <div className="min-w-0">
@@ -211,8 +211,10 @@ export default function AutoResponder({ guild, guildData, permLevel }) {
                 </div>
                 <button
                   onClick={() => setRemoveIndex(i)}
-                  className="text-gray-700 hover:text-red-400 transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100">
-                  <Trash2 size={14} />
+                  title={`Remove trigger ${item.trigger}`}
+                  aria-label={`Remove trigger ${item.trigger}`}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0 lg:opacity-0 lg:group-hover:opacity-100 lg:focus-visible:opacity-100">
+                  <Trash2 size={14} aria-hidden="true" />
                 </button>
               </div>
               );

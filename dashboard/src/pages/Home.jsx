@@ -136,9 +136,9 @@ export default function Home({ health, auth, onEnter }) {
               {t('home.subtitle', 'Moderation, music, XP, tickets and live analytics — in one place.')}
               {' '}100 Slash Commands · Dashboard V2.
             </p>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3 [&>a]:min-h-[44px] [&>button]:min-h-[44px]">
               <button onClick={() => go('overview')} className="cyber-button-solid px-5 py-2.5 inline-flex items-center gap-2">
-                {t('home.openDashboard', 'Open dashboard')} <ArrowRight size={16} />
+                {t('home.openDashboard', 'Open dashboard')} <ArrowRight size={16} aria-hidden="true" />
               </button>
               {inviteUrl && (
                 <a href={inviteUrl} target="_blank" rel="noreferrer" className="cyber-button px-5 py-2.5 inline-flex items-center">
@@ -146,14 +146,18 @@ export default function Home({ health, auth, onEnter }) {
                 </a>
               )}
               {auth?.oauthEnabled && !auth?.loggedIn && (
-                <a href="/api/auth/discord" className="cyber-button px-5 py-2.5">{t('common.loginDiscord', 'Login with Discord')}</a>
+                <a href="/api/auth/discord" className="cyber-button px-5 py-2.5 inline-flex items-center">{t('common.loginDiscord', 'Login with Discord')}</a>
               )}
-              <a href="/register" className="cyber-button px-5 py-2.5 inline-flex items-center">
-                {t('home.signup', 'Sign up')}
-              </a>
-              <a href="/login" className="px-5 py-2.5 text-sm text-zinc-400 hover:text-white transition-colors inline-flex items-center">
-                {t('home.login', 'Log in')}
-              </a>
+              {!auth?.loggedIn && (
+                <>
+                  <a href="/register" className="cyber-button px-5 py-2.5 inline-flex items-center">
+                    {t('home.signup', 'Sign up')}
+                  </a>
+                  <a href="/login" className="px-5 py-2.5 text-sm text-zinc-400 hover:text-white transition-colors inline-flex items-center">
+                    {t('home.login', 'Log in')}
+                  </a>
+                </>
+              )}
             </div>
           </div>
 
@@ -170,12 +174,12 @@ export default function Home({ health, auth, onEnter }) {
                 alt="EB BOT"
                 className="relative w-64 h-64 sm:w-80 sm:h-80 rounded-[2rem] object-cover ring-1 ring-white/15 shadow-[0_30px_80px_rgba(0,0,0,0.55),0_0_60px_rgba(34,211,238,0.12)]"
               />
-              <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 glass-popover px-3 py-1.5 flex items-center gap-2 whitespace-nowrap">
-                <span className={`relative flex w-1.5 h-1.5`}>
+              <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 glass-popover px-3 py-1.5 flex items-center gap-2 whitespace-nowrap" role="status">
+                <span className={`relative flex w-1.5 h-1.5`} aria-hidden="true">
                   <span className={`absolute inline-flex h-full w-full rounded-full opacity-60 animate-ping ${online ? 'bg-emerald-400' : 'bg-red-400'}`} />
                   <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${online ? 'bg-emerald-400' : 'bg-red-400'}`} />
                 </span>
-                <span className="text-[11px] font-medium text-zinc-200">{online ? '𝑬𝑩#8552 online' : 'Bot offline'}</span>
+                <span className="text-[11px] font-medium text-zinc-200">{online ? t('home.botOnline', 'EB online') : t('common.offline', 'Offline')}</span>
               </div>
             </div>
           </div>
@@ -319,7 +323,7 @@ export default function Home({ health, auth, onEnter }) {
       </section>
 
       <footer className="border-t border-white/[0.06]">
-        <div className="max-w-6xl mx-auto px-5 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-600">
+        <div className="max-w-6xl mx-auto px-5 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-500">
           <span>EB BOT · Homepage · Dashboard + Discord</span>
           <div className="flex items-center gap-4">
             <button onClick={() => go('home')} className="text-zinc-500 hover:text-zinc-300">#home</button>

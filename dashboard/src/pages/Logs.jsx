@@ -249,7 +249,7 @@ export default function Logs({ guild, guildData }) {
       )}
 
       <div className="relative mb-3">
-        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search events, users, channels…" className="cyber-input text-xs" />
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search events, users, channels…" aria-label="Search log events" className="cyber-input text-xs" />
       </div>
 
       {/* Category filter pills */}

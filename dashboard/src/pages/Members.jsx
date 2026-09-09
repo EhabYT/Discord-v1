@@ -269,8 +269,8 @@ function NotesPanel({ guild, member, onClose, onChanged }) {
               <p className="text-sm text-zinc-100 whitespace-pre-wrap">{n.text}</p>
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[11px] text-zinc-500">{n.mod} · {n.ts ? new Date(n.ts).toLocaleString() : '—'}</span>
-                <button onClick={() => remove(n.id)} className="text-zinc-600 hover:text-red-400 transition-colors" title="Delete note">
-                  <Trash2 size={12} />
+                <button onClick={() => remove(n.id)} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0" title="Delete note" aria-label="Delete note">
+                  <Trash2 size={13} aria-hidden="true" />
                 </button>
               </div>
             </div>
@@ -314,8 +314,8 @@ function GroupedLog({ items, members, emptyTitle, emptySub, accent = 'yellow', o
     <div className="space-y-4">
       <div className="cyber-card p-3">
         <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
-          <input type="text" placeholder="Filter by username or user ID..." value={filter}
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+          <input type="text" placeholder="Filter by username or user ID..." aria-label="Filter by username or user ID" value={filter}
             onChange={(e) => setFilter(e.target.value)} className="cyber-input pl-9" />
         </div>
       </div>
@@ -366,8 +366,8 @@ function GroupedLog({ items, members, emptyTitle, emptySub, accent = 'yellow', o
                             </div>
                           </div>
                           {onDelete && (
-                            <button onClick={() => onDelete(userId, id)} className="text-zinc-600 hover:text-red-400 transition-colors" title="Delete">
-                              <Trash2 size={13} />
+                            <button onClick={() => onDelete(userId, id)} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0" title="Delete entry" aria-label={`Delete entry for ${name}`}>
+                              <Trash2 size={13} aria-hidden="true" />
                             </button>
                           )}
                         </div>
@@ -585,8 +585,8 @@ function WarningsDesk({ guild, warnings, members, onDeleted, onEdited, onCleared
       )}
       <div className="cyber-card p-3">
         <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
-          <input type="text" placeholder="Filter by username or user ID..." value={filter}
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+          <input type="text" placeholder="Filter by username or user ID..." aria-label="Filter by username or user ID" value={filter}
             onChange={(e) => setFilter(e.target.value)} className="cyber-input pl-9" />
         </div>
       </div>
@@ -712,14 +712,14 @@ function MemberRow({ member, guildId, warnCount, noteCount, onAction, onOpenNote
           <NoteCount count={noteCount} />
         </div>
         <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-          <span className="text-[11px] text-zinc-600">@{member.username}</span>
-          {member.highestRole && <span className="text-[11px] text-zinc-500">{member.highestRole}</span>}
-          <span className="text-[11px] text-zinc-700">{member.roles} role{member.roles !== 1 ? 's' : ''}</span>
-          {member.joinedAt && <span className="text-[11px] text-zinc-700">Joined {new Date(member.joinedAt).toLocaleDateString()}</span>}
+          <span className="text-[11px] text-zinc-500">@{member.username}</span>
+          {member.highestRole && <span className="text-[11px] text-zinc-400">{member.highestRole}</span>}
+          <span className="text-[11px] text-zinc-500">{member.roles} role{member.roles !== 1 ? 's' : ''}</span>
+          {member.joinedAt && <span className="text-[11px] text-zinc-500">Joined {new Date(member.joinedAt).toLocaleDateString()}</span>}
         </div>
       </div>
-      <div className="flex-shrink-0 flex items-center gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-        <button onClick={() => onOpenNotes(member)} className="cyber-icon-button" title="Notes"><StickyNote size={14} /></button>
+      <div className="flex-shrink-0 flex items-center gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 md:group-focus-visible:opacity-100 transition-opacity">
+        <button onClick={() => onOpenNotes(member)} className="cyber-icon-button" title="Staff notes" aria-label={`Staff notes for ${member.displayName || member.username || ''}`}><StickyNote size={14} aria-hidden="true" /></button>
         <ActionMenu member={member} guildId={guildId} onAction={onAction} onOpenNotes={onOpenNotes} />
       </div>
     </div>
@@ -914,10 +914,11 @@ export default function Members({ guild }) {
           {tab === 'members' && (
             <div className="cyber-card p-3 mb-4">
               <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
                 <input
                   type="text"
                   placeholder="Search by username, display name, or user ID..."
+                  aria-label="Search members"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   className="cyber-input pl-9"

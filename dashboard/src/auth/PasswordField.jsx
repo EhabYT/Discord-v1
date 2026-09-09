@@ -32,8 +32,8 @@ export function PasswordStrength({ password }) {
   ];
   return (
     <div className="mt-2">
-      <div className="grid grid-cols-4 gap-1">{[1, 2, 3, 4].map(value => <span key={value} className={`h-1 rounded-full ${score >= value ? 'bg-cyan-400' : 'bg-white/[0.07]'}`} />)}</div>
-      <p className="text-[11px] text-zinc-600 mt-1">{labels[score]} · {t('auth.pwMin', 'minimum 15 characters')}</p>
+      <div className="grid grid-cols-4 gap-1" role="img" aria-label={`${labels[score]}`}>{[1, 2, 3, 4].map(value => <span key={value} className={`h-1 rounded-full ${score >= value ? 'bg-cyan-400' : 'bg-white/[0.07]'}`} />)}</div>
+      <p className="text-[11px] text-zinc-500 mt-1">{labels[score]} · {t('auth.pwMin', 'minimum 15 characters')}</p>
     </div>
   );
 }

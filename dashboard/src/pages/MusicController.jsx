@@ -159,9 +159,9 @@ export default function MusicController({ guild }) {
                     <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${data.current?.source === 'spotify' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
                       {data.current?.source?.toUpperCase()}
                     </span>
-                    <span className="text-xs text-gray-500">{data.current?.position} / {data.current?.duration}</span>
+                    <span className="text-xs text-zinc-400 tabular-nums">{data.current?.position} / {data.current?.duration}</span>
                     {data.voiceChannel && (
-                      <span className="text-[10px] text-zinc-500 flex items-center gap-1"><Mic2 size={10} />{data.voiceChannel.name}</span>
+                      <span className="text-[10px] text-zinc-400 flex items-center gap-1"><Mic2 size={10} aria-hidden="true" />{data.voiceChannel.name}</span>
                     )}
                   </div>
                 </div>
@@ -178,60 +178,67 @@ export default function MusicController({ guild }) {
                 />
               </div>
 
-              <div className="flex items-center justify-center gap-3">
-                <button onClick={() => action('shuffle', {}, 'Queue shuffled')} title="Shuffle"
-                  className={`p-2 rounded-lg transition-all ${actionPending === 'shuffle' ? 'text-cyan-400' : 'text-gray-500 hover:text-cyan-400 hover:bg-cyan-500/10'}`}>
-                  <Shuffle size={16} />
+              <div className="flex items-center justify-center gap-2 sm:gap-3">
+                <button onClick={() => action('shuffle', {}, 'Queue shuffled')} title="Shuffle" aria-label="Shuffle queue"
+                  className={`min-w-[40px] min-h-[40px] p-2 rounded-lg transition-all flex items-center justify-center ${actionPending === 'shuffle' ? 'text-cyan-300' : 'text-zinc-400 hover:text-cyan-300 hover:bg-cyan-500/10'}`}>
+                  <Shuffle size={16} aria-hidden="true" />
                 </button>
-                <button onClick={() => action('skip', {}, 'Skipped')} title="Skip"
-                  className={`p-2.5 rounded-xl transition-all ${actionPending === 'skip' ? 'text-cyan-400 bg-cyan-500/20' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}>
-                  <SkipForward size={18} />
+                <button onClick={() => action('skip', {}, 'Skipped')} title="Skip" aria-label="Skip track"
+                  className={`min-w-[44px] min-h-[44px] p-2.5 rounded-xl transition-all flex items-center justify-center ${actionPending === 'skip' ? 'text-cyan-300 bg-cyan-500/20' : 'text-zinc-300 hover:text-white hover:bg-white/10'}`}>
+                  <SkipForward size={18} aria-hidden="true" />
                 </button>
                 <button
                   onClick={() => action('pause', {}, paused ? 'Resumed' : 'Paused')}
                   title={paused ? 'Resume' : 'Pause'}
                   aria-label={paused ? 'Resume playback' : 'Pause playback'}
-                  className="p-3.5 rounded-full bg-gradient-to-br from-cyan-200 via-cyan-300 to-sky-400 hover:from-cyan-100 hover:to-sky-300 text-black flex items-center justify-center transition-all shadow-[0_0_32px_rgba(34,211,238,0.4)] hover:shadow-[0_0_44px_rgba(34,211,238,0.55)] active:scale-95"
+                  className="min-w-[52px] min-h-[52px] p-3.5 rounded-full bg-gradient-to-br from-cyan-200 via-cyan-300 to-sky-400 hover:from-cyan-100 hover:to-sky-300 text-black flex items-center justify-center transition-all shadow-[0_0_32px_rgba(34,211,238,0.4)] hover:shadow-[0_0_44px_rgba(34,211,238,0.55)] active:scale-95"
                 >
-                  {actionPending === 'pause' ? <Loader2 size={20} className="animate-spin" /> : paused ? <Play size={20} /> : <Pause size={20} />}
+                  {actionPending === 'pause' ? <Loader2 size={20} className="animate-spin" aria-hidden="true" /> : paused ? <Play size={20} aria-hidden="true" /> : <Pause size={20} aria-hidden="true" />}
                 </button>
-                <button onClick={() => action('stop', {}, 'Stopped')} title="Stop"
-                  className="p-2.5 rounded-xl text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all">
-                  <Square size={18} />
+                <button onClick={() => action('stop', {}, 'Stopped')} title="Stop" aria-label="Stop playback"
+                  className="min-w-[44px] min-h-[44px] p-2.5 rounded-xl text-zinc-300 hover:text-red-300 hover:bg-red-500/10 transition-all flex items-center justify-center">
+                  <Square size={18} aria-hidden="true" />
                 </button>
                 <button
                   onClick={() => action('loop', { mode: nextLoop }, `Loop: ${LOOP_MODES[nextLoop].label}`)}
                   title={`Loop: ${LOOP_MODES[data?.repeatMode || 0]?.label || 'Off'}`}
-                  className={`p-2 rounded-lg transition-all ${(data?.repeatMode || 0) > 0 ? 'text-cyan-400 bg-cyan-500/10' : 'text-gray-500 hover:text-cyan-400 hover:bg-cyan-500/10'}`}
+                  aria-label={`Loop mode: ${LOOP_MODES[data?.repeatMode || 0]?.label || 'Off'}. Activate to switch.`}
+                  aria-pressed={(data?.repeatMode || 0) > 0}
+                  className={`min-w-[40px] min-h-[40px] p-2 rounded-lg transition-all flex items-center justify-center ${(data?.repeatMode || 0) > 0 ? 'text-cyan-300 bg-cyan-500/10' : 'text-zinc-400 hover:text-cyan-300 hover:bg-cyan-500/10'}`}
                 >
-                  <LoopIcon size={16} />
+                  <LoopIcon size={16} aria-hidden="true" />
                 </button>
                 <button
                   onClick={() => action('autoplay', { enabled: data?.repeatMode !== 3 }, data?.repeatMode === 3 ? 'Autoplay off' : 'Autoplay on')}
                   title="Autoplay similar tracks"
-                  className={`p-2 rounded-lg transition-all ${data?.repeatMode === 3 ? 'text-cyan-400 bg-cyan-500/10' : 'text-gray-500 hover:text-cyan-400 hover:bg-cyan-500/10'}`}
+                  aria-label={data?.repeatMode === 3 ? 'Turn autoplay off' : 'Turn autoplay on'}
+                  aria-pressed={data?.repeatMode === 3}
+                  className={`min-w-[40px] min-h-[40px] p-2 rounded-lg transition-all flex items-center justify-center ${data?.repeatMode === 3 ? 'text-cyan-300 bg-cyan-500/10' : 'text-zinc-400 hover:text-cyan-300 hover:bg-cyan-500/10'}`}
                 >
-                  <Sparkles size={16} />
+                  <Sparkles size={16} aria-hidden="true" />
                 </button>
                 <button
                   onClick={loadLyrics}
                   title="Lyrics"
-                  className="p-2 rounded-lg text-gray-500 hover:text-cyan-400 hover:bg-cyan-500/10 transition-all"
+                  aria-label="Show lyrics"
+                  className="min-w-[40px] min-h-[40px] p-2 rounded-lg text-zinc-400 hover:text-cyan-300 hover:bg-cyan-500/10 transition-all flex items-center justify-center"
                 >
-                  <ScrollText size={16} />
+                  <ScrollText size={16} aria-hidden="true" />
                 </button>
               </div>
 
               <div className="flex items-center gap-3 mt-4">
-                <Volume2 size={14} className="text-gray-500 flex-shrink-0" />
+                <Volume2 size={14} className="text-zinc-400 flex-shrink-0" aria-hidden="true" />
                 <input
-                  type="range" min="0" max="100" value={volume}
+                  type="range" min="0" max="100" value={volume} aria-label={`Volume, ${volume} percent`}
                   onChange={(e) => setVolume(Number(e.target.value))}
                   onMouseUp={() => action('volume', { volume })}
                   onTouchEnd={() => action('volume', { volume })}
+                  onBlur={() => action('volume', { volume })}
+                  onKeyUp={(e) => { if (e.key.startsWith('Arrow')) action('volume', { volume }); }}
                   className="eb-range flex-1"
                 />
-                <span className="text-xs text-gray-500 w-8 text-right">{volume}%</span>
+                <span className="text-xs text-zinc-300 w-10 text-right tabular-nums" aria-hidden="true">{volume}%</span>
               </div>
             </>
           )}
@@ -239,16 +246,17 @@ export default function MusicController({ guild }) {
 
         <div className="lg:col-span-2 space-y-4 lg:sticky lg:top-4 self-start w-full min-w-0">
           <div className="cyber-card p-4">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Audio Filters</p>
+            <p className="text-xs font-semibold text-zinc-300 uppercase tracking-wide mb-3">Audio Filters</p>
             <div className="flex flex-wrap gap-1.5">
               {FILTERS.map((f) => (
                 <button
                   key={f}
                   onClick={() => action('filters', { filter: f })}
-                  className={`text-xs px-2.5 py-1 rounded-full border transition-all capitalize ${
+                  aria-pressed={!!data?.filters?.includes(f)}
+                  className={`text-xs px-3 py-2 min-h-[36px] rounded-full border transition-all capitalize ${
                     data?.filters?.includes(f)
-                      ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-400 shadow-[0_0_8px_rgba(0,255,255,0.2)]'
-                      : 'border-white/10 text-gray-500 hover:border-cyan-500/30 hover:text-gray-300'
+                      ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300 shadow-[0_0_8px_rgba(0,255,255,0.2)]'
+                      : 'border-white/10 text-zinc-400 hover:border-cyan-500/30 hover:text-zinc-200'
                   }`}
                 >
                   {f}
@@ -259,33 +267,34 @@ export default function MusicController({ guild }) {
 
           <div className="cyber-card p-4 flex-1">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+              <p className="text-xs font-semibold text-zinc-300 uppercase tracking-wide">
                 Queue {data?.queue?.length ? `(${data.queue.length})` : ''}
               </p>
               {data?.queue?.length > 0 && (
-                <button onClick={() => action('clear', {}, 'Queue cleared')} className="text-[10px] text-red-400 hover:text-red-300 flex items-center gap-1">
-                  <Trash2 size={10} /> Clear
+                <button onClick={() => action('clear', {}, 'Queue cleared')} className="min-h-[32px] px-2 text-[11px] font-medium text-red-300 hover:text-red-200 flex items-center gap-1">
+                  <Trash2 size={11} aria-hidden="true" /> Clear
                 </button>
               )}
             </div>
             {!data?.queue?.length ? (
-              <p className="text-xs text-gray-600 text-center py-4">Queue is empty</p>
+              <p className="text-xs text-zinc-400 text-center py-4">Queue is empty</p>
             ) : (
               <div className="space-y-1.5 max-h-56 overflow-y-auto">
                 {data.queue.map((t, i) => (
-                  <div key={`${t.title}-${i}`} className="flex items-center gap-2 py-1 group">
-                    <span className="text-[10px] text-gray-600 w-4 flex-shrink-0">{i + 1}</span>
+                  <div key={`${t.title}-${i}`} className="flex items-center gap-2 py-1.5 group">
+                    <span className="text-[10px] text-zinc-500 w-5 text-right flex-shrink-0 tabular-nums" aria-hidden="true">{i + 1}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-gray-300 truncate">{t.title}</p>
-                      <p className="text-[10px] text-gray-600 truncate">{t.author}</p>
+                      <p className="text-xs text-zinc-200 truncate">{t.title}</p>
+                      <p className="text-[10px] text-zinc-500 truncate">{t.author}</p>
                     </div>
-                    <span className="text-[10px] text-gray-600 flex-shrink-0">{t.duration}</span>
+                    <span className="text-[10px] text-zinc-500 flex-shrink-0 tabular-nums">{t.duration}</span>
                     <button
                       onClick={() => removeAt(t.index ?? i)}
-                      className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-red-400 transition-all"
-                      title="Remove"
+                      className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-all flex-shrink-0 lg:opacity-0 lg:group-hover:opacity-100 lg:focus-visible:opacity-100 lg:focus-within:opacity-100"
+                      title={`Remove ${t.title}`}
+                      aria-label={`Remove ${t.title} from queue`}
                     >
-                      <Trash2 size={11} />
+                      <Trash2 size={12} aria-hidden="true" />
                     </button>
                   </div>
                 ))}
@@ -322,14 +331,15 @@ export default function MusicController({ guild }) {
               <button
                 key={i}
                 onClick={() => playTrack(t.url)}
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-white/5 hover:bg-cyan-500/10 hover:border-cyan-500/30 border border-transparent text-left transition-all group"
+                aria-label={`Play ${t.title} by ${t.author}`}
+                className="w-full flex items-center gap-3 px-3 py-2.5 min-h-[52px] rounded-lg bg-white/5 hover:bg-cyan-500/10 hover:border-cyan-500/30 border border-transparent text-left transition-all group"
               >
                 {t.thumbnail && <img src={t.thumbnail} alt="" className="w-8 h-8 rounded object-cover flex-shrink-0" />}
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-gray-200 truncate group-hover:text-white">{t.title}</p>
-                  <p className="text-[10px] text-gray-600 truncate">{t.author} · {t.duration}</p>
+                  <p className="text-xs font-medium text-zinc-200 truncate group-hover:text-white">{t.title}</p>
+                  <p className="text-[10px] text-zinc-500 truncate">{t.author} · {t.duration}</p>
                 </div>
-                <Play size={12} className="text-cyan-400 opacity-0 group-hover:opacity-100 flex-shrink-0 transition-opacity" />
+                <Play size={12} className="text-cyan-300 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-visible:opacity-100 flex-shrink-0 transition-opacity" aria-hidden="true" />
               </button>
             ))}
           </div>

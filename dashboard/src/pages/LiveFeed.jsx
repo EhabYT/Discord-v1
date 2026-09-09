@@ -232,22 +232,23 @@ export default function LiveFeed({ guild }) {
         </div>
       </div>
 
-      <div className="flex-shrink-0 px-6 py-2 border-b border-white/[0.04] flex items-center justify-between gap-3">
+      <div className="flex-shrink-0 px-4 sm:px-6 py-2 border-b border-white/[0.04] flex items-center justify-between gap-3 flex-wrap">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search user, message, channel…"
-          className="cyber-input text-xs h-8 max-w-xs"
+          aria-label="Search live events"
+          className="cyber-input text-xs max-w-xs min-h-[40px]"
         />
-        <p className="text-[10px] text-gray-600">
+        <p className="text-[11px] text-zinc-500 tabular-nums">
           Showing {visible.length} of {events.length} events (max {MAX_EVENTS})
         </p>
-        <label className="flex items-center gap-1.5 text-[10px] text-gray-600 cursor-pointer">
+        <label className="flex items-center gap-2 min-h-[40px] text-[11px] text-zinc-400 cursor-pointer select-none">
           <input
             type="checkbox"
             checked={autoScroll}
             onChange={e => setAutoScroll(e.target.checked)}
-            className="accent-cyan-500 w-3 h-3"
+            className="accent-cyan-500 w-4 h-4"
           />
           Auto-scroll
         </label>
@@ -256,8 +257,8 @@ export default function LiveFeed({ guild }) {
       {/* Feed */}
       <div className="flex-1 overflow-y-auto">
         {visible.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-700">
-            <Radio size={40} className="opacity-20" />
+          <div className="flex flex-col items-center justify-center h-full gap-3 text-zinc-500 p-6 text-center">
+            <Radio size={40} className="opacity-30" aria-hidden="true" />
             <p className="text-sm">
               {connected ? 'Waiting for activity...' : 'Connecting to event stream...'}
             </p>

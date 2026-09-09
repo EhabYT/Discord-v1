@@ -25,7 +25,9 @@ export default function CopyButton({
       type="button"
       onClick={run}
       aria-live="polite"
-      className={className || 'cyber-button flex items-center gap-1.5 text-xs py-1.5 px-3'}
+      aria-label={ok ? copiedLabel : `${label}: ${value}`}
+      title={value}
+      className={`${className || 'cyber-button flex items-center gap-1.5 text-xs py-1.5 px-3'} min-h-[36px]`}
     >
       {ok
         ? <Check size={12} className="text-emerald-300" aria-hidden="true" />

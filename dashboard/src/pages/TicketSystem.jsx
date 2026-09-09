@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Ticket, Save, Clock, User, Hash, Plus, Settings, X, ChevronRight, CheckCircle, AlertCircle, Loader } from 'lucide-react';
 import PageHeader from '../components/PageHeader.jsx';
+import EmptyState from '../components/EmptyState.jsx';
 import ConfirmModal from '../components/ConfirmModal.jsx';
 import { useToast } from '../components/Toast.jsx';
 import api from '../api.js';
 
 const STATUS_STYLES = {
   open:    'cyber-badge-green',
-  closed:  'bg-gray-500/10 text-gray-400 border-gray-500/30 cyber-badge',
+  closed:  'bg-zinc-500/10 text-zinc-400 border-zinc-500/30 cyber-badge',
   pending: 'cyber-badge-yellow',
 };
 
@@ -169,7 +170,7 @@ export default function TicketSystem({ guild, guildData }) {
         <div className="glass-panel p-5 animate-fade-in">
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <label className="text-xs text-gray-500 block mb-1.5">Ticket Category</label>
+              <label className="eb-field-label">Ticket Category</label>
               <select
                 value={config.categoryId || ''}
                 onChange={e => setConfig(c => ({ ...c, categoryId: e.target.value || null }))}
@@ -178,11 +179,11 @@ export default function TicketSystem({ guild, guildData }) {
                 <option value="">— None —</option>
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
-              <p className="text-[11px] text-gray-600 mt-1">New ticket channels are created here</p>
+              <p className="text-[11px] text-zinc-500 mt-1">New ticket channels are created here</p>
             </div>
 
             <div>
-              <label className="text-xs text-gray-500 block mb-1.5">Transcript Channel</label>
+              <label className="eb-field-label">Transcript Channel</label>
               <select
                 value={config.transcriptChannelId || ''}
                 onChange={e => setConfig(c => ({ ...c, transcriptChannelId: e.target.value || null }))}
@@ -191,11 +192,11 @@ export default function TicketSystem({ guild, guildData }) {
                 <option value="">— None —</option>
                 {textChs.map(c => <option key={c.id} value={c.id}>#{c.name}</option>)}
               </select>
-              <p className="text-[11px] text-gray-600 mt-1">Closed ticket transcripts sent here</p>
+              <p className="text-[11px] text-zinc-500 mt-1">Closed ticket transcripts sent here</p>
             </div>
 
             <div>
-              <label className="text-xs text-gray-500 block mb-1.5">Support Role</label>
+              <label className="eb-field-label">Support Role</label>
               <select
                 value={config.supportRoleId || ''}
                 onChange={e => setConfig(c => ({ ...c, supportRoleId: e.target.value || null }))}
@@ -204,11 +205,11 @@ export default function TicketSystem({ guild, guildData }) {
                 <option value="">— None —</option>
                 {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
               </select>
-              <p className="text-[11px] text-gray-600 mt-1">Role that can see & manage all tickets</p>
+              <p className="text-[11px] text-zinc-500 mt-1">Role that can see & manage all tickets</p>
             </div>
 
             <div>
-              <label className="text-xs text-gray-500 block mb-1.5">Max Open Per User</label>
+              <label className="eb-field-label">Max Open Per User</label>
               <input
                 type="number"
                 value={config.maxOpen || 1}
@@ -216,7 +217,7 @@ export default function TicketSystem({ guild, guildData }) {
                 className="cyber-input"
                 min="1" max="10"
               />
-              <p className="text-[11px] text-gray-600 mt-1">Max tickets a user can have open at once</p>
+              <p className="text-[11px] text-zinc-500 mt-1">Max tickets a user can have open at once</p>
             </div>
           </div>
 
@@ -236,7 +237,7 @@ export default function TicketSystem({ guild, guildData }) {
             <h3 className="text-sm font-semibold text-white mb-4">Panel Settings</h3>
             <div className="space-y-4">
               <div>
-                <label className="text-xs text-gray-500 block mb-1.5">Post to Channel</label>
+                <label className="eb-field-label">Post to Channel</label>
                 <select
                   value={config.panelChannelId || ''}
                   onChange={e => setConfig(c => ({ ...c, panelChannelId: e.target.value || null }))}
@@ -247,7 +248,7 @@ export default function TicketSystem({ guild, guildData }) {
                 </select>
               </div>
               <div>
-                <label className="text-xs text-gray-500 block mb-1.5">Panel Title</label>
+                <label className="eb-field-label">Panel Title</label>
                 <input
                   type="text"
                   value={config.panelTitle || ''}
@@ -257,7 +258,7 @@ export default function TicketSystem({ guild, guildData }) {
                 />
               </div>
               <div>
-                <label className="text-xs text-gray-500 block mb-1.5">Panel Description</label>
+                <label className="eb-field-label">Panel Description</label>
                 <textarea
                   value={config.panelDescription || ''}
                   onChange={e => setConfig(c => ({ ...c, panelDescription: e.target.value }))}
@@ -294,30 +295,31 @@ export default function TicketSystem({ guild, guildData }) {
         <div className="cyber-card p-4 animate-fade-in">
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
             <span className="text-sm font-semibold text-white">Tickets</span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <input
                 value={ticketQuery}
                 onChange={(e) => setTicketQuery(e.target.value)}
                 placeholder="Search ID / user…"
-                className="cyber-input text-[11px] h-8 w-36"
+                aria-label="Search tickets"
+                className="cyber-input text-xs w-36 min-h-[40px]"
               />
               {['all', 'open', 'closed'].map((f) => (
-                <button key={f} onClick={() => setTicketFilter(f)}
-                  className={`text-[10px] px-2 py-1 rounded-full border capitalize ${ticketFilter === f ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300' : 'border-white/10 text-zinc-500'}`}>
+                <button key={f} onClick={() => setTicketFilter(f)} aria-pressed={ticketFilter === f}
+                  className={`text-[11px] font-medium px-3 py-2 min-h-[36px] rounded-full border capitalize transition-all ${ticketFilter === f ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-200' : 'border-white/10 text-zinc-400 hover:text-zinc-200 hover:border-white/20'}`}>
                   {f}
                 </button>
               ))}
-              <button onClick={refreshTickets} className="text-[10px] text-cyan-400 hover:text-cyan-300">Refresh</button>
-              <span className="text-xs text-gray-600">{tickets.length} total</span>
+              <button onClick={refreshTickets} className="min-h-[36px] px-2 text-[11px] font-medium text-cyan-300 hover:text-cyan-200">Refresh</button>
+              <span className="text-xs text-zinc-500 tabular-nums">{tickets.length} total</span>
             </div>
           </div>
 
           {visibleTickets.length === 0 ? (
-            <div className="text-center py-12">
-              <Ticket size={28} className="text-gray-700 mx-auto mb-2" />
-              <p className="text-sm text-gray-600">{tickets.length === 0 ? 'No tickets found' : 'No matches'}</p>
-              <p className="text-xs text-gray-700 mt-1">{tickets.length === 0 ? 'Create a ticket panel so members can open tickets' : 'Try a different search or filter'}</p>
-            </div>
+            tickets.length === 0 ? (
+              <EmptyState icon={Ticket} title="No tickets found" subtitle="Create a ticket panel so members can open tickets." />
+            ) : (
+              <EmptyState icon={Ticket} title="No matches" subtitle="Try a different search or filter." />
+            )
           ) : (
             <div className="space-y-2">
               {visibleTickets.map((ticket, i) => (
@@ -334,21 +336,21 @@ export default function TicketSystem({ guild, guildData }) {
                     </p>
                     <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                       {ticket.userId && (
-                        <span className="text-[11px] text-gray-600 flex items-center gap-1">
-                          <User size={9} /> {ticket.userId}
+                        <span className="text-[11px] text-zinc-500 flex items-center gap-1">
+                          <User size={9} aria-hidden="true" /> {ticket.userId}
                         </span>
                       )}
                       {ticket.channelId && (
-                        <span className="text-[11px] text-gray-600 flex items-center gap-1">
-                          <Hash size={9} /> {ticket.channelId}
+                        <span className="text-[11px] text-zinc-500 flex items-center gap-1">
+                          <Hash size={9} aria-hidden="true" /> {ticket.channelId}
                         </span>
                       )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {ticket.createdAt && (
-                      <span className="text-[11px] text-gray-600 flex items-center gap-1 tabular-nums">
-                        <Clock size={9} />
+                      <span className="text-[11px] text-zinc-500 flex items-center gap-1 tabular-nums">
+                        <Clock size={9} aria-hidden="true" />
                         {new Date(ticket.createdAt).toLocaleDateString()}
                       </span>
                     )}
@@ -358,10 +360,11 @@ export default function TicketSystem({ guild, guildData }) {
                     {(ticket.status === 'open' || !ticket.status) && (
                       <button
                         onClick={() => setConfirmClose(ticket.id)}
-                        className="text-gray-600 hover:text-red-400 transition-colors"
+                        className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0"
                         title="Close ticket"
+                        aria-label={`Close ticket ${ticket.id?.slice(-6) || ''}`}
                       >
-                        <X size={14} />
+                        <X size={14} aria-hidden="true" />
                       </button>
                     )}
                   </div>

@@ -296,8 +296,8 @@ export default function ReactionRoles({ guild, guildData }) {
                         {m.channelId ? ` · #${channels.find((c) => c.id === m.channelId)?.name || m.channelId}` : ''}
                       </p>
                     </div>
-                    <button onClick={() => setConfirm(m.id)} className="text-zinc-600 hover:text-red-400" title="Remove">
-                      <Trash2 size={14} />
+                    <button onClick={() => setConfirm(m.id)} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0" title="Remove mapping" aria-label={`Remove role mapping ${m.label || m.roleId || ''}`}>
+                      <Trash2 size={14} aria-hidden="true" />
                     </button>
                   </div>
                 );

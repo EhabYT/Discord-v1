@@ -156,9 +156,10 @@ export default function Commands({ guild, permLevel = 0 }) {
                   type="button"
                   onClick={() => { copyText(`/${c.name}`); toast.success(`Copied /${c.name}`); }}
                   className="cyber-icon-button"
-                  title="Copy"
+                  title={`Copy /${c.name}`}
+                  aria-label={`Copy /${c.name}`}
                 >
-                  <Copy size={12} />
+                  <Copy size={12} aria-hidden="true" />
                 </button>
                 <button
                   type="button"

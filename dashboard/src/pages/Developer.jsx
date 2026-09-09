@@ -479,23 +479,25 @@ export default function Developer({ initialTab = 'overview' }) {
 
       {tab === 'env' && (
         <div className="cyber-card overflow-hidden">
-          <table className="w-full text-left text-xs">
-            <thead className="text-[10px] uppercase tracking-wider text-zinc-600">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[420px] text-left text-xs">
+            <thead className="text-[10px] uppercase tracking-wider text-zinc-500">
               <tr><th className="px-3 py-2">Key</th><th>Value</th></tr>
             </thead>
             <tbody>
               {env.map((v) => (
                 <tr key={v.key} className="border-t border-white/[0.05]">
-                  <td className="px-3 py-1.5 font-mono text-cyan-300/90">{v.key}</td>
-                  <td className="px-3 py-1.5 font-mono text-zinc-500">
+                  <td className="px-3 py-2 font-mono text-cyan-300/90 break-all">{v.key}</td>
+                  <td className="px-3 py-2 font-mono text-zinc-400 break-all">
                     {v.secret
-                      ? <span className="text-amber-400/80">{v.set ? 'Configured' : 'Not configured'}</span>
+                      ? <span className="text-amber-300">{v.set ? 'Configured' : 'Not configured'}</span>
                       : (v.set ? v.preview : '—')}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

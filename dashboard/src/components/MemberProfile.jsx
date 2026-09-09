@@ -33,10 +33,16 @@ export default function MemberProfile({ guild, member, onClose, onOpenNotes }) {
   }, [guild?.id, member?.id]);
 
   // Close on Escape like every other overlay (palette, modals, popovers).
+  // Lock body scroll while the drawer is open so the page behind doesn't move.
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
   }, [onClose]);
 
   const name = data?.displayName || member.displayName || member.username;
@@ -64,14 +70,14 @@ export default function MemberProfile({ guild, member, onClose, onOpenNotes }) {
             <button
               onClick={async () => { if (await copyText(member.id)) toast.success(t('mem.copied', 'User ID copied')); }}
               title={t('mem.copyIdTitle', 'Copy user ID')}
-              className="text-[11px] text-zinc-500 hover:text-cyan-200 font-mono mt-0.5 truncate transition-colors"
+              className="text-[11px] text-zinc-400 hover:text-cyan-200 font-mono mt-0.5 truncate transition-colors min-h-[28px] px-1 -mx-1 text-left"
             >
               {member.id}
             </button>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-xl text-zinc-500 hover:text-zinc-100 hover:bg-white/[0.07] transition-all"
+            className="w-8 h-8 flex items-center justify-center rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.07] transition-all flex-shrink-0"
             aria-label={t('mem.close', 'Close profile')}
             autoFocus
           >
@@ -86,20 +92,20 @@ export default function MemberProfile({ guild, member, onClose, onOpenNotes }) {
             <>
               <div className="grid grid-cols-2 gap-2">
                 <div className="cyber-card p-3">
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-wide flex items-center gap-1"><Trophy size={10} /> {t('mem.level', 'Level')}</p>
+                  <p className="text-[10px] text-zinc-400 uppercase tracking-wide flex items-center gap-1"><Trophy size={10} aria-hidden="true" /> {t('mem.level', 'Level')}</p>
                   <p className="text-lg font-bold text-cyan-300 tabular-nums">{xp.textLevel || 0}</p>
-                  <p className="text-[11px] text-zinc-500 tabular-nums">{(xp.textXp || 0).toLocaleString()} XP</p>
+                  <p className="text-[11px] text-zinc-400 tabular-nums">{(xp.textXp || 0).toLocaleString()} XP</p>
                 </div>
                 <div className="cyber-card p-3">
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-wide flex items-center gap-1"><Shield size={10} /> {t('mem.warnings', 'Warnings')}</p>
+                  <p className="text-[10px] text-zinc-400 uppercase tracking-wide flex items-center gap-1"><Shield size={10} aria-hidden="true" /> {t('mem.warnings', 'Warnings')}</p>
                   <p className="text-lg font-bold text-yellow-300 tabular-nums">{data?.warnings || 0}</p>
                 </div>
                 <div className="cyber-card p-3">
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-wide flex items-center gap-1"><MessageSquare size={10} /> {t('mem.messages', 'Messages')}</p>
+                  <p className="text-[10px] text-zinc-400 uppercase tracking-wide flex items-center gap-1"><MessageSquare size={10} aria-hidden="true" /> {t('mem.messages', 'Messages')}</p>
                   <p className="text-lg font-bold text-white tabular-nums">{(stats.messages || 0).toLocaleString()}</p>
                 </div>
                 <div className="cyber-card p-3">
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-wide flex items-center gap-1"><Mic size={10} /> {t('mem.voice', 'Voice')}</p>
+                  <p className="text-[10px] text-zinc-400 uppercase tracking-wide flex items-center gap-1"><Mic size={10} aria-hidden="true" /> {t('mem.voice', 'Voice')}</p>
                   <p className="text-lg font-bold text-white tabular-nums">{formatVoice(stats.voiceTime)}</p>
                 </div>
               </div>
@@ -115,7 +121,7 @@ export default function MemberProfile({ guild, member, onClose, onOpenNotes }) {
                 <p className="cyber-label mb-2 flex items-center gap-1"><Hash size={10} /> {t('mem.roles', 'Roles')}</p>
                 <div className="flex flex-wrap gap-1.5">
                   {(data?.roles || []).length === 0 ? (
-                    <span className="text-xs text-zinc-500">{t('mem.noRoles', 'No extra roles')}</span>
+                    <span className="text-xs text-zinc-400">{t('mem.noRoles', 'No extra roles')}</span>
                   ) : data.roles.map((r) => {
                     const color = r.color && r.color !== '#000000' ? r.color : '#d4d4d8';
                     return (

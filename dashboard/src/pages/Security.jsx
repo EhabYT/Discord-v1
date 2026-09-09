@@ -120,17 +120,17 @@ export default function Security({ guild, guildData, onNavigate }) {
         {/* Member Verification — full desk lives on its own page */}
         <SectionCard icon={Lock} title="Member Verification" iconColor="text-cyan-400" badge={verification.enabled ? 'Armed' : 'Off'}>
           <div className="space-y-4">
-            <p className="text-xs text-zinc-500 leading-relaxed">
-              Gate, captcha, pending members and verify logs moved to the dedicated <strong className="text-zinc-300">Verification</strong> page.
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              Gate, captcha, pending members and verify logs moved to the dedicated <strong className="text-zinc-200">Verification</strong> page.
             </p>
             <div className="grid grid-cols-2 gap-2 text-center">
               <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] py-2">
                 <p className="text-sm font-semibold text-white">{verification.roleId ? 'Role set' : 'No role'}</p>
-                <p className="text-[10px] text-zinc-600">Verified role</p>
+                <p className="text-[10px] text-zinc-500">Verified role</p>
               </div>
               <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] py-2">
                 <p className="text-sm font-semibold text-white">{verification.enabled ? 'On' : 'Off'}</p>
-                <p className="text-[10px] text-zinc-600">Gate</p>
+                <p className="text-[10px] text-zinc-500">Gate</p>
               </div>
             </div>
             <button
@@ -149,7 +149,7 @@ export default function Security({ guild, guildData, onNavigate }) {
               <div className="flex items-center justify-between p-3 rounded-xl bg-white/[0.04] border border-white/[0.08] mb-4">
                 <div>
                   <p className="text-xs font-semibold text-white">Bot Latency</p>
-                  <p className="text-[11px] text-gray-600 mt-0.5">WebSocket heartbeat</p>
+                  <p className="text-[11px] text-zinc-500 mt-0.5">WebSocket heartbeat</p>
                 </div>
                 <div className="text-right">
                   <p className="text-xl font-bold tabular-nums" style={{ color: pingColor(perf.ping) }}>
@@ -173,16 +173,16 @@ export default function Security({ guild, guildData, onNavigate }) {
                   { label: 'Uptime',value: `${Math.floor(perf.uptime / 3600000)}h` },
                 ].map(m => (
                   <div key={m.label} className="py-2 rounded-lg bg-white/[0.04]">
-                    <p className="text-xs font-bold text-cyan-400">{m.value}</p>
-                    <p className="text-[10px] text-gray-600">{m.label}</p>
+                    <p className="text-xs font-bold text-cyan-300 tabular-nums">{m.value}</p>
+                    <p className="text-[10px] text-zinc-500">{m.label}</p>
                   </div>
                 ))}
               </div>
             </>
           ) : (
             <div className="flex flex-col items-center justify-center h-36 gap-2">
-              <div className="w-6 h-6 border-2 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin" />
-              <p className="text-xs text-gray-600">Loading metrics…</p>
+              <div className="w-6 h-6 border-2 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin" role="status" aria-label="Loading metrics" />
+              <p className="text-xs text-zinc-500">Loading metrics…</p>
             </div>
           )}
           <button onClick={loadPerf} className="mt-3 w-full cyber-button text-xs flex items-center justify-center gap-1.5">

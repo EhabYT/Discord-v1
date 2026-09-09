@@ -21,18 +21,22 @@ const VARS = [
 function VarPills({ onInsert }) {
   const [tip, setTip] = useState(null);
   return (
-    <div className="flex items-center gap-1 flex-wrap">
+    <div className="flex items-center gap-1.5 flex-wrap">
       {VARS.map(({ v, desc }) => (
         <button
           key={v}
           onClick={() => onInsert(v)}
+          title={desc}
+          aria-label={`Insert variable ${v}: ${desc}`}
           onMouseEnter={() => setTip(desc)}
           onMouseLeave={() => setTip(null)}
-          className="relative text-[10px] px-2 py-0.5 rounded-md bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/20 transition-colors font-mono"
+          onFocus={() => setTip(desc)}
+          onBlur={() => setTip(null)}
+          className="relative text-[11px] px-2.5 py-1.5 min-h-[32px] rounded-md bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 hover:bg-cyan-500/20 transition-colors font-mono"
         >
           {v}
           {tip === desc && (
-            <span className="absolute -top-7 left-0 bg-[#0B0E14] border border-white/10 text-gray-300 text-[10px] px-2 py-1 rounded whitespace-nowrap z-10 pointer-events-none">
+            <span className="absolute -top-8 left-0 bg-[#0B0E14] border border-white/10 text-zinc-300 text-[10px] px-2 py-1 rounded whitespace-nowrap z-10 pointer-events-none" aria-hidden="true">
               {desc}
             </span>
           )}
@@ -60,7 +64,7 @@ function DiscordPreview({ text, embed, guildName }) {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-2 mb-1">
-            <span className="text-sm font-semibold text-white">𝑬𝑩</span>
+            <span className="text-sm font-semibold text-white">EB</span>
             <span className="text-[10px] text-gray-500">
               Today at {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
@@ -454,7 +458,7 @@ export default function WelcomeAutoResponse({ guild, guildData }) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[11px] text-gray-500 mb-1">
-                    <span className="text-white font-semibold">𝑬𝑩</span> → <span className="text-cyan-400">NewMember</span>
+                    <span className="text-white font-semibold">EB</span> → <span className="text-cyan-400">NewMember</span>
                     <span className="ml-2">Private Message</span>
                   </p>
                   <p className="text-sm text-gray-200 leading-relaxed">

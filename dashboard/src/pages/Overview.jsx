@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import StatCard from '../components/StatCard.jsx';
 import PageHeader from '../components/PageHeader.jsx';
+import EmptyState from '../components/EmptyState.jsx';
 import CopyButton from '../components/CopyButton.jsx';
 import { useI18n } from '../i18n.jsx';
 import { timeAgo } from '../lib/time.js';
@@ -101,7 +102,7 @@ function AuditEntry({ item, isLast }) {
                 onClick={() => setExpanded(e => !e)}
                 aria-expanded={expanded}
                 aria-label={expanded ? t('ov.hideReason', 'Hide reason') : t('ov.showReason', 'Show reason')}
-                className="w-6 h-6 flex items-center justify-center rounded-lg text-zinc-400 hover:text-cyan-200 hover:bg-white/[0.06] transition-colors"
+                className="touch-32 w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-cyan-200 hover:bg-white/[0.06] transition-colors"
               >
                 {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
               </button>
@@ -110,7 +111,7 @@ function AuditEntry({ item, isLast }) {
         </div>
 
         {expanded && item.reason && (
-          <div className="mt-2 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/5 text-xs text-gray-400 italic animate-fade-in">
+          <div className="mt-2 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/5 text-xs text-zinc-400 italic animate-fade-in">
             "{item.reason}"
           </div>
         )}
@@ -137,7 +138,7 @@ function MetricBar({ label, value, max = 100, color = '#00FFFF', unit = '%' }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-xs text-gray-500">{label}</span>
+        <span className="text-xs text-zinc-400">{label}</span>
         <span className="text-xs font-bold text-white tabular-nums">{value}{unit}</span>
       </div>
       <div className="cyber-progress">
@@ -395,7 +396,7 @@ export default function Overview({ guild, guildData, onNavigate, publicUrl: publ
                     <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative">
                       <div className="absolute -top-6 hidden group-hover:block group-focus-visible:block text-[10px] font-semibold text-white bg-black/80 border border-white/10 px-1.5 py-0.5 rounded-md tabular-nums">{n}</div>
                       <div className="w-full rounded-t-md bg-gradient-to-t from-cyan-500/50 to-cyan-300/90 shadow-[0_0_12px_rgba(34,211,238,0.2)]" style={{ height: `${h}%` }} />
-                      <span className="text-[8px] text-zinc-600">{growth.labels?.[i] || ''}</span>
+                      <span className="text-[10px] text-zinc-500" aria-hidden="true">{growth.labels?.[i] || ''}</span>
                     </div>
                   );
                 })}
@@ -459,23 +460,23 @@ export default function Overview({ guild, guildData, onNavigate, publicUrl: publ
             )}
 
             {!guild ? (
-              <div className="empty-state px-4">
-                <div className="empty-state-icon"><Server size={22} className="text-cyan-300/80" /></div>
-                <p className="empty-state-title">{t('ov.noServerAudit', 'Select a server to see its audit log')}</p>
-                <p className="empty-state-sub">{t('ov.guildStreamHere', 'Guild activity streams here once a server is selected.')}</p>
-              </div>
+              <EmptyState
+                icon={Server}
+                title={t('ov.noServerAudit', 'Select a server to see its audit log')}
+                subtitle={t('ov.guildStreamHere', 'Guild activity streams here once a server is selected.')}
+              />
             ) : activity.length === 0 ? (
-              <div className="empty-state px-4">
-                <div className="empty-state-icon"><Activity size={22} className="text-cyan-300/80" /></div>
-                <p className="empty-state-title">{t('ov.noActivity', 'No recent activity')}</p>
-                <p className="empty-state-sub">{t('ov.eventsIn', 'Events appear here as they happen in').replace('{guild}', guild.name)}</p>
-              </div>
+              <EmptyState
+                icon={Activity}
+                title={t('ov.noActivity', 'No recent activity')}
+                subtitle={t('ov.eventsIn', 'Events appear here as they happen in').replace('{guild}', guild.name)}
+              />
             ) : filtered.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-sm text-zinc-500">{t('ov.noCategory', 'No events in this category')}</p>
+                <p className="text-sm text-zinc-400">{t('ov.noCategory', 'No events in this category')}</p>
                 <button
                   onClick={() => setCatFilter('all')}
-                  className="mt-2 text-xs text-cyan-300 hover:text-cyan-200"
+                  className="mt-2 min-h-[36px] px-3 text-xs font-medium text-cyan-300 hover:text-cyan-200"
                 >
                   {t('ov.showAll', 'Show all events')}
                 </button>
@@ -491,7 +492,7 @@ export default function Overview({ guild, guildData, onNavigate, publicUrl: publ
                   <button
                     onClick={() => setShowAll(v => !v)}
                     aria-expanded={showAll}
-                    className="mt-3 w-full py-2.5 text-xs font-medium text-zinc-400 hover:text-cyan-200 border border-white/[0.07] hover:border-cyan-300/25 hover:bg-cyan-400/[0.05] rounded-xl transition-all flex items-center justify-center gap-1.5"
+                    className="mt-3 w-full min-h-[44px] py-2.5 text-xs font-medium text-zinc-400 hover:text-cyan-200 border border-white/[0.07] hover:border-cyan-300/25 hover:bg-cyan-400/[0.05] rounded-xl transition-all flex items-center justify-center gap-1.5"
                   >
                     {showAll
                       ? <><ChevronUp size={12} /> {t('ov.showLess', 'Show less')}</>

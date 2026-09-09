@@ -112,10 +112,10 @@ export default function BotControls({ guild, guildData, setGuildData }) {
         <button
           onClick={handleSave}
           disabled={saving || !dirty}
-          className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
+          className={`flex items-center gap-2 px-4 py-1.5 min-h-[40px] rounded-lg text-xs font-semibold transition-all duration-200 ${
             dirty && !saving
               ? 'cyber-button-solid'
-              : 'bg-white/5 border border-white/10 text-gray-600 cursor-not-allowed'
+              : 'bg-white/5 border border-white/10 text-zinc-500 cursor-not-allowed'
           }`}
         >
           {saving

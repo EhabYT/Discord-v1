@@ -105,18 +105,20 @@ export default function Tags({ guild }) {
                   <p className="font-mono text-xs text-cyan-200">/{t.name}</p>
                   <p className="text-xs text-zinc-400 mt-1 whitespace-pre-wrap line-clamp-4">{t.content}</p>
                 </div>
-                <div className="flex gap-1.5 flex-shrink-0">
+                <div className="flex gap-1.5 flex-shrink-0 items-center">
                   <button
                     onClick={async () => {
                       try { await navigator.clipboard.writeText(t.content); toast.success('Copied'); }
                       catch { toast.error('Copy failed'); }
                     }}
-                    className="cyber-icon-button" title="Copy"
+                    className="cyber-icon-button" title={`Copy tag ${t.name}`} aria-label={`Copy tag ${t.name}`}
                   >
-                    <Copy size={12} />
+                    <Copy size={12} aria-hidden="true" />
                   </button>
-                  <button onClick={() => { setEditing(t.name); setName(t.name); setContent(t.content); }} className="cyber-button text-[11px]">Edit</button>
-                  <button onClick={() => setConfirm(t.name)} className="text-zinc-600 hover:text-red-400"><Trash2 size={13} /></button>
+                  <button onClick={() => { setEditing(t.name); setName(t.name); setContent(t.content); }} className="cyber-button text-[11px] min-h-[36px]">Edit</button>
+                  <button onClick={() => setConfirm(t.name)} className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0" title={`Delete tag ${t.name}`} aria-label={`Delete tag ${t.name}`}>
+                    <Trash2 size={13} aria-hidden="true" />
+                  </button>
                 </div>
               </div>
             </div>

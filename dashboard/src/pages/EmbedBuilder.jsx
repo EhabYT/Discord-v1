@@ -192,8 +192,8 @@ export default function EmbedBuilder({ guild, guildData, permLevel }) {
               {templates.map(t => (
                 <div key={t.name} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.07]">
                   <span className="text-xs text-gray-300 flex-1 truncate">{t.name}</span>
-                  <button onClick={() => loadTpl(t)} className="text-[10px] text-cyan-400 hover:text-cyan-300 transition-colors">Load</button>
-                  <button onClick={() => deleteTpl(t.name)} className="text-gray-600 hover:text-red-400 transition-colors"><Trash2 size={11} /></button>
+                  <button onClick={() => loadTpl(t)} className="min-h-[32px] px-2 text-[10px] font-medium text-cyan-300 hover:text-cyan-200 transition-colors">Load</button>
+                  <button onClick={() => deleteTpl(t.name)} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0" title={`Delete template ${t.name}`} aria-label={`Delete template ${t.name}`}><Trash2 size={12} aria-hidden="true" /></button>
                 </div>
               ))}
             </div>
@@ -219,7 +219,7 @@ export default function EmbedBuilder({ guild, guildData, permLevel }) {
               }
               {embed.description && <p className="text-xs text-gray-300 leading-relaxed whitespace-pre-wrap">{embed.description}</p>}
               {embed.image && (
-                <img src={embed.image} alt="" className="rounded-lg max-h-40 object-cover mt-2 w-full" onError={e => e.target.style.display='none'} />
+                <img src={embed.image} alt="Embed image preview" className="rounded-lg max-h-40 object-cover mt-2 w-full" onError={e => e.target.style.display='none'} />
               )}
               {embed.fields.length > 0 && (
                 <div className="flex flex-wrap gap-2 pt-1">
@@ -244,7 +244,7 @@ export default function EmbedBuilder({ guild, guildData, permLevel }) {
             </div>
             {embed.thumbnail && (
               <div className="p-3 flex-shrink-0">
-                <img src={embed.thumbnail} alt="" className="w-16 h-16 rounded-lg object-cover"
+                <img src={embed.thumbnail} alt="Embed thumbnail preview" className="w-16 h-16 rounded-lg object-cover"
                   onError={e => e.target.style.display='none'} />
               </div>
             )}
@@ -268,15 +268,15 @@ export default function EmbedBuilder({ guild, guildData, permLevel }) {
           <label className="cyber-label mb-2 flex items-center gap-1"><Palette size={10} /> Accent Color</label>
           <div className="flex flex-wrap gap-1.5 mb-2">
             {COLOR_PRESETS.map(p => (
-              <button key={p.hex} title={p.label} onClick={() => setEmbed(em => ({ ...em, color: p.hex }))}
-                className="w-6 h-6 rounded-md border-2 transition-all hover:scale-110"
+              <button key={p.hex} type="button" title={p.label} aria-label={`Accent color ${p.label} ${p.hex}`} aria-pressed={embed.color === p.hex} onClick={() => setEmbed(em => ({ ...em, color: p.hex }))}
+                className="swatch-sm w-6 h-6 rounded-md border-2 transition-all hover:scale-110"
                 style={{ background: p.hex, borderColor: embed.color === p.hex ? '#fff' : 'transparent' }} />
             ))}
           </div>
           <div className="flex gap-2 items-center">
-            <input type="color" value={embed.color}
+            <input type="color" value={embed.color} aria-label="Custom accent color"
               onChange={e => setEmbed(em => ({ ...em, color: e.target.value }))}
-              className="h-9 w-12 rounded-lg border border-cyan-500/20 cursor-pointer p-0.5 bg-transparent" />
+              className="h-10 w-14 rounded-lg border border-cyan-500/20 cursor-pointer p-1 bg-transparent" />
             <input type="text" value={embed.color} maxLength={7}
               onChange={e => setEmbed(em => ({ ...em, color: e.target.value }))}
               className="cyber-input font-mono text-xs w-28" />
@@ -382,8 +382,8 @@ export default function EmbedBuilder({ guild, guildData, permLevel }) {
                     onChange={e => updField(i, 'inline', e.target.checked)} className="accent-cyan-400" />
                   Inline
                 </label>
-                <button onClick={() => delField(i)} className="text-gray-600 hover:text-red-400 transition-colors flex-shrink-0">
-                  <Trash2 size={12} />
+                <button onClick={() => delField(i)} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0" title={`Delete field ${i + 1}`} aria-label={`Delete field ${i + 1}`}>
+                  <Trash2 size={13} aria-hidden="true" />
                 </button>
               </div>
             ))}

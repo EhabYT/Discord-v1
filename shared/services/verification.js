@@ -263,13 +263,13 @@ function isConfigured(cfg) {
 
 function setupProblem(cfg, guild) {
     if (!cfg || !cfg.roleId) {
-        return { code: 'NOT_SETUP', message: '❌ Verification is not set up yet. An admin needs to pick a verified role in Dashboard → Verification (Quick tab) or run /setupverification.' };
+        return { code: 'NOT_SETUP', message: '❌ Verification is not set up yet. An admin needs to pick a verified role in Dashboard → Verification → Setup → Roles (or Quick tab → Create roles), or run /setupverification.' };
     }
     if (guild && cfg.roleId && !guild.roles.cache.has(cfg.roleId)) {
-        return { code: 'NOT_FOUND', message: '❌ The configured verified role was deleted. An admin needs to pick a new one in Dashboard → Verification.' };
+        return { code: 'NOT_FOUND', message: '❌ The configured verified role was deleted. An admin needs to pick a new one in Dashboard → Verification → Setup → Roles.' };
     }
     if (!cfg.enabled) {
-        return { code: 'DISABLED', message: '❌ Verification is currently disabled. An admin can turn it on in Dashboard → Verification → Setup.' };
+        return { code: 'DISABLED', message: '❌ Verification is currently disabled. An admin can turn it on in Dashboard → Verification → Setup → Gate (or Quick → Go live).' };
     }
     return null;
 }
@@ -694,6 +694,9 @@ async function createRoles(guild, { which = 'both', verifiedName = 'Verified', u
     if (wantV) {
         const role = await guild.roles.create({
             name: String(verifiedName || 'Verified').slice(0, 100),
+            // `color` keeps this working on older discord.js; `colors` is the
+            // current API (v14.27+). Passing both is intentional.
+            color: 0x00fbff,
             colors: { primaryColor: 0x00fbff },
             reason: 'EB verification — verified role',
             mentionable: false,
@@ -703,6 +706,7 @@ async function createRoles(guild, { which = 'both', verifiedName = 'Verified', u
     if (wantU) {
         const role = await guild.roles.create({
             name: String(unverifiedName || 'Unverified').slice(0, 100),
+            color: 0x6b7280,
             colors: { primaryColor: 0x6b7280 },
             hoist: false,
             reason: 'EB verification — join / pending role',
@@ -824,9 +828,11 @@ async function fixHierarchy(guild, db) {
             // Discord does not allow a bot to move a role that is already above it (Missing Permissions 50013).
             // Clone the role at the bottom of the list, which will be below the bot in the common case, and swap config.
             try {
+                const cloneColor = typeof role.color === 'number' ? role.color : 0;
                 const clone = await guild.roles.create({
                     name: role.name,
-                    color: role.color,
+                    color: cloneColor,
+                    colors: { primaryColor: cloneColor },
                     hoist: role.hoist,
                     permissions: role.permissions?.bitfield ?? 0n,
                     mentionable: role.mentionable,

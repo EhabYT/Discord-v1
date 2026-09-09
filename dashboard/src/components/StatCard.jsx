@@ -50,6 +50,9 @@ const COLORS = {
 export default function StatCard({ icon: Icon, label, value, sub, color = 'cyan', trend, onClick, className = '' }) {
   const c = COLORS[color] || COLORS.cyan;
   const Tag = onClick ? 'button' : 'div';
+  // Truncated values (large counts, latency JSX) need a hover tooltip so the
+  // full number stays discoverable for sighted users and screen readers.
+  const valueText = typeof value === 'string' || typeof value === 'number' ? String(value) : undefined;
 
   return (
     <Tag
@@ -80,9 +83,9 @@ export default function StatCard({ icon: Icon, label, value, sub, color = 'cyan'
       )}
 
       <div className="min-w-0 flex-1 relative">
-        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.12em]">{label}</p>
-        <p className="text-2xl font-bold text-white mt-0.5 truncate leading-tight tabular-nums tracking-tight">{value ?? '—'}</p>
-        {sub && <p className="text-[11px] text-zinc-500 mt-0.5 truncate">{sub}</p>}
+        <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-[0.12em]">{label}</p>
+        <p className="text-2xl font-bold text-white mt-0.5 truncate leading-tight tabular-nums tracking-tight" title={valueText}>{value ?? '—'}</p>
+        {sub && <p className="text-[11px] text-zinc-400 mt-0.5 truncate" title={typeof sub === 'string' ? sub : undefined}>{sub}</p>}
       </div>
 
       {trend && (

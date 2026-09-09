@@ -389,6 +389,9 @@ module.exports = (botClient) => {
                 requireRules: typeof req.body.requireRules === 'boolean' ? req.body.requireRules : current.requireRules,
                 mode: req.body.mode ?? current.mode,
                 showGuildIcon: typeof req.body.showGuildIcon === 'boolean' ? req.body.showGuildIcon : current.showGuildIcon,
+                panelImage: req.body.panelImage ?? current.panelImage,
+                panelThumbnail: req.body.panelThumbnail ?? current.panelThumbnail,
+                footerText: req.body.footerText ?? current.footerText,
             });
             const channelId = req.body.channelId || cfg.channelId || cfg.logChannelId;
             try {
@@ -532,6 +535,20 @@ module.exports = (botClient) => {
             let cfg = await verify.getConfig(db, req.params.guildId);
             if (req.body?.channelId) cfg.channelId = req.body.channelId;
             if (req.body?.mode) cfg.mode = req.body.mode === 'captcha' ? 'captcha' : 'button';
+            // Honor roles picked in the Quick tab (previously only Setup → Save persisted them,
+            // so Go live silently ignored the selection and auto-created duplicates).
+            for (const key of ['roleId', 'unverifiedRoleId']) {
+                const id = req.body?.[key];
+                if (typeof id === 'string' && id && req.guild.roles.cache.has(id)) {
+                    try {
+                        verify.assertRoleManageable(req.guild, id);
+                    } catch (err) {
+                        const status = err.code === 'NOT_FOUND' ? 400 : 403;
+                        return res.status(status).json({ error: err.message, code: err.code || 'HIERARCHY', field: key });
+                    }
+                    cfg[key] = id;
+                }
+            }
             if (!cfg.roleId || !cfg.unverifiedRoleId) {
                 const created = await verify.createRoles(req.guild, {
                     which: !cfg.roleId && !cfg.unverifiedRoleId ? 'both' : (!cfg.roleId ? 'verified' : 'unverified'),

@@ -430,7 +430,7 @@ export default function Progression({ guild, guildData }) {
                         <div className="h-1 rounded-full bg-white/10 overflow-hidden">
                           <div className="h-full bg-cyan-500 rounded-full" style={{ width: `${prog}%` }} />
                         </div>
-                        <p className="text-[9px] text-gray-700 text-right mt-0.5">{prog}%</p>
+                        <p className="text-[10px] text-zinc-500 text-right mt-0.5 tabular-nums">{prog}%</p>
                       </div>
                     )}
                   </div>

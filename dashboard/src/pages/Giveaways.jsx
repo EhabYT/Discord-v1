@@ -644,15 +644,15 @@ export default function Giveaways({ guild, guildData, permLevel }) {
               <label className="cyber-label mb-2">Embed Color</label>
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {COLORS.map(c => (
-                  <button key={c.hex} title={c.label} onClick={() => setForm(f => ({ ...f, color: c.hex }))}
-                    className="w-6 h-6 rounded-md border-2 transition-all hover:scale-110 flex-shrink-0"
+                  <button key={c.hex} type="button" title={c.label} aria-label={`Embed color ${c.label} ${c.hex}`} aria-pressed={form.color === c.hex} onClick={() => setForm(f => ({ ...f, color: c.hex }))}
+                    className="swatch-sm w-6 h-6 rounded-md border-2 transition-all hover:scale-110 flex-shrink-0"
                     style={{ background: c.hex, borderColor: form.color === c.hex ? '#fff' : 'transparent' }} />
                 ))}
               </div>
               <div className="flex gap-2 items-center">
-                <input type="color" value={form.color}
+                <input type="color" value={form.color} aria-label="Custom embed color"
                   onChange={e => setForm(f => ({ ...f, color: e.target.value }))}
-                  className="h-8 w-10 rounded-lg border border-cyan-500/20 cursor-pointer p-0.5 bg-transparent" />
+                  className="h-10 w-14 rounded-lg border border-cyan-500/20 cursor-pointer p-1 bg-transparent" />
                 <input type="text" value={form.color} maxLength={7}
                   onChange={e => setForm(f => ({ ...f, color: e.target.value }))}
                   className="cyber-input font-mono text-xs w-24" />
@@ -660,15 +660,16 @@ export default function Giveaways({ guild, guildData, permLevel }) {
             </div>
 
             {/* DM Winner toggle */}
-            <label className="flex items-center gap-3 cursor-pointer group">
-              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
-                form.dmWinner ? 'bg-cyan-500 border-cyan-500' : 'border-white/20 group-hover:border-cyan-500/40'
-              }`} onClick={() => setForm(f => ({ ...f, dmWinner: !f.dmWinner }))}>
-                {form.dmWinner && <span className="text-[8px] text-black font-bold">✓</span>}
-              </div>
+            <label className="flex items-center gap-3 cursor-pointer group min-h-[44px]">
+              <input
+                type="checkbox"
+                checked={form.dmWinner}
+                onChange={() => setForm(f => ({ ...f, dmWinner: !f.dmWinner }))}
+                className="w-4 h-4 rounded accent-cyan-500 flex-shrink-0"
+              />
               <div>
-                <p className="text-sm text-gray-300">DM winners when giveaway ends</p>
-                <p className="text-[10px] text-gray-600">Winners receive a direct message with the prize info</p>
+                <p className="text-sm text-zinc-200">DM winners when giveaway ends</p>
+                <p className="text-[11px] text-zinc-400">Winners receive a direct message with the prize info</p>
               </div>
             </label>
 

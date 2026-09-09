@@ -136,8 +136,8 @@ export default function Birthdays({ guild, guildData }) {
                       {e.today ? ' · TODAY' : ` · in ${e.days}d`}
                     </p>
                   </div>
-                  <button onClick={() => setConfirm(e.userId)} className="text-zinc-600 hover:text-red-400" title="Remove">
-                    <Trash2 size={14} />
+                  <button onClick={() => setConfirm(e.userId)} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0" title="Remove birthday" aria-label={`Remove birthday for ${e.username || e.userId}`}>
+                    <Trash2 size={14} aria-hidden="true" />
                   </button>
                 </div>
               ))}

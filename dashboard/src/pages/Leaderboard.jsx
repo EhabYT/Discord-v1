@@ -106,8 +106,8 @@ export default function Leaderboard({ guild }) {
       </PageHeader>
 
       <div className="relative">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
-        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search members…" className="cyber-input pl-9" />
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search members…" aria-label="Search leaderboard members" className="cyber-input pl-9" />
       </div>
 
       {/* Tabs */}

@@ -139,7 +139,7 @@ export default function CommandPalette({ open, onClose, onNavigate, permLevel = 
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('pal.placeholder', 'Jump to a page, group, or action…  (try “dev log”)')}
             aria-label={t('common.search', 'Search')}
-            className="flex-1 bg-transparent text-sm text-white placeholder:text-zinc-600 outline-none min-w-0"
+            className="flex-1 bg-transparent text-sm text-white placeholder:text-zinc-500 outline-none min-w-0"
           />
           {query ? (
             <button
@@ -159,20 +159,20 @@ export default function CommandPalette({ open, onClose, onNavigate, permLevel = 
           {ordered.length === 0 ? (
             <div className="px-3 py-10 text-center">
               <span className="w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center bg-white/[0.04] border border-white/[0.07]">
-                <SearchX size={20} className="text-zinc-600" />
+                <SearchX size={20} className="text-zinc-500" aria-hidden="true" />
               </span>
               <p className="text-sm font-semibold text-zinc-300">{t('pal.emptyTitle', 'No matching pages')}</p>
-              <p className="text-xs text-zinc-600 mt-1">
+              <p className="text-xs text-zinc-500 mt-1">
                 {query ? t('pal.emptyHintQuery', 'Nothing matches "{q}". Try a group like "music" or "security".').replace('{q}', query) : t('pal.emptyHint', 'Type to filter every dashboard desk.')}
               </p>
             </div>
           ) : (
             sections.map((section) => (
               <div key={section.key}>
-                <p className="flex items-center gap-1.5 px-2.5 pb-1.5 pt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">
+                <p className="flex items-center gap-1.5 px-2.5 pb-1.5 pt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-400">
                   {section.icon && <section.icon size={10} />}
                   {section.title}
-                  <span className="ml-auto text-[9px] tabular-nums text-zinc-600 bg-white/[0.04] border border-white/[0.06] rounded-md px-1.5 py-0.5">
+                  <span className="ml-auto text-[9px] tabular-nums text-zinc-500 bg-white/[0.04] border border-white/[0.06] rounded-md px-1.5 py-0.5">
                     {section.items.length}
                   </span>
                 </p>
@@ -236,7 +236,7 @@ export default function CommandPalette({ open, onClose, onNavigate, permLevel = 
           )}
         </div>
 
-        <div className="flex items-center gap-3 px-4 py-2.5 border-t border-white/[0.07] bg-white/[0.015] text-[10px] text-zinc-600">
+        <div className="flex items-center gap-3 px-4 py-2.5 border-t border-white/[0.07] bg-white/[0.015] text-[10px] text-zinc-500">
           <span className="inline-flex items-center gap-1.5"><span className="flex gap-0.5"><kbd className="kbd">↑</kbd><kbd className="kbd">↓</kbd></span> {t('pal.navigate', 'navigate')}</span>
           <span className="inline-flex items-center gap-1.5"><kbd className="kbd"><CornerDownLeft size={9} /></kbd> {t('pal.open', 'open')}</span>
           <span className="ml-auto tabular-nums">{ordered.length} {t('pal.results', 'results')}{query ? ` ${t('pal.for', 'for')} “${query}”` : ''}</span>

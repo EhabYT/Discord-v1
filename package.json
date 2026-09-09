@@ -72,5 +72,11 @@
   "overrides": {
     "esbuild": "^0.28.1",
     "qs": "^6.16.0"
+  },
+  "nodemonConfig": {
+    "watch": ["bot/src", "backend/src", "shared", "database/*.js", "config"],
+    "ignore": ["logs/*", "*.log", "database/ephemeral-fallback.json", "dashboard/*", "node_modules", ".git"],
+    "ext": "js,json",
+    "delay": 1500
   }
 }
