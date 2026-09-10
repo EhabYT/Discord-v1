@@ -24,14 +24,37 @@ const ALLOWED_LOGS = new Set([
 ]);
 
 const unlockHits = new Map();
+const UNLOCK_WINDOW_MS = 10 * 60 * 1000;
+const UNLOCK_MAX_FAILURES = 8;
 
-function rateUnlock(ip) {
+// Brute-force guard for the DEV_TOKEN second factor. Only *failed* attempts
+// consume the budget: a successful unlock resets the counter, so legitimate
+// developers are never locked out by their own earlier typos or by routine
+// lock/unlock cycles. Returns the remaining block in seconds, or null.
+function unlockBlocked(ip) {
+    const hit = unlockHits.get(ip);
+    if (!hit) return null;
+    if (Date.now() - hit.t > UNLOCK_WINDOW_MS) { unlockHits.delete(ip); return null; }
+    if (hit.n < UNLOCK_MAX_FAILURES) return null;
+    return Math.max(1, Math.ceil((hit.t + UNLOCK_WINDOW_MS - Date.now()) / 1000));
+}
+
+function unlockFailed(ip) {
     const now = Date.now();
     const hit = unlockHits.get(ip) || { n: 0, t: now };
-    if (now - hit.t > 10 * 60 * 1000) { hit.n = 0; hit.t = now; }
+    if (now - hit.t > UNLOCK_WINDOW_MS) { hit.n = 0; hit.t = now; }
     hit.n += 1;
     unlockHits.set(ip, hit);
-    return hit.n <= 8;
+    // Opportunistic sweep so distinct one-off IPs cannot grow the map forever.
+    if (unlockHits.size > 1000) {
+        for (const [key, value] of unlockHits) {
+            if (now - value.t > UNLOCK_WINDOW_MS) unlockHits.delete(key);
+        }
+    }
+}
+
+function unlockSucceeded(ip) {
+    unlockHits.delete(ip);
 }
 
 function tailFile(file, lines = 120) {
@@ -102,17 +125,27 @@ module.exports = (botClient) => {
 
     router.post('/unlock', (req, res) => {
         const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'x').split(',')[0].trim();
-        if (!rateUnlock(ip)) return res.status(429).json({ error: 'Too many unlock attempts' });
+        const retryAfter = unlockBlocked(ip);
+        if (retryAfter != null) {
+            res.set('Retry-After', String(retryAfter));
+            return res.status(429).json({
+                error: `Too many unlock attempts — try again in ${Math.max(1, Math.ceil(retryAfter / 60))} minute(s)`,
+                code: 'RATE_LIMITED',
+            });
+        }
         const base = baseSystemRole(req, botClient);
         const localBootstrap = process.env.NODE_ENV !== 'production' && isLoopback(req);
         if (base < SYSTEM_ROLES.DEVELOPER && !localBootstrap) {
+            unlockFailed(ip);
             if (req.session?.user?.id) recordDeveloperAction(req, 'developer.unlock', 'session', 'denied');
             return res.status(403).json({ error: 'Developer identity required', code: 'DEVELOPER_IDENTITY_REQUIRED' });
         }
         if (base !== SYSTEM_ROLES.SUPER_ADMIN && !tokenOk(req.body?.token)) {
+            unlockFailed(ip);
             if (req.session?.user?.id) recordDeveloperAction(req, 'developer.unlock', 'session', 'denied');
             return res.status(403).json({ error: 'Invalid developer token' });
         }
+        unlockSucceeded(ip);
         req.session.devUnlocked = true;
         req.systemRole = ROLE_NAMES[base === SYSTEM_ROLES.SUPER_ADMIN ? base : SYSTEM_ROLES.DEVELOPER];
         return req.session.save((err) => {
