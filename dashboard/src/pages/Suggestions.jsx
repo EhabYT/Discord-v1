@@ -122,12 +122,12 @@ export default function Suggestions({ guild, guildData }) {
         <StatCard icon={X} label="Denied" value={counts.denied} color="red" />
       </div>
 
-      <div className="seg-tabs">
-        <button onClick={() => setTab('inbox')} className={tab === 'inbox' ? 'seg-tab-active' : 'seg-tab'}>
-          <Inbox size={12} /> Inbox
+      <div className="seg-tabs" role="tablist" aria-label="Suggestions sections">
+        <button onClick={() => setTab('inbox')} role="tab" aria-selected={tab === 'inbox'} className={tab === 'inbox' ? 'seg-tab-active' : 'seg-tab'}>
+          <Inbox size={12} aria-hidden="true" /> Inbox
         </button>
-        <button onClick={() => setTab('settings')} className={tab === 'settings' ? 'seg-tab-active' : 'seg-tab'}>
-          <Settings size={12} /> Settings
+        <button onClick={() => setTab('settings')} role="tab" aria-selected={tab === 'settings'} className={tab === 'settings' ? 'seg-tab-active' : 'seg-tab'}>
+          <Settings size={12} aria-hidden="true" /> Settings
         </button>
       </div>
 
@@ -135,27 +135,27 @@ export default function Suggestions({ guild, guildData }) {
         <div className="space-y-4 animate-fade-in">
           <div className="cyber-card p-4 space-y-3">
             <p className="text-xs font-semibold text-white">Post as staff</p>
-            <textarea rows={3} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Write a suggestion…" className="cyber-input resize-none text-xs" />
+            <textarea rows={3} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Write a suggestion…" aria-label="Staff suggestion text" className="cyber-input resize-none text-xs" />
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <label className="flex items-center gap-2 text-[11px] text-zinc-500">
-                <input type="checkbox" checked={anon} onChange={(e) => setAnon(e.target.checked)} /> Anonymous
+              <label className="flex items-center gap-2 min-h-[32px] text-[11px] text-zinc-400 cursor-pointer select-none">
+                <input type="checkbox" checked={anon} onChange={(e) => setAnon(e.target.checked)} className="w-4 h-4 accent-cyan-400 flex-shrink-0" /> Anonymous
               </label>
               <button onClick={post} disabled={posting || !draft.trim()} className="cyber-button-solid text-xs flex items-center gap-1.5">
-                {posting ? <Loader size={12} className="animate-spin" /> : <Send size={12} />} Post
+                {posting ? <Loader size={12} className="animate-spin" aria-hidden="true" /> : <Send size={12} aria-hidden="true" />} Post
               </button>
             </div>
           </div>
 
-          <div className="flex gap-1.5 flex-wrap">
+          <div className="flex gap-1.5 flex-wrap" role="group" aria-label="Filter suggestions by status">
             {FILTERS.map((f) => (
-              <button key={f.id} onClick={() => setFilter(f.id)} className={filter === f.id ? 'seg-tab-active' : 'seg-tab'}>
+              <button key={f.id} onClick={() => setFilter(f.id)} aria-pressed={filter === f.id} className={filter === f.id ? 'seg-tab-active' : 'seg-tab'}>
                 {f.label}
               </button>
             ))}
           </div>
           <div className="relative">
-            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search suggestions…" className="cyber-input pl-9 text-xs" />
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search suggestions…" aria-label="Search suggestions" className="cyber-input pl-9 text-xs" />
           </div>
 
           {loading ? (
@@ -171,27 +171,29 @@ export default function Suggestions({ guild, guildData }) {
                       <p className="text-xs font-semibold text-white">#{s.id} · {s.anonymous ? 'Anonymous' : (s.authorTag || 'Member')}</p>
                       <p className="text-xs text-zinc-400 mt-1 leading-relaxed whitespace-pre-wrap">{s.message}</p>
                     </div>
-                    <span className={`text-[10px] uppercase tracking-wide ${s.status === 'approved' ? 'text-emerald-300' : s.status === 'denied' ? 'text-red-300' : 'text-amber-300'}`}>{s.status}</span>
+                    <span className={s.status === 'approved' ? 'cyber-badge-green uppercase' : s.status === 'denied' ? 'cyber-badge-red uppercase' : 'cyber-badge-yellow uppercase'}>{s.status}</span>
                   </div>
                   {s.status === 'pending' && (
                     <>
-                      <input value={note[s.id] || ''} onChange={(e) => setNote((n) => ({ ...n, [s.id]: e.target.value }))} placeholder="Staff note (optional)" className="cyber-input text-xs" />
+                      <input value={note[s.id] || ''} onChange={(e) => setNote((n) => ({ ...n, [s.id]: e.target.value }))} placeholder="Staff note (optional)" aria-label={`Staff note for suggestion ${s.id}`} className="cyber-input text-xs" />
                       <div className="flex gap-2 flex-wrap">
                         <button onClick={() => act(s.id, 'approve')} disabled={!!busy} className="cyber-button-success text-xs flex items-center gap-1.5">
-                          {busy === `approve-${s.id}` ? <Loader size={11} className="animate-spin" /> : <Check size={11} />} Approve
+                          {busy === `approve-${s.id}` ? <Loader size={11} className="animate-spin" aria-hidden="true" /> : <Check size={11} aria-hidden="true" />} Approve
                         </button>
                         <button onClick={() => act(s.id, 'deny')} disabled={!!busy} className="cyber-button text-xs text-red-300 flex items-center gap-1.5">
-                          {busy === `deny-${s.id}` ? <Loader size={11} className="animate-spin" /> : <X size={11} />} Deny
+                          {busy === `deny-${s.id}` ? <Loader size={11} className="animate-spin" aria-hidden="true" /> : <X size={11} aria-hidden="true" />} Deny
                         </button>
-                        <button onClick={() => setConfirm(s.id)} className="cyber-button text-xs text-zinc-500 flex items-center gap-1.5">
-                          <Trash2 size={11} /> Delete
+                        <button onClick={() => setConfirm(s.id)} className="cyber-button text-xs text-zinc-400 flex items-center gap-1.5" aria-label={`Delete suggestion ${s.id}`}>
+                          <Trash2 size={11} aria-hidden="true" /> Delete
                         </button>
                       </div>
                     </>
                   )}
                   {s.status !== 'pending' && (
                     <div className="flex justify-end">
-                      <button onClick={() => setConfirm(s.id)} className="text-zinc-600 hover:text-red-400"><Trash2 size={13} /></button>
+                      <button onClick={() => setConfirm(s.id)} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors" title="Delete suggestion" aria-label={`Delete suggestion ${s.id}`}>
+                        <Trash2 size={13} aria-hidden="true" />
+                      </button>
                     </div>
                   )}
                 </div>

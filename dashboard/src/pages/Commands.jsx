@@ -106,23 +106,25 @@ export default function Commands({ guild, permLevel = 0 }) {
 
       <div className="cyber-card p-4 space-y-3">
         <div className="relative">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search /fun meme, weather, blackjack…"
+            aria-label="Search slash commands"
             className="cyber-input pl-9 text-xs"
           />
         </div>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Command categories">
           {GROUPS.map((g) => (
             <button
               key={g.id}
               onClick={() => setTab(g.id)}
-              className={`text-[11px] px-2.5 py-1 rounded-lg border ${
+              aria-pressed={tab === g.id}
+              className={`text-[11px] font-medium px-3 py-2 min-h-[32px] rounded-lg border transition-all ${
                 tab === g.id
-                  ? 'border-cyan-400/40 bg-cyan-400/10 text-cyan-200'
-                  : 'border-white/10 text-zinc-500 hover:text-zinc-200'
+                  ? 'border-cyan-300/40 bg-cyan-400/10 text-cyan-200'
+                  : 'border-white/10 text-zinc-400 hover:text-zinc-200 hover:border-white/20'
               }`}
             >
               {g.label}
@@ -141,16 +143,18 @@ export default function Commands({ guild, permLevel = 0 }) {
                 <button
                   type="button"
                   onClick={() => setOpen(expanded ? null : c.name)}
+                  aria-expanded={expanded}
+                  aria-label={`${expanded ? 'Collapse' : 'Expand'} /${c.name} details`}
                   className="flex-1 min-w-0 text-left"
                 >
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-xs text-cyan-300">/{c.name}</span>
                     {hasSubs ? (
-                      <span className="text-[10px] text-zinc-600">{c.subs.length} subs</span>
+                      <span className="text-[10px] text-zinc-500 tabular-nums">{c.subs.length} subs</span>
                     ) : null}
-                    <ChevronDown size={12} className={`text-zinc-600 transition ${expanded ? 'rotate-180' : ''}`} />
+                    <ChevronDown size={12} className={`text-zinc-500 transition ${expanded ? 'rotate-180' : ''}`} aria-hidden="true" />
                   </div>
-                  {c.description && <p className="text-[11px] text-zinc-500 truncate mt-0.5">{c.description}</p>}
+                  {c.description && <p className="text-[11px] text-zinc-400 truncate mt-0.5">{c.description}</p>}
                 </button>
                 <button
                   type="button"
@@ -165,14 +169,16 @@ export default function Commands({ guild, permLevel = 0 }) {
                   type="button"
                   disabled={!canToggle}
                   onClick={() => toggle(c.name, !c.enabled)}
-                  className={`text-[11px] px-2 py-1 rounded-lg border ${
+                  aria-pressed={c.enabled}
+                  aria-label={`Turn /${c.name} ${c.enabled ? 'off' : 'on'} in this server`}
+                  className={`text-[11px] font-medium px-3 py-2 min-h-[32px] rounded-lg border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                     c.enabled
                       ? 'border-emerald-500/25 text-emerald-300'
                       : 'border-yellow-500/25 text-yellow-300'
-                  } ${!canToggle ? 'opacity-50' : ''}`}
+                  }`}
                   title={canToggle ? 'Toggle in this server' : 'Admin only'}
                 >
-                  <Power size={11} className="inline mr-1" />
+                  <Power size={11} className="inline mr-1" aria-hidden="true" />
                   {c.enabled ? 'On' : 'Off'}
                 </button>
               </div>
@@ -181,7 +187,7 @@ export default function Commands({ guild, permLevel = 0 }) {
                   {(c.subs || []).map((s) => (
                     <div key={s.name} className="flex items-baseline gap-2">
                       <span className="font-mono text-[11px] text-cyan-200/80">{s.name}</span>
-                      <span className="text-[11px] text-zinc-600 truncate">{s.description}</span>
+                      <span className="text-[11px] text-zinc-500 truncate">{s.description}</span>
                     </div>
                   ))}
                 </div>
@@ -190,7 +196,7 @@ export default function Commands({ guild, permLevel = 0 }) {
           );
         })}
         {filtered.length === 0 && (
-          <p className="text-xs text-zinc-600 text-center py-8">No commands match.</p>
+          <p className="text-xs text-zinc-500 text-center py-8">No commands match.</p>
         )}
       </div>
     </div>

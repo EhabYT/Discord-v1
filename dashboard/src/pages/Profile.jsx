@@ -595,7 +595,7 @@ export default function Profile({ account, discord, auth }) {
               </button>
             </div>
           )}
-          <p className="text-[10px] text-zinc-600 mt-3 leading-relaxed">{t('profile.photoHint', 'PNG, JPEG or WebP up to 2 MiB. Square-cropped server-side.')}</p>
+          <p className="text-[10px] text-zinc-500 mt-3 leading-relaxed">{t('profile.photoHint', 'PNG, JPEG or WebP up to 2 MiB. Square-cropped server-side.')}</p>
         </aside>
 
         {/* Main column */}
@@ -650,7 +650,7 @@ export default function Profile({ account, discord, auth }) {
                 <button disabled={busy === 'profile' || Boolean(usernameError)} className="cyber-button-solid inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                   <Save size={14} /> {busy === 'profile' ? t('profile.saving', 'Saving…') : t('profile.saveChanges', 'Save changes')}
                 </button>
-                <span className="text-[11px] text-zinc-600">{t('profile.cooldownNote', 'Username cooldown: once every 30 days.')}</span>
+                <span className="text-[11px] text-zinc-500">{t('profile.cooldownNote', 'Username cooldown: once every 30 days.')}</span>
               </div>
             </form>
 
@@ -679,7 +679,7 @@ export default function Profile({ account, discord, auth }) {
                   <button disabled={busy === 'email'} className="cyber-button text-xs inline-flex items-center gap-1.5 disabled:opacity-50">
                     <Mail size={13} /> {busy === 'email' ? t('profile.requesting', 'Requesting…') : t('profile.verifyNewEmail', 'Verify new email')}
                   </button>
-                  <p className="text-[11px] text-zinc-600 mt-1.5">{t('profile.emailHint', 'The new address replaces the current one only after verification.')}</p>
+                  <p className="text-[11px] text-zinc-500 mt-1.5">{t('profile.emailHint', 'The new address replaces the current one only after verification.')}</p>
                 </div>
               </form>
             </div>
@@ -698,7 +698,7 @@ export default function Profile({ account, discord, auth }) {
                 />
               </label>
               <div className="flex items-center justify-between gap-3 mt-1.5">
-                <p className={`text-[11px] tabular-nums ${bio.length >= BIO_MAX ? 'text-amber-300' : 'text-zinc-600'}`}>
+                <p className={`text-[11px] tabular-nums ${bio.length >= BIO_MAX ? 'text-amber-300' : 'text-zinc-500'}`}>
                   {bio.length}/{BIO_MAX}
                 </p>
                 <button onClick={saveBio} disabled={busy === 'bio'} className="cyber-button text-xs disabled:opacity-50">{busy === 'bio' ? t('profile.saving', 'Saving…') : t('profile.saveBio', 'Save bio')}</button>
@@ -806,7 +806,7 @@ export default function Profile({ account, discord, auth }) {
                     {activity.slice(0, 20).map((item, i) => (
                       <li key={`${item.at}-${i}`} className="flex items-center justify-between gap-3 text-[11px] border-b border-white/[0.05] pb-1.5">
                         <span className="text-zinc-400">{String(item.event).replaceAll('_', ' ')}</span>
-                        <time className="text-zinc-600 tabular-nums">{formatInZone(item.at, effectiveZone)}</time>
+                        <time className="text-zinc-500 tabular-nums">{formatInZone(item.at, effectiveZone)}</time>
                       </li>
                     ))}
                   </ul>
@@ -830,7 +830,7 @@ export default function Profile({ account, discord, auth }) {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-white">Discord</p>
                   {discord
-                    ? <p className="text-xs text-zinc-400 truncate mt-0.5">@{discord.username || discord.tag}{discord.id ? <span className="text-zinc-600 font-mono"> · {discord.id}</span> : null}</p>
+                    ? <p className="text-xs text-zinc-400 truncate mt-0.5">@{discord.username || discord.tag}{discord.id ? <span className="text-zinc-500 font-mono"> · {discord.id}</span> : null}</p>
                     : <p className="text-xs text-zinc-500 mt-0.5">{t('profile.discordNc', 'Not connected — Link Discord for server access to manage your servers.')}</p>}
                 </div>
                 {discord
@@ -934,7 +934,7 @@ export default function Profile({ account, discord, auth }) {
                 <CyanToggle enabled={notifications.marketing} onChange={(v) => setNotif('marketing', v)} label={t('profile.mktNotif', 'Marketing emails')} description={t('profile.mktNotifDesc', 'Feature drops and community spotlights. Off by default.')} />
               </div>
             </div>
-            <p className="text-[11px] text-zinc-600 flex items-center gap-1.5"><Bell size={11} /> {t('profile.prefsSync', 'Preferences sync to your account and follow you across devices.')}</p>
+            <p className="text-[11px] text-zinc-500 flex items-center gap-1.5"><Bell size={11} aria-hidden="true" /> {t('profile.prefsSync', 'Preferences sync to your account and follow you across devices.')}</p>
           </Section>
 
           {/* 5 — Danger zone */}

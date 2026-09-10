@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ScrollText, Circle, Filter, Trash2, WifiOff, Save, Pause, Play, Loader, Download } from 'lucide-react';
 import { getSocket, joinGuild, leaveGuild } from '../socket.js';
 import PageHeader from '../components/PageHeader.jsx';
+import EmptyState from '../components/EmptyState.jsx';
 import { useToast } from '../components/Toast.jsx';
 import api from '../api.js';
 
@@ -47,37 +48,37 @@ function LogEntry({ log }) {
   const borderColor = CAT_BORDER[log.category] || 'border-l-cyan-400';
   return (
     <div className={`flex gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] border-l-2 ${borderColor} animate-fade-in`}>
-      <span className="text-base flex-shrink-0 leading-none mt-0.5">{log.icon || '📋'}</span>
+      <span className="text-base flex-shrink-0 leading-none mt-0.5" aria-hidden="true">{log.icon || '📋'}</span>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <p className="text-xs font-semibold text-white">{log.title}</p>
           {log.channel && (
-            <span className="text-[10px] text-gray-600">#{log.channel.name}</span>
+            <span className="text-[10px] text-zinc-500">#{log.channel.name}</span>
           )}
         </div>
         {log.description && (
-          <p className="text-xs text-gray-500 mt-0.5 truncate">{log.description}</p>
+          <p className="text-xs text-zinc-400 mt-0.5 truncate">{log.description}</p>
         )}
         {log.before && (
           <div className="mt-1.5 grid grid-cols-2 gap-2">
             <div className="bg-red-500/[0.08] border border-red-500/20 rounded-lg p-1.5">
-              <p className="text-[10px] text-red-400 font-semibold mb-0.5">Before</p>
-              <p className="text-[10px] text-gray-400 truncate">{log.before}</p>
+              <p className="text-[10px] text-red-300 font-semibold mb-0.5">Before</p>
+              <p className="text-[10px] text-zinc-300 truncate">{log.before}</p>
             </div>
             <div className="bg-green-500/[0.08] border border-green-500/20 rounded-lg p-1.5">
-              <p className="text-[10px] text-green-400 font-semibold mb-0.5">After</p>
-              <p className="text-[10px] text-gray-400 truncate">{log.after}</p>
+              <p className="text-[10px] text-green-300 font-semibold mb-0.5">After</p>
+              <p className="text-[10px] text-zinc-300 truncate">{log.after}</p>
             </div>
           </div>
         )}
         {log.author && (
           <div className="flex items-center gap-1.5 mt-1">
             {log.author.avatar && <img src={log.author.avatar} alt="" className="w-4 h-4 rounded-full" />}
-            <span className="text-[10px] text-gray-600">{log.author.tag}</span>
+            <span className="text-[10px] text-zinc-500">{log.author.tag}</span>
           </div>
         )}
       </div>
-      <span className="text-[10px] text-gray-700 flex-shrink-0 tabular-nums">
+      <span className="text-[10px] text-zinc-500 flex-shrink-0 tabular-nums" title={log.timestamp ? new Date(log.timestamp).toLocaleString() : undefined}>
         {new Date(log.timestamp).toLocaleTimeString()}
       </span>
     </div>
@@ -173,21 +174,23 @@ export default function Logs({ guild, guildData }) {
   return (
     <div className="page-shell-sm animate-fade-in">
       <PageHeader icon={ScrollText} title="Live Logs" subtitle={`Real-time event stream for ${guild.name}`}>
-        <div className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-full border font-medium
-          ${connected ? 'text-green-400 border-green-500/30 bg-green-500/[0.08]' : 'text-red-400 border-red-500/30 bg-red-500/[0.08]'}`}>
+        <div className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 min-h-[36px] rounded-full border font-medium
+          ${connected ? 'text-green-300 border-green-500/30 bg-green-500/[0.08]' : 'text-red-300 border-red-500/30 bg-red-500/[0.08]'}`}>
           {connected
-            ? <><Circle size={7} className="fill-green-400 animate-pulse" /> Live</>
-            : <><WifiOff size={11} /> Offline</>}
+            ? <><Circle size={7} className="fill-green-400 animate-pulse" aria-hidden="true" /> Live</>
+            : <><WifiOff size={11} aria-hidden="true" /> Offline</>}
         </div>
         <button
           onClick={togglePause}
+          aria-pressed={paused}
+          aria-label={paused ? 'Resume event stream' : 'Pause event stream'}
           className={paused ? 'cyber-button-success flex items-center gap-1.5 text-xs py-1.5' : 'cyber-button flex items-center gap-1.5 text-xs py-1.5'}
         >
-          {paused ? <Play size={12} /> : <Pause size={12} />}
+          {paused ? <Play size={12} aria-hidden="true" /> : <Pause size={12} aria-hidden="true" />}
           {paused ? 'Resume' : 'Pause'}
         </button>
-        <button onClick={() => setConfigOpen(o => !o)} className="cyber-button flex items-center gap-1.5 text-xs py-1.5">
-          <Filter size={12} /> Log Channels
+        <button onClick={() => setConfigOpen(o => !o)} aria-expanded={configOpen} className="cyber-button flex items-center gap-1.5 text-xs py-1.5">
+          <Filter size={12} aria-hidden="true" /> Log Channels
         </button>
         {logs.length > 0 && (
           <>
@@ -210,10 +213,10 @@ export default function Logs({ guild, guildData }) {
               }}
               className="cyber-button flex items-center gap-1.5 text-xs py-1.5"
             >
-              <Download size={12} /> CSV
+              <Download size={12} aria-hidden="true" /> CSV
             </button>
-            <button onClick={() => setLogs([])} className="cyber-button flex items-center gap-1.5 text-xs py-1.5 text-red-400 hover:text-red-300 border-red-500/20 hover:border-red-500/40">
-              <Trash2 size={12} /> Clear
+            <button onClick={() => setLogs([])} aria-label="Clear displayed logs" className="cyber-button flex items-center gap-1.5 text-xs py-1.5 text-red-300 hover:text-red-200 border-red-500/20 hover:border-red-500/40">
+              <Trash2 size={12} aria-hidden="true" /> Clear
             </button>
           </>
         )}
@@ -224,12 +227,12 @@ export default function Logs({ guild, guildData }) {
         <div className="cyber-card p-5 mb-4 animate-fade-in">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-white">Log Channel Configuration</h3>
-            <p className="text-xs text-gray-600">Map event types to Discord channels</p>
+            <p className="text-xs text-zinc-500">Map event types to Discord channels</p>
           </div>
           <div className="grid md:grid-cols-2 gap-3 mb-4">
             {LOG_TYPES.map(({ key, label }) => (
               <div key={key}>
-                <label className="text-xs text-gray-500 block mb-1">{label}</label>
+                <label className="text-xs text-zinc-400 block mb-1">{label}</label>
                 <select
                   value={logConfig[key] || ''}
                   onChange={e => setLogConfig(c => ({ ...c, [key]: e.target.value || null }))}
@@ -242,7 +245,7 @@ export default function Logs({ guild, guildData }) {
             ))}
           </div>
           <button onClick={saveLogConfig} disabled={saving} className="cyber-button-solid flex items-center gap-2 text-xs">
-            {saving ? <Loader size={12} className="animate-spin" /> : <Save size={12} />}
+            {saving ? <Loader size={12} className="animate-spin" aria-hidden="true" /> : <Save size={12} aria-hidden="true" />}
             {saving ? 'Saving…' : 'Save Log Channels'}
           </button>
         </div>
@@ -278,31 +281,27 @@ export default function Logs({ guild, guildData }) {
       {/* Log stream */}
       <div className="glass-panel p-4">
         <div className="flex items-center gap-2 mb-3">
-          <span className="eb-panel-icon !w-7 !h-7"><ScrollText size={14} /></span>
+          <span className="eb-panel-icon !w-7 !h-7"><ScrollText size={14} aria-hidden="true" /></span>
           <span className="text-xs font-bold text-white">Event Stream</span>
           {paused && (
             <span className="cyber-badge-yellow ml-1">Paused</span>
           )}
-          <span className="text-xs text-gray-600 ml-auto tabular-nums">{filtered.length} / 300</span>
+          <span className="text-xs text-zinc-500 ml-auto tabular-nums">{filtered.length} / 300</span>
           {connected && !paused && (
-            <div className="flex items-center gap-1">
-              <Circle size={6} className="text-green-400 fill-green-400 animate-pulse" />
-              <span className="text-[10px] text-green-400">Live</span>
+            <div className="flex items-center gap-1" role="status" aria-label="Live stream connected">
+              <Circle size={6} className="text-green-400 fill-green-400 animate-pulse" aria-hidden="true" />
+              <span className="text-[10px] text-green-300">Live</span>
             </div>
           )}
         </div>
 
         <div className="space-y-1.5 max-h-[560px] overflow-y-auto pr-1">
           {filtered.length === 0 ? (
-            <div className="text-center py-14">
-              <ScrollText size={28} className="text-gray-700 mx-auto mb-2" />
-              <p className="text-sm text-gray-600">Waiting for events…</p>
-              <p className="text-xs text-gray-700 mt-1">
-                {connected
-                  ? `Events will appear here as they happen in ${guild.name}`
-                  : 'Reconnecting to live stream…'}
-              </p>
-            </div>
+            <EmptyState
+              icon={ScrollText}
+              title="Waiting for events…"
+              subtitle={connected ? `Events will appear here as they happen in ${guild.name}` : 'Reconnecting to live stream…'}
+            />
           ) : (
             filtered.map((log, i) => (
               <LogEntry key={`${log.timestamp}-${i}`} log={log} />

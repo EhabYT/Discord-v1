@@ -893,14 +893,15 @@ export default function Verification({ guild, guildData }) {
         <div className="space-y-4 animate-fade-in">
           <Section title="Find a member" icon={Search}>
             <div className="relative">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
               <input
                 value={memberQ}
                 onChange={(e) => setMemberQ(e.target.value)}
                 placeholder="Search username or ID to verify / unverify…"
+                aria-label="Search members to verify or unverify"
                 className="cyber-input pl-9 text-xs"
               />
-              {searching && <Loader size={13} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-cyan-300" />}
+              {searching && <Loader size={13} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-cyan-300" aria-hidden="true" />}
             </div>
             {found.length > 0 && (
               <div className="space-y-1.5">
@@ -960,9 +961,9 @@ export default function Verification({ guild, guildData }) {
                         : <div className="w-8 h-8 rounded-full bg-violet-500/15 text-violet-300 text-xs font-bold flex items-center justify-center">{(p.username || '?')[0]}</div>}
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold text-white truncate">{p.displayName || p.username}</p>
-                        <p className="text-[10px] text-zinc-600 tabular-nums">
+                        <p className="text-[10px] text-zinc-500 tabular-nums" title={p.joinedAt ? new Date(p.joinedAt).toLocaleString() : undefined}>
                           joined {timeAgo(p.joinedAt, t)}
-                          {left && <span className={left === 'overdue' ? ' text-red-400' : ' text-amber-300'}> · kick {left}</span>}
+                          {left && <span className={left === 'overdue' ? ' text-red-300' : ' text-amber-200'}> · kick {left}</span>}
                         </p>
                       </div>
                       <button
@@ -993,8 +994,8 @@ export default function Verification({ guild, guildData }) {
             }
           >
             <div className="relative">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
-              <input value={logQuery} onChange={(e) => setLogQuery(e.target.value)} placeholder="Search user, method, staff…" className="cyber-input pl-9 text-xs" />
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+              <input value={logQuery} onChange={(e) => setLogQuery(e.target.value)} placeholder="Search user, method, staff…" aria-label="Search verification log" className="cyber-input pl-9 text-xs" />
             </div>
             {filteredLog.length === 0 ? (
               <EmptyState icon={ScrollText} title="No verifications yet" subtitle="Button clicks and staff verifies show up here." />
@@ -1007,7 +1008,7 @@ export default function Verification({ guild, guildData }) {
                       : <div className="w-8 h-8 rounded-full bg-cyan-500/15 text-cyan-300 text-xs font-bold flex items-center justify-center">{(e.username || '?')[0]}</div>}
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-white truncate">{e.displayName || e.username}</p>
-                      <p className="text-[10px] text-zinc-600 tabular-nums">{e.by || 'self'} · {timeAgo(e.at, t)}</p>
+                      <p className="text-[10px] text-zinc-500 tabular-nums" title={e.at ? new Date(e.at).toLocaleString() : undefined}>{e.by || 'self'} · {timeAgo(e.at, t)}</p>
                     </div>
                     <span className="text-[10px] px-2 py-0.5 rounded-full border border-cyan-500/25 text-cyan-300 capitalize">{e.method || 'button'}</span>
                     <button

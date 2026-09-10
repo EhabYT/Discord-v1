@@ -348,16 +348,16 @@ export default function EmbedBuilder({ guild, guildData, permLevel }) {
         </div>
 
         {/* Timestamp toggle */}
-        <label className="flex items-center gap-3 cursor-pointer group">
-          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
-            embed.addTimestamp ? 'bg-cyan-500 border-cyan-500' : 'border-white/20 group-hover:border-cyan-500/40'
-          }`}
-            onClick={() => setEmbed(em => ({ ...em, addTimestamp: !em.addTimestamp }))}>
-            {embed.addTimestamp && <Check size={10} className="text-black" />}
-          </div>
+        <label className="flex items-center gap-3 cursor-pointer group min-h-[44px] select-none">
+          <input
+            type="checkbox"
+            checked={!!embed.addTimestamp}
+            onChange={e => setEmbed(em => ({ ...em, addTimestamp: e.target.checked }))}
+            className="w-4 h-4 rounded accent-cyan-500 flex-shrink-0"
+          />
           <div className="flex items-center gap-1.5">
-            <Clock size={12} className="text-gray-500" />
-            <span className="text-sm text-gray-400">Add current timestamp to footer</span>
+            <Clock size={12} className="text-zinc-500" aria-hidden="true" />
+            <span className="text-sm text-zinc-300">Add current timestamp to footer</span>
           </div>
         </label>
 
@@ -368,18 +368,18 @@ export default function EmbedBuilder({ guild, guildData, permLevel }) {
             {embed.fields.map((field, i) => (
               <div key={i} className="flex items-center gap-2 animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
                 <div className="flex flex-col gap-0.5 flex-shrink-0">
-                  <button onClick={() => moveField(i, -1)} disabled={i === 0}
-                    className="text-gray-700 hover:text-gray-400 disabled:opacity-20 transition-colors"><ChevronUp size={11} /></button>
-                  <button onClick={() => moveField(i, 1)} disabled={i === embed.fields.length - 1}
-                    className="text-gray-700 hover:text-gray-400 disabled:opacity-20 transition-colors"><ChevronDown size={11} /></button>
+                  <button onClick={() => moveField(i, -1)} disabled={i === 0} aria-label={`Move field ${i + 1} up`}
+                    className="w-7 h-7 flex items-center justify-center rounded-md text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.06] disabled:opacity-20 transition-colors"><ChevronUp size={12} aria-hidden="true" /></button>
+                  <button onClick={() => moveField(i, 1)} disabled={i === embed.fields.length - 1} aria-label={`Move field ${i + 1} down`}
+                    className="w-7 h-7 flex items-center justify-center rounded-md text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.06] disabled:opacity-20 transition-colors"><ChevronDown size={12} aria-hidden="true" /></button>
                 </div>
-                <input type="text" placeholder="Field name" value={field.name}
+                <input type="text" placeholder="Field name" aria-label={`Field ${i + 1} name`} value={field.name}
                   onChange={e => updField(i, 'name', e.target.value)} className="cyber-input text-xs flex-1" />
-                <input type="text" placeholder="Field value" value={field.value}
+                <input type="text" placeholder="Field value" aria-label={`Field ${i + 1} value`} value={field.value}
                   onChange={e => updField(i, 'value', e.target.value)} className="cyber-input text-xs flex-1" />
-                <label className="flex items-center gap-1 text-xs text-gray-500 cursor-pointer whitespace-nowrap flex-shrink-0">
+                <label className="flex items-center gap-1.5 min-h-[32px] text-xs text-zinc-400 cursor-pointer whitespace-nowrap flex-shrink-0 select-none">
                   <input type="checkbox" checked={field.inline}
-                    onChange={e => updField(i, 'inline', e.target.checked)} className="accent-cyan-400" />
+                    onChange={e => updField(i, 'inline', e.target.checked)} className="w-4 h-4 accent-cyan-400 flex-shrink-0" aria-label={`Field ${i + 1} inline`} />
                   Inline
                 </label>
                 <button onClick={() => delField(i)} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0" title={`Delete field ${i + 1}`} aria-label={`Delete field ${i + 1}`}>
@@ -393,15 +393,15 @@ export default function EmbedBuilder({ guild, guildData, permLevel }) {
         {/* Actions */}
         <div className="flex gap-2 pt-1 flex-wrap">
           <button onClick={addField} className="cyber-button flex items-center gap-1.5 text-xs">
-            <Plus size={12} /> Add Field
+            <Plus size={12} aria-hidden="true" /> Add Field
           </button>
           <button onClick={() => setEmbed({ ...BLANK, channelId: embed.channelId })}
-            className="cyber-button flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-300">
+            className="cyber-button flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-200">
             Clear
           </button>
           <button onClick={send} disabled={sending}
             className="cyber-button-solid flex items-center gap-2 ml-auto">
-            <Send size={14} />
+            <Send size={14} aria-hidden="true" />
             {sending ? 'Sending…' : 'Send Embed'}
           </button>
         </div>

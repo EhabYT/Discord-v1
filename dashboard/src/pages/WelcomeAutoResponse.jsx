@@ -206,7 +206,7 @@ export default function WelcomeAutoResponse({ guild, guildData }) {
     setTesting(false);
   };
 
-  if (!guild) return <div className="p-6 text-gray-500 text-sm">Select a server first.</div>;
+  if (!guild) return <div className="p-6 text-zinc-400 text-sm">Select a server first.</div>;
 
   const TABS = [
     { id: 'join',  label: 'Join Message',  icon: MessageSquare },
@@ -222,15 +222,15 @@ export default function WelcomeAutoResponse({ guild, guildData }) {
         subtitle={`Configure join/leave messages and DMs for ${guild.name}`}
       >
         <button onClick={save} disabled={saving} className="cyber-button-solid flex items-center gap-2">
-          {saving ? <Loader size={13} className="animate-spin" /> : <Save size={13} />}
+          {saving ? <Loader size={13} className="animate-spin" aria-hidden="true" /> : <Save size={13} aria-hidden="true" />}
           {saving ? 'Saving…' : 'Save All'}
         </button>
       </PageHeader>
 
-      <div className="seg-tabs">
+      <div className="seg-tabs" role="tablist" aria-label="Welcome message sections">
         {TABS.map(({ id, label, icon: Icon }) => (
-          <button key={id} onClick={() => setTab(id)} className={tab === id ? 'seg-tab-active' : 'seg-tab'}>
-            <Icon size={12} />{label}
+          <button key={id} onClick={() => setTab(id)} role="tab" aria-selected={tab === id} className={tab === id ? 'seg-tab-active' : 'seg-tab'}>
+            <Icon size={12} aria-hidden="true" />{label}
           </button>
         ))}
       </div>
@@ -304,10 +304,10 @@ export default function WelcomeAutoResponse({ guild, guildData }) {
                   <div>
                     <label className="cyber-label mb-1.5">Color</label>
                     <div className="flex gap-2 items-center">
-                      <input type="color" value={wEmbed.color}
+                      <input type="color" value={wEmbed.color} aria-label="Welcome embed color"
                         onChange={e => setWEmbed(em => ({ ...em, color: e.target.value }))}
-                        className="h-9 w-12 rounded-lg border border-cyan-500/20 cursor-pointer p-0.5 bg-transparent" />
-                      <input type="text" value={wEmbed.color} maxLength={7}
+                        className="h-10 w-14 rounded-lg border border-cyan-500/20 cursor-pointer p-1 bg-transparent" />
+                      <input type="text" value={wEmbed.color} maxLength={7} aria-label="Welcome embed color hex"
                         onChange={e => setWEmbed(em => ({ ...em, color: e.target.value }))}
                         className="cyber-input font-mono text-xs w-24" />
                     </div>

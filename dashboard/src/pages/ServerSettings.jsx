@@ -146,16 +146,16 @@ export default function ServerSettings({ guild, guildData, setGuildData }) {
 
       <div className="grid grid-cols-3 gap-3">
         <div className="cyber-card p-3 text-center">
-          <p className="text-xl font-bold text-white">{guild.memberCount?.toLocaleString?.() || '—'}</p>
-          <p className="text-[10px] text-zinc-600">Members</p>
+          <p className="text-xl font-bold text-white tabular-nums">{guild.memberCount?.toLocaleString?.() || '—'}</p>
+          <p className="text-[10px] text-zinc-500">Members</p>
         </div>
         <div className="cyber-card p-3 text-center">
-          <p className="text-xl font-bold text-cyan-300">{commands.length}</p>
-          <p className="text-[10px] text-zinc-600">Commands</p>
+          <p className="text-xl font-bold text-cyan-300 tabular-nums">{commands.length}</p>
+          <p className="text-[10px] text-zinc-500">Commands</p>
         </div>
         <div className="cyber-card p-3 text-center">
-          <p className="text-xl font-bold text-yellow-300">{disabledCount}</p>
-          <p className="text-[10px] text-zinc-600">Disabled</p>
+          <p className="text-xl font-bold text-yellow-300 tabular-nums">{disabledCount}</p>
+          <p className="text-[10px] text-zinc-500">Disabled</p>
         </div>
       </div>
 
@@ -174,15 +174,15 @@ export default function ServerSettings({ guild, guildData, setGuildData }) {
           </select>
         </div>
         <button onClick={saveGeneral} disabled={saving === 'general'} className="cyber-button-solid flex items-center gap-2 text-xs">
-          {saving === 'general' ? <RefreshCw size={12} className="animate-spin" /> : <Save size={12} />}
+          {saving === 'general' ? <RefreshCw size={12} className="animate-spin" aria-hidden="true" /> : <Save size={12} aria-hidden="true" />}
           Save options
         </button>
       </Section>
 
       <Section icon={Settings} title="Slash commands" desc="Disable a command in this server without removing it globally.">
         <div className="relative">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
-          <input value={cmdQuery} onChange={(e) => setCmdQuery(e.target.value)} placeholder="Filter commands…" className="cyber-input pl-9 text-xs" />
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+          <input value={cmdQuery} onChange={(e) => setCmdQuery(e.target.value)} placeholder="Filter commands…" aria-label="Filter slash commands" className="cyber-input pl-9 text-xs" />
         </div>
         <div className="max-h-64 overflow-y-auto grid sm:grid-cols-2 gap-1.5">
           {filteredCmds.map((c) => (
@@ -191,7 +191,7 @@ export default function ServerSettings({ guild, guildData, setGuildData }) {
               <input type="checkbox" checked={c.enabled} onChange={(e) => toggleCommand(c.name, e.target.checked)} className="accent-cyan-400" />
             </label>
           ))}
-          {filteredCmds.length === 0 && <p className="text-xs text-zinc-600 col-span-2 text-center py-4">No commands match.</p>}
+          {filteredCmds.length === 0 && <p className="text-xs text-zinc-500 col-span-2 text-center py-4">No commands match.</p>}
         </div>
       </Section>
 
@@ -200,24 +200,25 @@ export default function ServerSettings({ guild, guildData, setGuildData }) {
           <input
             type="text"
             placeholder="Pattern or word to block…"
+            aria-label="Word filter pattern"
             value={newFilter}
             onChange={(e) => setNewFilter(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addFilter()}
             className="cyber-input font-mono text-xs"
           />
-          <button onClick={addFilter} className="cyber-button-solid flex-shrink-0 flex items-center gap-1">
-            <Plus size={14} />
+          <button onClick={addFilter} aria-label="Add word filter" className="cyber-button-solid flex-shrink-0 flex items-center gap-1 min-h-[40px]">
+            <Plus size={14} aria-hidden="true" />
           </button>
         </div>
         {customFilters.length === 0 ? (
-          <p className="text-xs text-gray-600 text-center py-3">No custom filters added</p>
+          <p className="text-xs text-zinc-500 text-center py-3">No custom filters added</p>
         ) : (
           <div className="space-y-1.5 max-h-48 overflow-y-auto">
             {customFilters.map((f, i) => (
               <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.06]">
-                <code className="text-xs text-cyan-400 font-mono flex-1 truncate">{f}</code>
-                <button onClick={() => removeFilter(f)} className="text-gray-600 hover:text-red-400 transition-colors flex-shrink-0">
-                  <Trash2 size={12} />
+                <code className="text-xs text-cyan-300 font-mono flex-1 truncate">{f}</code>
+                <button onClick={() => removeFilter(f)} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0" title="Remove filter" aria-label={`Remove word filter ${f}`}>
+                  <Trash2 size={13} aria-hidden="true" />
                 </button>
               </div>
             ))}

@@ -93,23 +93,23 @@ export default function AutoResponder({ guild, guildData, permLevel }) {
 
       {/* How it works */}
       <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-cyan-500/[0.04] border border-cyan-500/[0.12]">
-        <MessageSquare size={15} className="text-cyan-400 flex-shrink-0 mt-0.5" />
-        <p className="text-xs text-gray-400 leading-relaxed">
-          When a message contains a <span className="text-cyan-400 font-mono">trigger phrase</span>, the bot immediately replies with the configured response. Matching is case-insensitive and partial (trigger phrase anywhere in the message).
+        <MessageSquare size={15} className="text-cyan-300 flex-shrink-0 mt-0.5" aria-hidden="true" />
+        <p className="text-xs text-zinc-300 leading-relaxed">
+          When a message contains a <span className="text-cyan-300 font-mono">trigger phrase</span>, the bot immediately replies with the configured response. Matching is case-insensitive and partial (trigger phrase anywhere in the message).
         </p>
       </div>
 
       {/* Add trigger form */}
       <div className="cyber-card p-5 space-y-4">
-        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
-          <Plus size={12} className="text-cyan-400" /> Add New Trigger
+        <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-wide flex items-center gap-2">
+          <Plus size={12} className="text-cyan-300" aria-hidden="true" /> Add New Trigger
         </h2>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="cyber-label mb-1.5 flex items-center gap-1">
-              <Hash size={10} /> Trigger Phrase
-            </label>
+        <label className="cyber-label mb-1.5 flex items-center gap-1">
+          <Hash size={10} aria-hidden="true" /> Trigger Phrase
+        </label>
             <input
               type="text"
               placeholder="e.g. !help, price, when launch"
@@ -156,13 +156,13 @@ export default function AutoResponder({ guild, guildData, permLevel }) {
           </div>
         )}
 
-        <label className="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer">
-          <input type="checkbox" checked={exact} onChange={(e) => setExact(e.target.checked)} className="accent-cyan-400" />
+        <label className="flex items-center gap-2 min-h-[32px] text-xs text-zinc-400 cursor-pointer select-none">
+          <input type="checkbox" checked={exact} onChange={(e) => setExact(e.target.checked)} className="w-4 h-4 accent-cyan-400 flex-shrink-0" />
           Exact match only (whole message must equal the trigger)
         </label>
         <button onClick={add} disabled={saving || !newTrigger.trim() || !newResponse.trim()}
           className="cyber-button-solid flex items-center gap-1.5 text-sm disabled:opacity-50">
-          <Plus size={14} /> Add Trigger
+          <Plus size={14} aria-hidden="true" /> Add Trigger
         </button>
       </div>
 

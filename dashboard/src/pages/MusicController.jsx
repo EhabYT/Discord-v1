@@ -314,7 +314,7 @@ export default function MusicController({ guild }) {
             ))}
           </select>
           <input
-            type="text" placeholder="Search YouTube, Spotify..."
+            type="text" placeholder="Search YouTube, Spotify..." aria-label="Search YouTube or Spotify for music"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && doSearch()}

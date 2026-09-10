@@ -61,7 +61,7 @@ export default function Tags({ guild }) {
     return items.filter((t) => `${t.name} ${t.content}`.toLowerCase().includes(q));
   }, [items, query]);
 
-  if (!guild) return <div className="p-6 text-zinc-500 text-sm">Select a server first.</div>;
+  if (!guild) return <div className="p-6 text-zinc-400 text-sm">Select a server first.</div>;
 
   return (
     <div className="page-shell-sm animate-fade-in">
@@ -71,25 +71,25 @@ export default function Tags({ guild }) {
 
       <div className="cyber-card p-5 space-y-3">
         <p className="text-xs font-semibold text-white">{editing ? `Edit · ${editing}` : 'New tag'}</p>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="name (faq, rules, links…)" className="cyber-input text-xs font-mono" disabled={!!editing} />
-        <textarea rows={4} value={content} onChange={(e) => setContent(e.target.value)} placeholder="Content members see with /tag get" className="cyber-input resize-none text-xs" />
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="name (faq, rules, links…)" aria-label="Tag name" className="cyber-input text-xs font-mono" disabled={!!editing} />
+        <textarea rows={4} value={content} onChange={(e) => setContent(e.target.value)} placeholder="Content members see with /tag get" aria-label="Tag content" className="cyber-input resize-none text-xs" />
         <div className="flex gap-2 flex-wrap">
           <button onClick={save} disabled={saving} className="cyber-button-solid text-xs flex items-center gap-1.5">
-            {saving ? <Loader size={12} className="animate-spin" /> : editing ? <Save size={12} /> : <Plus size={12} />}
+            {saving ? <Loader size={12} className="animate-spin" aria-hidden="true" /> : editing ? <Save size={12} aria-hidden="true" /> : <Plus size={12} aria-hidden="true" />}
             {editing ? 'Update' : 'Save tag'}
           </button>
           {editing && (
             <button onClick={() => { setEditing(''); setName(''); setContent(''); }} className="cyber-button text-xs">Cancel</button>
           )}
         </div>
-        <p className="text-[11px] text-zinc-600 inline-flex items-center gap-1.5">
-          <Info size={11} /> Members use <span className="font-mono text-cyan-200">/tag get name</span>
+        <p className="text-[11px] text-zinc-500 inline-flex items-center gap-1.5">
+          <Info size={11} aria-hidden="true" /> Members use <span className="font-mono text-cyan-200">/tag get name</span>
         </p>
       </div>
 
       <div className="relative">
-        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
-        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search tags…" className="cyber-input pl-9 text-xs" />
+        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search tags…" aria-label="Search tags" className="cyber-input pl-9 text-xs" />
       </div>
 
       {loading ? (

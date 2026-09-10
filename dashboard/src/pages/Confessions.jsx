@@ -94,12 +94,12 @@ export default function Confessions({ guild, guildData }) {
         <StatCard icon={Settings} label="Staff log" value={cfg.staffLog ? 'On' : 'Off'} color={cfg.staffLog ? 'yellow' : 'green'} />
       </div>
 
-      <div className="seg-tabs">
-        <button onClick={() => setTab('inbox')} className={tab === 'inbox' ? 'seg-tab-active' : 'seg-tab'}>
-          <Inbox size={12} /> Inbox
+      <div className="seg-tabs" role="tablist" aria-label="Confessions sections">
+        <button onClick={() => setTab('inbox')} role="tab" aria-selected={tab === 'inbox'} className={tab === 'inbox' ? 'seg-tab-active' : 'seg-tab'}>
+          <Inbox size={12} aria-hidden="true" /> Inbox
         </button>
-        <button onClick={() => setTab('settings')} className={tab === 'settings' ? 'seg-tab-active' : 'seg-tab'}>
-          <Settings size={12} /> Settings
+        <button onClick={() => setTab('settings')} role="tab" aria-selected={tab === 'settings'} className={tab === 'settings' ? 'seg-tab-active' : 'seg-tab'}>
+          <Settings size={12} aria-hidden="true" /> Settings
         </button>
       </div>
 
@@ -107,14 +107,14 @@ export default function Confessions({ guild, guildData }) {
         <div className="space-y-4 animate-fade-in">
           <div className="cyber-card p-4 space-y-3">
             <p className="text-xs font-semibold text-white">Post as staff (no cooldown)</p>
-            <textarea rows={3} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Anonymous confession…" className="cyber-input resize-none text-xs" />
+            <textarea rows={3} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Anonymous confession…" aria-label="Staff confession text" className="cyber-input resize-none text-xs" />
             <button onClick={post} disabled={posting || !draft.trim()} className="cyber-button-solid text-xs flex items-center gap-1.5">
-              {posting ? <Loader size={12} className="animate-spin" /> : <Send size={12} />} Post
+              {posting ? <Loader size={12} className="animate-spin" aria-hidden="true" /> : <Send size={12} aria-hidden="true" />} Post
             </button>
           </div>
           <div className="relative">
-            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search…" className="cyber-input pl-9 text-xs" />
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search…" aria-label="Search confessions" className="cyber-input pl-9 text-xs" />
           </div>
           {loading ? (
             <div className="space-y-2">{[...Array(3)].map((_, i) => <div key={i} className="h-16 skeleton rounded-xl" />)}</div>
@@ -126,11 +126,13 @@ export default function Confessions({ guild, guildData }) {
                 <div key={x.id} className="cyber-card p-4">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="text-[10px] text-zinc-600">#{x.id} · {new Date(x.createdAt).toLocaleString()}</p>
+                      <p className="text-[10px] text-zinc-500 tabular-nums">#{x.id} · {new Date(x.createdAt).toLocaleString()}</p>
                       <p className="text-xs text-zinc-300 mt-1 whitespace-pre-wrap">{x.message}</p>
-                      {x.authorTag && <p className="text-[10px] text-amber-300 mt-1">Staff log: {x.authorTag}</p>}
+                      {x.authorTag && <p className="text-[10px] text-amber-200 mt-1">Staff log: {x.authorTag}</p>}
                     </div>
-                    <button onClick={() => setConfirm(x.id)} className="text-zinc-600 hover:text-red-400"><Trash2 size={13} /></button>
+                    <button onClick={() => setConfirm(x.id)} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0" title="Delete confession" aria-label={`Delete confession ${x.id}`}>
+                      <Trash2 size={13} aria-hidden="true" />
+                    </button>
                   </div>
                 </div>
               ))}
@@ -142,7 +144,7 @@ export default function Confessions({ guild, guildData }) {
       {tab === 'settings' && (
         <div className="space-y-4 animate-fade-in">
           <div className="cyber-info">
-            <Info size={14} className="text-cyan-400 flex-shrink-0 mt-0.5" />
+            <Info size={14} className="text-cyan-300 flex-shrink-0 mt-0.5" aria-hidden="true" />
             <p className="text-xs text-zinc-400 leading-relaxed">
               <span className="font-mono text-cyan-200">/confess</span> stays anonymous in Discord. Staff log (off by default) only stores the author in this desk.
             </p>
@@ -168,7 +170,7 @@ export default function Confessions({ guild, guildData }) {
             </div>
             <CyanToggle enabled={!!cfg.staffLog} onChange={(v) => setCfg((c) => ({ ...c, staffLog: v }))} label="Staff log authors" description="Keep Discord anonymous, store author only here" />
             <button onClick={save} disabled={saving} className="cyber-button-solid flex items-center gap-2">
-              {saving ? <Loader size={13} className="animate-spin" /> : <Save size={13} />} Save
+              {saving ? <Loader size={13} className="animate-spin" aria-hidden="true" /> : <Save size={13} aria-hidden="true" />} Save
             </button>
           </div>
         </div>

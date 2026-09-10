@@ -96,7 +96,7 @@ function AuditEntry({ item, isLast }) {
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="text-[10px] text-zinc-500 tabular-nums">{timeAgo(item.timestamp, t)}</span>
+            <span className="text-[10px] text-zinc-500 tabular-nums" title={item.timestamp ? new Date(item.timestamp).toLocaleString() : undefined}>{timeAgo(item.timestamp, t)}</span>
             {hasReason && (
               <button
                 onClick={() => setExpanded(e => !e)}

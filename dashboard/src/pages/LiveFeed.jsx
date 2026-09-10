@@ -44,19 +44,19 @@ function EventRow({ event }) {
           <span className="text-sm font-semibold text-white">{event.user || 'Unknown'}</span>
           <span className={`text-xs font-medium ${meta.color}`}>{meta.label}</span>
           {event.guildName && (
-            <span className="text-[10px] text-gray-600 truncate">in {event.guildName}</span>
+            <span className="text-[10px] text-zinc-500 truncate">in {event.guildName}</span>
           )}
         </div>
         {event.description && (
-          <p className="text-xs text-gray-400 mt-0.5 truncate">{event.description}</p>
+          <p className="text-xs text-zinc-400 mt-0.5 truncate">{event.description}</p>
         )}
         {event.channel && (
-          <p className="text-[10px] text-gray-600 mt-0.5">#{event.channel}</p>
+          <p className="text-[10px] text-zinc-500 mt-0.5">#{event.channel}</p>
         )}
       </div>
 
       {/* Time */}
-      <span className="text-[10px] text-gray-600 flex-shrink-0 mt-1 tabular-nums">{timeAgo(event.ts, t)}</span>
+      <span className="text-[10px] text-zinc-500 flex-shrink-0 mt-1 tabular-nums" title={event.ts ? new Date(event.ts).toLocaleString() : undefined}>{timeAgo(event.ts, t)}</span>
     </div>
   );
 }

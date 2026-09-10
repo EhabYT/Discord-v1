@@ -415,6 +415,13 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
+  // Reset the content scroll on navigation: the <main> element persists across
+  // pages, so without this a long list (Members) leaves the next page
+  // (Overview) starting mid-scroll. Instant jump respects reduced-motion.
+  useEffect(() => {
+    document.getElementById('main')?.scrollTo({ top: 0 });
+  }, [page, selectedGuild]);
+
   useEffect(() => {
     const title = PAGE_TITLES[page] || (page === 'home' ? 'Home' : 'Dashboard');
     const guild = selectedGuild?.name ? ` · ${selectedGuild.name}` : '';

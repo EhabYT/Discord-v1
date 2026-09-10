@@ -103,15 +103,15 @@ export default function StaffBoard({ guild, guildData }) {
         <StatCard icon={Clock} label="Reminders" value={rems.length} color="yellow" />
       </div>
 
-      <div className="seg-tabs">
-        <button onClick={() => setTab('announce')} className={tab === 'announce' ? 'seg-tab-active' : 'seg-tab'}><Megaphone size={12} /> Announce</button>
-        <button onClick={() => setTab('afk')} className={tab === 'afk' ? 'seg-tab-active' : 'seg-tab'}><Moon size={12} /> AFK</button>
-        <button onClick={() => setTab('reminders')} className={tab === 'reminders' ? 'seg-tab-active' : 'seg-tab'}><Clock size={12} /> Reminders</button>
+      <div className="seg-tabs" role="tablist" aria-label="Staff board sections">
+        <button onClick={() => setTab('announce')} role="tab" aria-selected={tab === 'announce'} className={tab === 'announce' ? 'seg-tab-active' : 'seg-tab'}><Megaphone size={12} aria-hidden="true" /> Announce</button>
+        <button onClick={() => setTab('afk')} role="tab" aria-selected={tab === 'afk'} className={tab === 'afk' ? 'seg-tab-active' : 'seg-tab'}><Moon size={12} aria-hidden="true" /> AFK</button>
+        <button onClick={() => setTab('reminders')} role="tab" aria-selected={tab === 'reminders'} className={tab === 'reminders' ? 'seg-tab-active' : 'seg-tab'}><Clock size={12} aria-hidden="true" /> Reminders</button>
       </div>
 
       <div className="relative">
-        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
-        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search…" className="cyber-input pl-9 text-xs" />
+        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search…" aria-label="Search staff board" className="cyber-input pl-9 text-xs" />
       </div>
 
       {tab === 'announce' && (
@@ -130,15 +130,15 @@ export default function StaffBoard({ guild, guildData }) {
                 <input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} className="cyber-input text-xs" />
               </div>
             </div>
-            <textarea rows={4} value={form.message} onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))} placeholder="Announcement text…" className="cyber-input resize-none text-xs" />
-            <label className="flex items-center gap-2 text-[11px] text-zinc-500">
-              <input type="checkbox" checked={form.ping} onChange={(e) => setForm((f) => ({ ...f, ping: e.target.checked }))} /> Ping @everyone
+            <textarea rows={4} value={form.message} onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))} placeholder="Announcement text…" aria-label="Announcement text" className="cyber-input resize-none text-xs" />
+            <label className="flex items-center gap-2 min-h-[32px] text-[11px] text-zinc-400 cursor-pointer select-none">
+              <input type="checkbox" checked={form.ping} onChange={(e) => setForm((f) => ({ ...f, ping: e.target.checked }))} className="w-4 h-4 accent-cyan-400 flex-shrink-0" /> Ping @everyone
             </label>
             <button onClick={sendAnn} disabled={sending} className="cyber-button-solid text-xs flex items-center gap-1.5">
-              {sending ? <Loader size={12} className="animate-spin" /> : <Send size={12} />} Post
+              {sending ? <Loader size={12} className="animate-spin" aria-hidden="true" /> : <Send size={12} aria-hidden="true" />} Post
             </button>
-            <p className="text-[11px] text-zinc-600 inline-flex items-center gap-1.5">
-              <Info size={11} /> Also works via <span className="font-mono text-cyan-200">/announce</span>
+            <p className="text-[11px] text-zinc-500 inline-flex items-center gap-1.5">
+              <Info size={11} aria-hidden="true" /> Also works via <span className="font-mono text-cyan-200">/announce</span>
             </p>
           </div>
           {loading ? <div className="space-y-2">{[...Array(2)].map((_, i) => <div key={i} className="h-14 skeleton rounded-xl" />)}</div>
@@ -161,7 +161,7 @@ export default function StaffBoard({ guild, guildData }) {
       {tab === 'afk' && (
         <div className="space-y-3 animate-fade-in">
           <div className="cyber-info">
-            <Info size={14} className="text-cyan-400 flex-shrink-0 mt-0.5" />
+            <Info size={14} className="text-cyan-300 flex-shrink-0 mt-0.5" aria-hidden="true" />
             <p className="text-xs text-zinc-400">Members set AFK with <span className="font-mono text-cyan-200">/afk</span>. Clearing here removes the status.</p>
           </div>
           {loading ? <div className="space-y-2">{[...Array(2)].map((_, i) => <div key={i} className="h-12 skeleton rounded-xl" />)}</div>
@@ -184,15 +184,15 @@ export default function StaffBoard({ guild, guildData }) {
           <div className="cyber-card p-5 space-y-3">
             <p className="text-xs font-semibold text-white">Set a reminder</p>
             <div className="grid md:grid-cols-3 gap-3">
-              <select value={remForm.channelId} onChange={(e) => setRemForm((f) => ({ ...f, channelId: e.target.value }))} className="cyber-select">
+              <select value={remForm.channelId} onChange={(e) => setRemForm((f) => ({ ...f, channelId: e.target.value }))} aria-label="Reminder channel" className="cyber-select">
                 <option value="">Channel</option>
                 {channels.map((c) => <option key={c.id} value={c.id}>#{c.name}</option>)}
               </select>
-              <input value={remForm.time} onChange={(e) => setRemForm((f) => ({ ...f, time: e.target.value }))} placeholder="10m / 1h / 1d" className="cyber-input text-xs font-mono" />
-              <input value={remForm.reason} onChange={(e) => setRemForm((f) => ({ ...f, reason: e.target.value }))} placeholder="What?" className="cyber-input text-xs" />
+              <input value={remForm.time} onChange={(e) => setRemForm((f) => ({ ...f, time: e.target.value }))} placeholder="10m / 1h / 1d" aria-label="Reminder delay, for example 10m, 1h or 1d" className="cyber-input text-xs font-mono" />
+              <input value={remForm.reason} onChange={(e) => setRemForm((f) => ({ ...f, reason: e.target.value }))} placeholder="What?" aria-label="Reminder message" className="cyber-input text-xs" />
             </div>
             <button onClick={addRem} disabled={sending} className="cyber-button-solid text-xs flex items-center gap-1.5">
-              {sending ? <Loader size={12} className="animate-spin" /> : <Clock size={12} />} Remind
+              {sending ? <Loader size={12} className="animate-spin" aria-hidden="true" /> : <Clock size={12} aria-hidden="true" />} Remind
             </button>
           </div>
           {loading ? <div className="h-12 skeleton rounded-xl" />
@@ -201,7 +201,7 @@ export default function StaffBoard({ guild, guildData }) {
               <div key={`${x.userId}-${x.index}-${x.expiresAt}`} className="cyber-card p-3 flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-xs text-white truncate">{x.reason}</p>
-                  <p className="text-[10px] text-zinc-600">{new Date(x.expiresAt).toLocaleString()}</p>
+                  <p className="text-[10px] text-zinc-500 tabular-nums">{new Date(x.expiresAt).toLocaleString()}</p>
                 </div>
                 <button onClick={() => setConfirm({ kind: 'rem', userId: x.userId, index: x.index })} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0" title="Remove reminder" aria-label="Remove reminder">
                   <Trash2 size={13} aria-hidden="true" />

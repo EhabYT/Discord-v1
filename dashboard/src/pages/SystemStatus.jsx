@@ -149,18 +149,18 @@ export default function SystemStatus({ pageHint, onNavigate, developerAccess = {
         <div className="flex items-center gap-2">
           {stats && (
             <div className={`flex items-center gap-1.5 text-xs font-medium ${pingColor(stats.ping)}`}>
-              <Circle size={6} className="fill-current animate-pulse" />
+              <Circle size={6} className="fill-current animate-pulse" aria-hidden="true" />
               {pingLabel(stats.ping)}
             </div>
           )}
           <button onClick={refresh} disabled={busy} className="cyber-button inline-flex items-center gap-2">
-            <RefreshCw size={14} className={busy ? 'animate-spin' : ''} />
+            <RefreshCw size={14} className={busy ? 'animate-spin' : ''} aria-hidden="true" />
             {t('sys.refresh', 'Refresh')}
           </button>
         </div>
       </PageHeader>
 
-      {error && <div className="cyber-warning text-sm text-amber-200">{error}</div>}
+      {error && <div className="cyber-warning text-sm text-amber-200" role="alert">{error}</div>}
 
       <section className="cyber-card-accent mesh-glow p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden">
         <div className="relative">
@@ -175,18 +175,18 @@ export default function SystemStatus({ pageHint, onNavigate, developerAccess = {
             ? 'border-emerald-300/30 bg-emerald-400/10 text-emerald-200 shadow-[0_0_24px_rgba(52,211,153,0.12)]'
             : 'border-amber-300/30 bg-amber-400/10 text-amber-200 shadow-[0_0_24px_rgba(250,204,21,0.12)]'
         }`}>
-          <span className="relative flex w-2 h-2">
+          <span className="relative flex w-2 h-2" aria-hidden="true">
             <span className={`absolute inline-flex h-full w-full rounded-full opacity-60 animate-ping ${snapshot?.status === 'ready' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
             <span className={`relative inline-flex rounded-full h-2 w-2 ${snapshot?.status === 'ready' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
           </span>
-          {snapshot?.status === 'ready' ? <CheckCircle2 size={15} /> : <XCircle size={15} />}
+          {snapshot?.status === 'ready' ? <CheckCircle2 size={15} aria-hidden="true" /> : <XCircle size={15} aria-hidden="true" />}
           {snapshot?.status === 'ready' ? t('sys.ready', 'Ready') : t('sys.degraded', 'Degraded')}
         </span>
       </section>
 
       {snapshot?.botBootstrap && snapshot.botBootstrap.state !== 'ready' && (
         <section className="cyber-info">
-          <Bot size={17} className="text-cyan-300 flex-shrink-0 mt-0.5" />
+          <Bot size={17} className="text-cyan-300 flex-shrink-0 mt-0.5" aria-hidden="true" />
           <div>
             <p className="text-sm font-semibold text-cyan-100">
               {t('sys.recovery', 'Bot recovery state')}: {snapshot.botBootstrap.state}

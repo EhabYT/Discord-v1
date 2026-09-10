@@ -115,8 +115,8 @@ export default function Birthdays({ guild, guildData }) {
       {tab === 'list' && (
         <div className="space-y-4 animate-fade-in">
           <div className="relative">
-            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search member…" className="cyber-input pl-9 text-xs" />
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search member…" aria-label="Search birthdays by member" className="cyber-input pl-9 text-xs" />
           </div>
           {loading ? (
             <div className="space-y-2">{[...Array(4)].map((_, i) => <div key={i} className="h-14 skeleton rounded-xl" />)}</div>
@@ -131,7 +131,7 @@ export default function Birthdays({ guild, guildData }) {
                     : <div className="w-8 h-8 rounded-full bg-pink-500/15 text-pink-300 text-xs font-bold flex items-center justify-center">{(e.username || '?')[0]}</div>}
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold text-white truncate">{e.username}</p>
-                    <p className="text-[10px] text-zinc-600">
+                    <p className="text-[10px] text-zinc-500 tabular-nums">
                       {MONTHS[(e.month || 1) - 1]} {e.day}
                       {e.today ? ' · TODAY' : ` · in ${e.days}d`}
                     </p>
@@ -149,7 +149,7 @@ export default function Birthdays({ guild, guildData }) {
       {tab === 'settings' && (
         <div className="space-y-4 animate-fade-in">
           <div className="cyber-info">
-            <Info size={14} className="text-cyan-400 flex-shrink-0 mt-0.5" />
+            <Info size={14} className="text-cyan-300 flex-shrink-0 mt-0.5" aria-hidden="true" />
             <p className="text-xs text-zinc-400 leading-relaxed">
               The bot checks every hour. Role is given for 24h. Members register with <span className="font-mono text-cyan-200">/birthday set</span>.
               Variables: {'{user}'} {'{name}'}
@@ -184,10 +184,10 @@ export default function Birthdays({ guild, guildData }) {
             </div>
             <div className="flex gap-2">
               <button onClick={save} disabled={saving} className="cyber-button-solid flex items-center gap-2">
-                {saving ? <Loader size={13} className="animate-spin" /> : <Save size={13} />} Save
+                {saving ? <Loader size={13} className="animate-spin" aria-hidden="true" /> : <Save size={13} aria-hidden="true" />} Save
               </button>
               <button onClick={test} disabled={testing || !cfg.channelId} className="cyber-button flex items-center gap-2">
-                {testing ? <Loader size={13} className="animate-spin" /> : <Send size={13} />} Test
+                {testing ? <Loader size={13} className="animate-spin" aria-hidden="true" /> : <Send size={13} aria-hidden="true" />} Test
               </button>
             </div>
           </div>

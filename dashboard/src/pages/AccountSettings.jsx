@@ -21,21 +21,21 @@ export default function AccountSettings() {
       <section className="grid sm:grid-cols-2 gap-3">
         {cards.map(({ href, icon: Icon, title, text }) => (
           <a key={href} href={href} className="cyber-card-hover p-5 flex items-start gap-3">
-            <span className="w-10 h-10 rounded-xl bg-cyan-400/10 text-cyan-300 flex items-center justify-center flex-shrink-0"><Icon size={18} /></span>
+            <span className="w-10 h-10 rounded-xl bg-cyan-400/10 text-cyan-300 flex items-center justify-center flex-shrink-0"><Icon size={18} aria-hidden="true" /></span>
             <span className="min-w-0 flex-1">
               <span className="font-semibold text-white">{title}</span>
-              <span className="block text-xs text-zinc-500 mt-1 leading-relaxed">{text}</span>
+              <span className="block text-xs text-zinc-400 mt-1 leading-relaxed">{text}</span>
             </span>
-            <ChevronRight size={15} className="text-zinc-600 mt-1 flex-shrink-0" />
+            <ChevronRight size={15} className="text-zinc-500 mt-1 flex-shrink-0" aria-hidden="true" />
           </a>
         ))}
         <a href="/settings/security" className="cyber-card-hover p-5 flex items-start gap-3 sm:col-span-2">
-          <span className="w-10 h-10 rounded-xl bg-cyan-400/10 text-cyan-300 flex items-center justify-center flex-shrink-0"><ShieldCheck size={18} /></span>
+          <span className="w-10 h-10 rounded-xl bg-cyan-400/10 text-cyan-300 flex items-center justify-center flex-shrink-0"><ShieldCheck size={18} aria-hidden="true" /></span>
           <span className="min-w-0 flex-1">
             <span className="font-semibold text-white">{t('aset.log', 'Security log')}</span>
-            <span className="block text-xs text-zinc-500 mt-1 leading-relaxed">{t('aset.logText', 'MFA, recovery codes, full session inventory, activity trail and deactivation.')}</span>
+            <span className="block text-xs text-zinc-400 mt-1 leading-relaxed">{t('aset.logText', 'MFA, recovery codes, full session inventory, activity trail and deactivation.')}</span>
           </span>
-          <ChevronRight size={15} className="text-zinc-600 mt-1 flex-shrink-0" />
+          <ChevronRight size={15} className="text-zinc-500 mt-1 flex-shrink-0" aria-hidden="true" />
         </a>
       </section>
       <section className="cyber-card p-5 grid sm:grid-cols-3 gap-3 text-center">

@@ -76,7 +76,7 @@ export default function Polls({ guild, guildData }) {
     return items.filter((p) => !q || `${p.question} ${p.id}`.toLowerCase().includes(q));
   }, [items, query]);
 
-  if (!guild) return <div className="p-6 text-zinc-500 text-sm">Select a server first.</div>;
+  if (!guild) return <div className="p-6 text-zinc-400 text-sm">Select a server first.</div>;
 
   return (
     <div className="page-shell-sm animate-fade-in">
@@ -109,19 +109,19 @@ export default function Polls({ guild, guildData }) {
             </select>
           </div>
         </div>
-        <input value={form.question} onChange={(e) => setForm((f) => ({ ...f, question: e.target.value }))} placeholder="Question" className="cyber-input text-xs" />
-        <input value={form.options} onChange={(e) => setForm((f) => ({ ...f, options: e.target.value }))} placeholder="Options separated by |  (empty = Yes / No)" className="cyber-input text-xs" />
+        <input value={form.question} onChange={(e) => setForm((f) => ({ ...f, question: e.target.value }))} placeholder="Question" aria-label="Poll question" className="cyber-input text-xs" />
+        <input value={form.options} onChange={(e) => setForm((f) => ({ ...f, options: e.target.value }))} placeholder="Options separated by |  (empty = Yes / No)" aria-label="Poll options separated by vertical bar" className="cyber-input text-xs" />
         <button onClick={create} disabled={creating} className="cyber-button-solid text-xs flex items-center gap-1.5">
-          {creating ? <Loader size={12} className="animate-spin" /> : <Plus size={12} />} Post poll
+          {creating ? <Loader size={12} className="animate-spin" aria-hidden="true" /> : <Plus size={12} aria-hidden="true" />} Post poll
         </button>
-        <p className="text-[11px] text-zinc-600 inline-flex items-center gap-1.5">
-          <Info size={11} /> Also works via <span className="font-mono text-cyan-200">/poll</span> in Discord.
+        <p className="text-[11px] text-zinc-500 inline-flex items-center gap-1.5">
+          <Info size={11} aria-hidden="true" /> Also works via <span className="font-mono text-cyan-200">/poll</span> in Discord.
         </p>
       </div>
 
       <div className="relative">
-        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
-        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search polls…" className="cyber-input pl-9 text-xs" />
+        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search polls…" aria-label="Search polls" className="cyber-input pl-9 text-xs" />
       </div>
 
       {loading ? (
@@ -135,7 +135,7 @@ export default function Polls({ guild, guildData }) {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-xs font-semibold text-white truncate">{p.question}</p>
-                  <p className="text-[10px] text-zinc-600 mt-0.5">
+                  <p className="text-[10px] text-zinc-500 mt-0.5 tabular-nums">
                     #{p.id} · {p.closed ? 'closed' : 'open'}
                     {p.endsAt && !p.closed ? ` · ends ${new Date(p.endsAt).toLocaleString()}` : ''}
                   </p>
@@ -152,7 +152,7 @@ export default function Polls({ guild, guildData }) {
                         <span>{o.emoji} {o.text}</span>
                         <span className="tabular-nums">{votes}</span>
                       </div>
-                      <div className="h-1 rounded-full bg-white/10 mt-0.5 overflow-hidden">
+                      <div className="h-1 rounded-full bg-white/10 mt-0.5 overflow-hidden" aria-hidden="true">
                         <div className="h-full bg-cyan-400/70" style={{ width: `${Math.round((votes / max) * 100)}%` }} />
                       </div>
                     </div>

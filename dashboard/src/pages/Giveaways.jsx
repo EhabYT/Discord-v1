@@ -172,8 +172,8 @@ function GiveawayCard({ g, channels, roles, onEnd, onReroll, onDelete, onDuplica
                 #{chanName}
               </span>
               <span className="flex items-center gap-1.5 text-xs">
-                <Clock size={10} className={isActive ? 'text-cyan-500/60' : 'text-gray-600'} />
-                <span className={isActive ? 'text-cyan-400 font-mono text-[11px]' : 'text-gray-500'}>
+                <Clock size={10} className={isActive ? 'text-cyan-500/60' : 'text-zinc-500'} aria-hidden="true" />
+                <span className={isActive ? 'text-cyan-300 font-mono text-[11px] tabular-nums' : 'text-zinc-400'} title={g.endsAt ? new Date(g.endsAt).toLocaleString() : undefined}>
                   {isActive ? left : `Ended ${new Date(g.endsAt).toLocaleDateString()}`}
                 </span>
               </span>
@@ -204,23 +204,24 @@ function GiveawayCard({ g, channels, roles, onEnd, onReroll, onDelete, onDuplica
             <button
               onClick={() => onReroll(g.id)}
               disabled={actionPending === rerollId}
-              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400 transition-all disabled:opacity-40">
-              <RotateCcw size={11} className={actionPending === rerollId ? 'animate-spin' : ''} />
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 min-h-[36px] rounded-lg bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+              <RotateCcw size={11} className={actionPending === rerollId ? 'animate-spin' : ''} aria-hidden="true" />
               {actionPending === rerollId ? 'Rolling…' : 'Reroll'}
             </button>
             {isActive && (
               <button
                 onClick={() => onEnd(g.id)}
                 disabled={actionPending === endingId}
-                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 transition-all disabled:opacity-40">
-                <Square size={11} />
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 min-h-[36px] rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                <Square size={11} aria-hidden="true" />
                 {actionPending === endingId ? 'Ending…' : 'End Early'}
               </button>
             )}
             <button
               onClick={() => setExpanded(v => !v)}
-              className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.07] border border-white/[0.07] text-gray-500 hover:text-gray-300 transition-all">
-              {expanded ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+              aria-expanded={expanded}
+              className="flex items-center gap-1 text-xs px-3 py-1.5 min-h-[36px] rounded-lg bg-white/[0.04] hover:bg-white/[0.07] border border-white/[0.07] text-zinc-400 hover:text-zinc-200 transition-all">
+              {expanded ? <ChevronUp size={11} aria-hidden="true" /> : <ChevronDown size={11} aria-hidden="true" />}
               {expanded ? 'Less' : 'More'}
             </button>
           </div>
@@ -548,7 +549,7 @@ export default function Giveaways({ guild, guildData, permLevel }) {
       )}
 
       <div className="relative">
-        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search prizes…" className="cyber-input text-xs" />
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search prizes…" aria-label="Search giveaways by prize" className="cyber-input text-xs" />
       </div>
 
       {/* Stats row */}
@@ -584,7 +585,7 @@ export default function Giveaways({ guild, guildData, permLevel }) {
                 className="cyber-input" />
             </div>
             <div>
-              <label className="cyber-label mb-1.5">Description <span className="text-gray-600">(optional)</span></label>
+              <label className="cyber-label mb-1.5">Description <span className="text-zinc-500">(optional)</span></label>
               <textarea rows={2} placeholder="Extra info about the giveaway…"
                 value={form.description}
                 onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
@@ -599,7 +600,7 @@ export default function Giveaways({ guild, guildData, permLevel }) {
                   onChange={v => setForm(f => ({ ...f, duration: v }))} />
               </div>
               <div>
-                <label className="cyber-label mb-1.5">Winners <span className="text-gray-600">(1–20)</span></label>
+                <label className="cyber-label mb-1.5">Winners <span className="text-zinc-500">(1–20)</span></label>
                 <input type="number" min="1" max="20" value={form.winners}
                   onChange={e => setForm(f => ({ ...f, winners: Math.min(20, Math.max(1, Number(e.target.value))) }))}
                   className="cyber-input" />
@@ -619,7 +620,7 @@ export default function Giveaways({ guild, guildData, permLevel }) {
               </div>
               <div>
                 <label className="cyber-label mb-1.5 flex items-center gap-1">
-                  <Shield size={9} /> Required Role <span className="text-gray-600">(optional)</span>
+                  <Shield size={9} aria-hidden="true" /> Required Role <span className="text-zinc-500">(optional)</span>
                 </label>
                 <select value={form.requiredRoleId}
                   onChange={e => setForm(f => ({ ...f, requiredRoleId: e.target.value }))}

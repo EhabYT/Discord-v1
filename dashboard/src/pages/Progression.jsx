@@ -242,10 +242,10 @@ export default function Progression({ guild, guildData }) {
                 {ignoredChannels.map(id => {
                   const ch = channels.find(c => c.id === id);
                   return (
-                    <span key={id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.05] border border-white/10 text-xs text-gray-300">
+                    <span key={id} className="flex items-center gap-1.5 pl-2.5 pr-1 py-1 rounded-full bg-white/[0.05] border border-white/10 text-xs text-zinc-300">
                       # {ch?.name || id}
-                      <button onClick={() => removeIgnored(id)} className="text-gray-600 hover:text-red-400 transition-colors">
-                        <X size={10} />
+                      <button onClick={() => removeIgnored(id)} className="w-6 h-6 flex items-center justify-center rounded-full text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors" title={`Unignore #${ch?.name || id}`} aria-label={`Stop ignoring channel ${ch?.name || id}`}>
+                        <X size={11} aria-hidden="true" />
                       </button>
                     </span>
                   );
@@ -276,15 +276,15 @@ export default function Progression({ guild, guildData }) {
             <span className="text-[10px] text-gray-600 ml-1">Auto-assign a role on level up</span>
           </div>
           <div className="flex gap-2 mb-4">
-            <input type="number" placeholder="Level" value={newLevel}
+            <input type="number" placeholder="Level" aria-label="Reward level" value={newLevel}
               onChange={e => setNewLevel(e.target.value)}
               className="cyber-input w-24" min="1" />
-            <select value={newRole} onChange={e => setNewRole(e.target.value)} className="cyber-select flex-1">
+            <select value={newRole} onChange={e => setNewRole(e.target.value)} aria-label="Reward role" className="cyber-select flex-1">
               <option value="">— Select Role —</option>
               {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
-            <button onClick={addReward} className="cyber-button-solid flex-shrink-0 flex items-center gap-1 px-3">
-              <Plus size={14} />
+            <button onClick={addReward} aria-label="Add role reward" className="cyber-button-solid flex-shrink-0 flex items-center gap-1 px-3 min-h-[40px]">
+              <Plus size={14} aria-hidden="true" />
             </button>
           </div>
           {rewards.length === 0 ? (
@@ -302,8 +302,8 @@ export default function Progression({ guild, guildData }) {
                       {roles.find(ro => ro.id === r.roleId)?.name || r.roleId}
                     </span>
                   </div>
-                  <button onClick={() => removeReward(r)} className="text-gray-600 hover:text-red-400 transition-colors flex-shrink-0">
-                    <Trash2 size={13} />
+                  <button onClick={() => removeReward(r)} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0" title={`Remove Level ${r.level} reward`} aria-label={`Remove Level ${r.level} role reward`}>
+                    <Trash2 size={13} aria-hidden="true" />
                   </button>
                 </div>
               ))}
@@ -320,7 +320,7 @@ export default function Progression({ guild, guildData }) {
               <Zap size={14} className="text-cyan-400" />
               <h2 className="text-sm font-semibold text-white">Per-Role XP Multipliers</h2>
             </div>
-            <p className="text-xs text-gray-500 mb-4">
+            <p className="text-xs text-zinc-400 mb-4">
               Members with these roles earn XP at a different rate. The highest applicable multiplier is used.
             </p>
             <div className="flex gap-2 mb-4">

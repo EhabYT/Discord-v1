@@ -130,20 +130,20 @@ export default function ReactionRoles({ guild, guildData }) {
         <StatCard icon={Tags} label="Exclusive groups" value={groups} color="green" />
       </div>
 
-      <div className="seg-tabs">
-        <button onClick={() => setTab('create')} className={tab === 'create' ? 'seg-tab-active' : 'seg-tab'}>
-          <Plus size={12} /> New panel
+      <div className="seg-tabs" role="tablist" aria-label="Reaction role sections">
+        <button onClick={() => setTab('create')} role="tab" aria-selected={tab === 'create'} className={tab === 'create' ? 'seg-tab-active' : 'seg-tab'}>
+          <Plus size={12} aria-hidden="true" /> New panel
         </button>
-        <button onClick={() => setTab('list')} className={tab === 'list' ? 'seg-tab-active' : 'seg-tab'}>
-          <Tags size={12} /> Mappings
-          {mappings.length > 0 && <span className="cyber-badge-cyan">{mappings.length}</span>}
+        <button onClick={() => setTab('list')} role="tab" aria-selected={tab === 'list'} className={tab === 'list' ? 'seg-tab-active' : 'seg-tab'}>
+          <Tags size={12} aria-hidden="true" /> Mappings
+          {mappings.length > 0 && <span className="cyber-badge-cyan tabular-nums">{mappings.length}</span>}
         </button>
       </div>
 
       {tab === 'create' && (
         <div className="space-y-4 animate-fade-in">
           <div className="cyber-info">
-            <Info size={14} className="text-cyan-400 flex-shrink-0 mt-0.5" />
+            <Info size={14} className="text-cyan-300 flex-shrink-0 mt-0.5" aria-hidden="true" />
             <p className="text-xs text-zinc-400 leading-relaxed">
               <strong className="text-zinc-200">Buttons</strong> are easier for members. <strong className="text-zinc-200">Reactions</strong> stay compatible with `/reactionrole`.
               Exclusive group = only one role from the set at a time (colors, platforms…).
@@ -151,16 +151,16 @@ export default function ReactionRoles({ guild, guildData }) {
           </div>
 
           {botCanManage === false && (
-            <div className="rounded-xl border border-red-400/30 bg-red-400/10 p-3 flex gap-2">
-              <AlertTriangle size={14} className="text-red-400 flex-shrink-0 mt-0.5" />
+            <div className="rounded-xl border border-red-400/30 bg-red-400/10 p-3 flex gap-2" role="alert">
+              <AlertTriangle size={14} className="text-red-300 flex-shrink-0 mt-0.5" aria-hidden="true" />
               <p className="text-xs text-red-200 leading-relaxed">
                 The bot does not have the <strong>Manage Roles</strong> permission, so no self-assignable role can be given out yet.
               </p>
             </div>
           )}
           {badRows.length > 0 && botTop != null && (
-            <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 flex gap-2">
-              <AlertTriangle size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
+            <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 flex gap-2" role="alert">
+              <AlertTriangle size={14} className="text-amber-300 flex-shrink-0 mt-0.5" aria-hidden="true" />
               <p className="text-xs text-amber-200 leading-relaxed">
                 {badRows.map((r) => roles.find((x) => x.id === r.roleId)?.name || 'A role').join(', ')} {badRows.length === 1 ? 'is' : 'are'} above the bot&apos;s highest role.
                 Move the bot role above {badRows.length === 1 ? 'it' : 'them'} in Server Settings → Roles, or members will see “I cannot manage…”.
@@ -169,7 +169,7 @@ export default function ReactionRoles({ guild, guildData }) {
           )}
 
           <div className="cyber-card p-5 space-y-4">
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2" role="group" aria-label="Panel style">
               {[
                 { id: 'button', title: 'Buttons', text: 'Click to toggle' },
                 { id: 'reaction', title: 'Reactions', text: 'Emoji on the message' },
@@ -177,10 +177,11 @@ export default function ReactionRoles({ guild, guildData }) {
                 <button
                   key={s.id}
                   onClick={() => setStyle(s.id)}
-                  className={`text-left p-3 rounded-xl border ${style === s.id ? 'border-cyan-400/40 bg-cyan-400/10' : 'border-white/10'}`}
+                  aria-pressed={style === s.id}
+                  className={`text-left p-3 min-h-[56px] rounded-xl border transition-all ${style === s.id ? 'border-cyan-300/40 bg-cyan-400/10' : 'border-white/10 hover:border-white/20'}`}
                 >
                   <p className="text-xs font-semibold text-white">{s.title}</p>
-                  <p className="text-[11px] text-zinc-500">{s.text}</p>
+                  <p className="text-[11px] text-zinc-400">{s.text}</p>
                 </button>
               ))}
             </div>
@@ -201,8 +202,8 @@ export default function ReactionRoles({ guild, guildData }) {
               <div>
                 <label className="cyber-label mb-1.5">Color</label>
                 <div className="flex gap-2">
-                  <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-9 w-12 rounded-lg border border-cyan-500/20 bg-transparent p-0.5" />
-                  <input value={color} onChange={(e) => setColor(e.target.value)} className="cyber-input font-mono text-xs w-24" maxLength={7} />
+                  <input type="color" value={color} onChange={(e) => setColor(e.target.value)} aria-label="Panel color" className="h-10 w-14 rounded-lg border border-cyan-500/20 bg-transparent p-1" />
+                  <input value={color} onChange={(e) => setColor(e.target.value)} aria-label="Panel color hex" className="cyber-input font-mono text-xs w-24" maxLength={7} />
                 </div>
               </div>
             </div>

@@ -4,6 +4,7 @@ import {
   Shield, Power, KeyRound, Server,
 } from 'lucide-react';
 import PageHeader from '../components/PageHeader.jsx';
+import ConfirmModal from '../components/ConfirmModal.jsx';
 import { useToast } from '../components/Toast.jsx';
 import api from '../api.js';
 
@@ -57,6 +58,10 @@ export default function Developer({ initialTab = 'overview' }) {
   const [maintenanceMessage, setMaintenanceMessage] = useState('');
   const [maintenanceDuration, setMaintenanceDuration] = useState('');
   const [busy, setBusy] = useState('');
+  // Staged destructive action behind the design-system ConfirmModal instead
+  // of the native window.confirm (unstyled, blocks the tab, no context).
+  // { kind: 'job', name, action } or { kind: 'deploy' }.
+  const [confirmAction, setConfirmAction] = useState(null);
   const systemLevel = ROLE_LEVEL[who?.role] || 0;
 
   const loadWho = () => api.get('/api/developer/whoami').then(setWho).catch(() => setWho({ unlocked: false }));
@@ -151,7 +156,6 @@ export default function Developer({ initialTab = 'overview' }) {
   };
 
   const jobAction = async (name, action) => {
-    if (!window.confirm(`${action} scheduled job "${name}"?`)) return;
     setBusy(`job:${name}`);
     try {
       await api.post(`/api/developer/jobs/${window.encodeURIComponent(name)}/${action}`, {});
@@ -159,6 +163,20 @@ export default function Developer({ initialTab = 'overview' }) {
       toast.success(`Job ${action} completed.`);
     } catch (err) { toast.error(err.message || `Could not ${action} job`); }
     setBusy('');
+  };
+
+  const confirmAndRun = () => {
+    const staged = confirmAction;
+    setConfirmAction(null);
+    if (!staged) return;
+    if (staged.kind === 'deploy') deploy();
+    else jobAction(staged.name, staged.action);
+  };
+
+  const JOB_CONFIRM_COPY = {
+    run: (name) => ({ title: `Run "${name}" now?`, message: 'Triggers one manual execution alongside the schedule. Safe to repeat.', confirm: 'Run now', danger: false }),
+    pause: (name) => ({ title: `Pause "${name}"?`, message: 'Scheduled runs stop until the job is resumed. A running execution finishes first.', confirm: 'Pause job', danger: true }),
+    resume: (name) => ({ title: `Resume "${name}"?`, message: 'Scheduled runs continue with the configured interval.', confirm: 'Resume job', danger: false }),
   };
 
   const deploy = async () => {
@@ -342,8 +360,8 @@ export default function Developer({ initialTab = 'overview' }) {
               <button onClick={saveMaintenance} disabled={busy === 'maintenance'} className="cyber-button text-xs">
                 {busy === 'maintenance' ? 'Saving…' : 'Save maintenance policy'}
               </button>
-              <button onClick={deploy} disabled={busy === 'deploy'} className="cyber-button text-xs inline-flex items-center gap-1.5">
-                <Power size={12} /> {busy === 'deploy' ? 'Deploying…' : 'Redeploy slash commands'}
+              <button onClick={() => setConfirmAction({ kind: 'deploy' })} disabled={busy === 'deploy'} className="cyber-button text-xs inline-flex items-center gap-1.5">
+                <Power size={12} aria-hidden="true" /> {busy === 'deploy' ? 'Deploying…' : 'Redeploy slash commands'}
               </button>
             </div>
           </div>
@@ -647,7 +665,7 @@ export default function Developer({ initialTab = 'overview' }) {
                 <p className="text-[11px] text-zinc-500 mt-1">
                   Every {Math.round(job.intervalMs / 1000)}s · {job.runCount} runs · {job.errorCount} consecutive errors
                 </p>
-                <p className="text-[10px] text-zinc-600 mt-1">
+                <p className="text-[10px] text-zinc-500 mt-1" title={job.lastRunAt ? new Date(job.lastRunAt).toLocaleString() : undefined}>
                   Last: {job.lastRunAt ? new Date(job.lastRunAt).toLocaleString() : 'never'}
                   {job.lastDurationMs != null ? ` · ${job.lastDurationMs.toFixed(1)} ms` : ''}
                   {job.nextRunAt ? ` · next ${new Date(job.nextRunAt).toLocaleTimeString()}` : ''}
@@ -656,10 +674,10 @@ export default function Developer({ initialTab = 'overview' }) {
               </div>
               {systemLevel >= ROLE_LEVEL.SUPER_ADMIN && (
                 <div className="flex gap-2 flex-wrap">
-                  <button disabled={busy === `job:${job.name}` || job.running} onClick={() => jobAction(job.name, 'run')} className="cyber-button text-xs">Run now</button>
+                  <button disabled={busy === `job:${job.name}` || job.running} onClick={() => setConfirmAction({ kind: 'job', name: job.name, action: 'run' })} className="cyber-button text-xs">Run now</button>
                   {job.status === 'running'
-                    ? <button onClick={() => jobAction(job.name, 'pause')} className="cyber-button-danger text-xs">Pause</button>
-                    : <button onClick={() => jobAction(job.name, 'resume')} className="cyber-button-success text-xs">Resume</button>}
+                    ? <button onClick={() => setConfirmAction({ kind: 'job', name: job.name, action: 'pause' })} className="cyber-button-danger text-xs">Pause</button>
+                    : <button onClick={() => setConfirmAction({ kind: 'job', name: job.name, action: 'resume' })} className="cyber-button-success text-xs">Resume</button>}
                 </div>
               )}
             </div>
@@ -681,7 +699,7 @@ export default function Developer({ initialTab = 'overview' }) {
                 <p className="text-[11px] text-zinc-500 mt-1">
                   {event.systemRole || 'UNKNOWN'} · {event.userId || 'local'} · {event.target}
                 </p>
-                <p className="text-[10px] text-zinc-600 mt-1 font-mono">
+                <p className="text-[10px] text-zinc-500 mt-1 font-mono">
                   {new Date(event.timestamp).toLocaleString()} · request {event.requestId || '—'}
                 </p>
               </div>
@@ -690,9 +708,19 @@ export default function Developer({ initialTab = 'overview' }) {
         </div>
       )}
 
-      <p className="text-[10px] text-zinc-700 flex items-center gap-1">
-        <Server size={10} /> Role-enforced API · /api/developer/* · no raw secrets
+      <p className="text-[10px] text-zinc-500 flex items-center gap-1">
+        <Server size={10} aria-hidden="true" /> Role-enforced API · /api/developer/* · no raw secrets
       </p>
+
+      <ConfirmModal
+        open={!!confirmAction}
+        title={confirmAction?.kind === 'deploy' ? 'Redeploy slash commands?' : (confirmAction ? JOB_CONFIRM_COPY[confirmAction.action]?.(confirmAction.name).title : '')}
+        message={confirmAction?.kind === 'deploy' ? 'Re-registers every slash command with Discord. Members see the updated commands within minutes.' : (confirmAction ? JOB_CONFIRM_COPY[confirmAction.action]?.(confirmAction.name).message : '')}
+        confirmLabel={confirmAction?.kind === 'deploy' ? 'Redeploy' : (confirmAction ? JOB_CONFIRM_COPY[confirmAction.action]?.(confirmAction.name).confirm : 'Confirm')}
+        variant={confirmAction?.kind === 'deploy' || (confirmAction && JOB_CONFIRM_COPY[confirmAction.action]?.(confirmAction.name).danger) ? 'danger' : 'warning'}
+        onCancel={() => setConfirmAction(null)}
+        onConfirm={confirmAndRun}
+      />
     </div>
   );
 }
