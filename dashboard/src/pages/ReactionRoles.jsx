@@ -272,8 +272,8 @@ export default function ReactionRoles({ guild, guildData }) {
       {tab === 'list' && (
         <div className="space-y-4 animate-fade-in">
           <div className="relative">
-            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Filter role, emoji, group…" className="cyber-input pl-9 text-xs" />
+            <Search size={13} className="absolute start-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Filter role, emoji, group…" aria-label="Filter role mappings" className="cyber-input ps-9 text-xs" />
           </div>
           {loading ? (
             <div className="space-y-2">{[...Array(3)].map((_, i) => <div key={i} className="h-14 skeleton rounded-xl" />)}</div>
@@ -290,9 +290,9 @@ export default function ReactionRoles({ guild, guildData }) {
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-white truncate">
                         {m.label || role?.name || m.roleId}
-                        {stuck && <span className="ml-1.5 inline-flex items-center gap-0.5 text-amber-400 font-normal" title="Above the bot role — move the bot role above it in Server Settings → Roles"><AlertTriangle size={11} /> above bot</span>}
+                        {stuck && <span className="ml-1.5 inline-flex items-center gap-0.5 text-amber-300 font-normal" title="Above the bot role — move the bot role above it in Server Settings → Roles"><AlertTriangle size={11} aria-hidden="true" /> above bot</span>}
                       </p>
-                      <p className="text-[10px] text-zinc-600">
+                      <p className="text-[10px] text-zinc-500 tabular-nums">
                         {m.style} · {m.mode}{m.group ? ` · group ${m.group}` : ''}
                         {m.channelId ? ` · #${channels.find((c) => c.id === m.channelId)?.name || m.channelId}` : ''}
                       </p>

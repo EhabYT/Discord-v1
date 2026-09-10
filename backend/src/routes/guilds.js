@@ -2,15 +2,18 @@ const express = require('express');
 const router = express.Router({ mergeParams: true });
 const { db, databaseConfigIssue } = require('eb-bot-database');
 const { EmbedBuilder, WebhookClient, PermissionsBitField } = require('discord.js');
-const { getUserPermLevel } = require('../middleware/permissions');
 const { sessionUserId } = require('../middleware/auth');
 const guildAccess = require('../middleware/guild-access');
 const { SYSTEM_ROLES, requireSystemRole } = require('../middleware/devauth');
 const rl = require('../middleware/rate-limit');
-const { withKeyLock } = require('eb-bot-database/lock');
 const logger = require('eb-bot-shared/lib/logger');
-const { ENTRY_REACTION, finalizeGiveaway, rerollGiveaway } = require('eb-bot-shared/services/giveaways');
 const registerAnalyticsRoutes = require('./guilds/analytics');
+const registerBoardRoutes = require('./guilds/board');
+const registerVerificationRoutes = require('./guilds/verification');
+const registerGiveawaysRoutes = require('./guilds/giveaways');
+const registerMembersRoutes = require('./guilds/members');
+const registerCommunityRoutes = require('./guilds/community');
+const registerTicketsRoutes = require('./guilds/tickets');
 
 /** Strict http(s) URL check for Discord embed fields (setURL/setImage/... throw shapeshift 500s otherwise). */
 function isHttpUrl(value) {
@@ -52,19 +55,34 @@ module.exports = (botClient) => {
             // A configured-but-unreachable database still fails closed, so a
             // real outage is never masked as empty configuration.
             const databaseOnline = !databaseConfigIssue();
-            const [automod, welcome, logging, djrole, xpEnabled, giveaways, commandsEnabled, ticketsRaw, rewards, customFilters, autoresponder] = await Promise.all([
-                db.get(`automod_${guildId}`),
-                db.get(`welcome_${guildId}`),
-                db.get(`logging_${guildId}`),
-                db.get(`djrole_${guildId}`),
-                db.get(`xp_enabled_${guildId}`),
-                db.get(`giveaways_${guildId}`),
-                db.get(`commands_enabled_${guildId}`),
-                db.get(`tickets_${guildId}`),
-                db.get(`rewards_${guildId}`),
-                db.get(`custom_filters_${guildId}`),
-                db.get(`autoresponder_${guildId}`)
+            // Single round-trip batch fetch: 11 parallel `db.get` calls occupied
+            // up to 11 pool slots (pool default is 5, so 6 queued) on every
+            // dashboard overview load. `mget` serves the same keys with one
+            // indexed `WHERE key = ANY($1)` query.
+            const batch = await db.mget([
+                `automod_${guildId}`,
+                `welcome_${guildId}`,
+                `logging_${guildId}`,
+                `djrole_${guildId}`,
+                `xp_enabled_${guildId}`,
+                `giveaways_${guildId}`,
+                `commands_enabled_${guildId}`,
+                `tickets_${guildId}`,
+                `rewards_${guildId}`,
+                `custom_filters_${guildId}`,
+                `autoresponder_${guildId}`,
             ]);
+            const automod = batch[`automod_${guildId}`];
+            const welcome = batch[`welcome_${guildId}`];
+            const logging = batch[`logging_${guildId}`];
+            const djrole = batch[`djrole_${guildId}`];
+            const xpEnabled = batch[`xp_enabled_${guildId}`];
+            const giveaways = batch[`giveaways_${guildId}`];
+            const commandsEnabled = batch[`commands_enabled_${guildId}`];
+            const ticketsRaw = batch[`tickets_${guildId}`];
+            const rewards = batch[`rewards_${guildId}`];
+            const customFilters = batch[`custom_filters_${guildId}`];
+            const autoresponder = batch[`autoresponder_${guildId}`];
             let tickets = ticketsRaw;
             if (!tickets) {
                 const legacy = await db.get(`ticket_config_${guildId}`);
@@ -138,21 +156,21 @@ module.exports = (botClient) => {
             const { guildId } = req.params;
             const type = req.query.type || 'xp';
             const filterPrefix = type === 'xp' ? `xp_${guildId}_` : `stats_${guildId}_`;
-            const all = await db.allByPrefix(filterPrefix);
 
+            // Database-side top-15: previously every call transferred the full
+            // prefix (up to 50,000 JSONB rows) to sort 15 in JavaScript.
+            // topPrefix ranks in Postgres and returns 15 rows. Unknown types
+            // keep the legacy unsorted first-15 behavior byte-for-byte.
             let entries = [];
-            entries = all
-                .map(e => ({ userId: e.id.replace(filterPrefix, ''), ...e.value }));
-
-            if (type === 'xp') {
-                entries.sort((a, b) => (b.textLevel * 100 + b.textXp) - (a.textLevel * 100 + a.textXp));
-            } else if (type === 'messages') {
-                entries.sort((a, b) => b.messages - a.messages);
-            } else if (type === 'voice') {
-                entries.sort((a, b) => b.voiceTime - a.voiceTime);
+            if (type === 'xp' || type === 'messages' || type === 'voice') {
+                const rows = await db.topPrefix(filterPrefix, { sort: type, limit: 15 });
+                entries = rows.map(e => ({ userId: e.id.replace(filterPrefix, ''), ...e.value }));
+            } else {
+                const all = await db.allByPrefix(filterPrefix);
+                entries = all
+                    .map(e => ({ userId: e.id.replace(filterPrefix, ''), ...e.value }))
+                    .slice(0, 15);
             }
-
-            entries = entries.slice(0, 15);
 
             const enrichedEntries = await Promise.all(entries.map(async (entry) => {
                 const user = await botClient.users.fetch(entry.userId).catch(() => null);
@@ -178,6 +196,14 @@ module.exports = (botClient) => {
                     ...w,
                     id: w.id || String(w.timestamp || i),
                 })));
+            // Optional bounded mode for old guilds: ?limit=N returns the N most
+            // recent warnings instead of the full history. No parameter means
+            // the legacy full list, byte-identical to before.
+            const limit = Number.parseInt(req.query.limit, 10);
+            if (Number.isFinite(limit) && limit > 0) {
+                warnings.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+                return res.json(warnings.slice(0, Math.min(limit, 2000)));
+            }
             res.json(warnings);
         } catch (err) { next(err); }
     });
@@ -310,285 +336,10 @@ module.exports = (botClient) => {
         } catch (err) { next(err); }
     });
 
-    const verify = require('eb-bot-shared/services/verification');
-
-    router.get('/verification', async (req, res, next) => {
-        try {
-            const config = await verify.getConfig(db, req.params.guildId);
-            res.json(config);
-        } catch (err) { next(err); }
-    });
-
-    router.get('/verification/overview', async (req, res, next) => {
-        try {
-            res.json(await verify.overview(req.guild, db));
-        } catch (err) { next(err); }
-    });
-
-    router.get('/verification/pending', async (req, res, next) => {
-        try {
-            const cfg = await verify.getConfig(db, req.params.guildId);
-            res.json(await verify.listPending(req.guild, db, cfg));
-        } catch (err) { next(err); }
-    });
-
-    router.get('/verification/log', async (req, res, next) => {
-        try {
-            res.json(await verify.getLog(db, req.params.guildId));
-        } catch (err) { next(err); }
-    });
-
-    router.post('/verification', requirePerm(3), async (req, res, next) => {
-        try {
-            const current = await verify.getConfig(db, req.params.guildId);
-            const body = req.body || {};
-            const merged = { ...current, ...body };
-            if (body.logChannelId && !body.channelId && !current.channelId) {
-                merged.channelId = body.logChannelId;
-            }
-            for (const key of ['roleId', 'unverifiedRoleId']) {
-                if (merged[key]) {
-                    try {
-                        verify.assertRoleManageable(req.guild, merged[key]);
-                    } catch (err) {
-                        const status = err.code === 'NOT_FOUND' ? 400 : 403;
-                        return res.status(status).json({ error: err.message, code: err.code || 'HIERARCHY', field: key });
-                    }
-                }
-            }
-            for (const id of merged.extraRoleIds || []) {
-                if (id && id !== merged.roleId) {
-                    try {
-                        verify.assertRoleManageable(req.guild, id);
-                    } catch (err) {
-                        const status = err.code === 'NOT_FOUND' ? 400 : 403;
-                        return res.status(status).json({ error: err.message, code: err.code || 'HIERARCHY', field: 'extraRoleIds' });
-                    }
-                }
-            }
-            const saved = await verify.saveConfig(db, req.params.guildId, merged);
-            res.json(saved);
-        } catch (err) { next(err); }
-    });
-
-    router.post('/verification/panel', requirePerm(3), rl.botMessaging(), async (req, res, next) => {
-        try {
-            const current = await verify.getConfig(db, req.params.guildId);
-            if (!current.roleId && !req.body.roleId) {
-                return res.status(400).json({ error: 'Set a verified role first' });
-            }
-            const cfg = verify.defaults({
-                ...current,
-                title: req.body.title ?? current.title,
-                description: req.body.description ?? current.description,
-                buttonLabel: req.body.buttonLabel ?? current.buttonLabel,
-                buttonEmoji: req.body.buttonEmoji ?? current.buttonEmoji,
-                buttonStyle: req.body.buttonStyle ?? current.buttonStyle,
-                embedColor: req.body.embedColor ?? current.embedColor,
-                rulesText: req.body.rulesText ?? current.rulesText,
-                requireRules: typeof req.body.requireRules === 'boolean' ? req.body.requireRules : current.requireRules,
-                mode: req.body.mode ?? current.mode,
-                showGuildIcon: typeof req.body.showGuildIcon === 'boolean' ? req.body.showGuildIcon : current.showGuildIcon,
-                panelImage: req.body.panelImage ?? current.panelImage,
-                panelThumbnail: req.body.panelThumbnail ?? current.panelThumbnail,
-                footerText: req.body.footerText ?? current.footerText,
-            });
-            const channelId = req.body.channelId || cfg.channelId || cfg.logChannelId;
-            try {
-                const result = await verify.postPanel(req.guild, cfg, channelId);
-                cfg.channelId = result.channelId;
-                cfg.messageId = result.messageId;
-                cfg.enabled = true;
-                await verify.saveConfig(db, req.params.guildId, cfg);
-                res.json({ success: true, ...result });
-            } catch (err) {
-                if (err.code === 'HIERARCHY' || err.code === 'MANAGED_ROLE' || err.code === 'EVERYONE' || err.code === 'NO_PERMS') {
-                    return res.status(403).json({ error: err.message, code: err.code });
-                }
-                throw err;
-            }
-        } catch (err) { next(err); }
-    });
-
-    router.post('/verification/members/:userId/verify', requirePerm(2), async (req, res, next) => {
-        try {
-            const cfg = await verify.getConfig(db, req.params.guildId);
-            if (!cfg.roleId) return res.status(400).json({ error: 'Set a verified role first', code: 'NOT_SETUP' });
-            const problem = verify.setupProblem ? verify.setupProblem(cfg, req.guild) : null;
-            if (problem && problem.code !== 'DISABLED') {
-                const status = problem.code === 'NOT_FOUND' ? 400 : 403;
-                return res.status(status).json({ error: problem.message, code: problem.code });
-            }
-            const member = await req.guild.members.fetch(req.params.userId).catch(() => null);
-            if (!member) return res.status(404).json({ error: 'Member not found' });
-            const actor = req.session?.user?.username || 'Dashboard';
-            try {
-                const entry = await verify.applyVerification(member, cfg, { db, method: 'staff', actor });
-                res.json({ success: true, entry });
-            } catch (err) {
-                if (err.code === 'HIERARCHY' || err.code === 'MANAGED_ROLE' || err.code === 'EVERYONE' || err.code === 'NO_PERMS') {
-                    return res.status(403).json({ error: err.message, code: err.code });
-                }
-                if (err.code === 'NOT_FOUND') {
-                    return res.status(400).json({ error: err.message, code: err.code });
-                }
-                if (typeof err?.code === 'number' && verify.describeDiscordFailure) {
-                    const mapped = verify.describeDiscordFailure(err, req.guild.roles.cache.get(cfg.roleId));
-                    const status = mapped.code === 'NOT_FOUND' ? 404 : 403;
-                    return res.status(status).json({ error: mapped.message, code: mapped.code });
-                }
-                throw err;
-            }
-        } catch (err) { next(err); }
-    });
-
-    router.post('/verification/members/:userId/unverify', requirePerm(2), async (req, res, next) => {
-        try {
-            const cfg = await verify.getConfig(db, req.params.guildId);
-            const member = await req.guild.members.fetch(req.params.userId).catch(() => null);
-            if (!member) return res.status(404).json({ error: 'Member not found' });
-            const actor = req.session?.user?.username || 'Dashboard';
-            await verify.revokeVerification(member, cfg, { db, actor });
-            res.json({ success: true });
-        } catch (err) { next(err); }
-    });
-
-    router.post('/verification/kick-pending', requirePerm(3), rl.bulkModeration(), async (req, res, next) => {
-        try {
-            const cfg = await verify.getConfig(db, req.params.guildId);
-            const map = await verify.getPendingMap(db, req.params.guildId);
-            const overdueOnly = req.body?.overdueOnly !== false;
-            const now = Date.now();
-            // Bulk moderation guard rails. This loop previously ran uncapped over
-            // every pending entry, issuing one Discord kick per iteration with no
-            // hierarchy check — so an Admin could sweep out moderators, and a large
-            // pending list would burn the bot's global rate limit inside a single
-            // request. Cap the batch, respect hierarchy, and report what was skipped.
-            const MAX_KICKS = 50;
-            let kicked = 0;
-            let skipped = 0;
-            let remaining = 0;
-            for (const [userId, info] of Object.entries(map)) {
-                if (overdueOnly && info?.kickAt && info.kickAt > now) continue;
-                if (overdueOnly && !info?.kickAt) continue;
-                if (kicked >= MAX_KICKS) { remaining += 1; continue; }
-                const member = await req.guild.members.fetch(userId).catch(() => null);
-                if (member && !verify.isVerified(member, cfg) && !verify.hasBypass(member, cfg)) {
-                    // Never let a bulk sweep do what a single action would refuse.
-                    if (await hierarchyError(req, member)) { skipped += 1; continue; }
-                    if (member.kickable === false) { skipped += 1; continue; }
-                    const ok = await member.kick(overdueOnly ? 'Did not verify in time' : 'Kicked unverified (dashboard)').catch(() => null);
-                    if (ok) kicked += 1;
-                }
-                delete map[userId];
-            }
-            await verify.setPendingMap(db, req.params.guildId, map);
-            res.json({ success: true, kicked, skipped, remaining });
-        } catch (err) { next(err); }
-    });
-
-    router.delete('/verification/log', requirePerm(3), async (req, res, next) => {
-        try {
-            await verify.clearLog(db, req.params.guildId);
-            res.json({ success: true });
-        } catch (err) { next(err); }
-    });
-
-    router.post('/verification/roles', requirePerm(3), async (req, res, next) => {
-        try {
-            const which = ['verified', 'unverified', 'both'].includes(req.body?.which) ? req.body.which : 'both';
-            const created = await verify.createRoles(req.guild, {
-                which,
-                verifiedName: req.body?.verifiedName,
-                unverifiedName: req.body?.unverifiedName,
-            });
-            const cfg = await verify.getConfig(db, req.params.guildId);
-            if (created.verified) cfg.roleId = created.verified.id;
-            if (created.unverified) cfg.unverifiedRoleId = created.unverified.id;
-            const saved = await verify.saveConfig(db, req.params.guildId, cfg);
-            res.json({ success: true, created, config: saved });
-        } catch (err) { next(err); }
-    });
-
-    router.post('/verification/lock', requirePerm(3), rl.bulkModeration(), async (req, res, next) => {
-        try {
-            const cfg = await verify.getConfig(db, req.params.guildId);
-            if (req.body?.channelId) cfg.channelId = req.body.channelId;
-            if (req.body?.enable === false) {
-                await verify.removeGateLock(req.guild, cfg);
-                cfg.lockApplied = false;
-                cfg.lockedChannelIds = [];
-                const saved = await verify.saveConfig(db, req.params.guildId, cfg);
-                return res.json({ success: true, locked: false, config: saved });
-            }
-            const ids = await verify.applyGateLock(req.guild, cfg);
-            cfg.lockApplied = true;
-            cfg.lockedChannelIds = ids;
-            cfg.enabled = true;
-            const saved = await verify.saveConfig(db, req.params.guildId, cfg);
-            res.json({ success: true, locked: true, channels: ids.length, config: saved });
-        } catch (err) { next(err); }
-    });
-
-    router.post('/verification/quick-setup', requirePerm(3), rl.bulkModeration(), async (req, res, next) => {
-        try {
-            let cfg = await verify.getConfig(db, req.params.guildId);
-            if (req.body?.channelId) cfg.channelId = req.body.channelId;
-            if (req.body?.mode) cfg.mode = req.body.mode === 'captcha' ? 'captcha' : 'button';
-            // Honor roles picked in the Quick tab (previously only Setup → Save persisted them,
-            // so Go live silently ignored the selection and auto-created duplicates).
-            for (const key of ['roleId', 'unverifiedRoleId']) {
-                const id = req.body?.[key];
-                if (typeof id === 'string' && id && req.guild.roles.cache.has(id)) {
-                    try {
-                        verify.assertRoleManageable(req.guild, id);
-                    } catch (err) {
-                        const status = err.code === 'NOT_FOUND' ? 400 : 403;
-                        return res.status(status).json({ error: err.message, code: err.code || 'HIERARCHY', field: key });
-                    }
-                    cfg[key] = id;
-                }
-            }
-            if (!cfg.roleId || !cfg.unverifiedRoleId) {
-                const created = await verify.createRoles(req.guild, {
-                    which: !cfg.roleId && !cfg.unverifiedRoleId ? 'both' : (!cfg.roleId ? 'verified' : 'unverified'),
-                });
-                if (created.verified) cfg.roleId = created.verified.id;
-                if (created.unverified) cfg.unverifiedRoleId = created.unverified.id;
-            }
-            if (!cfg.channelId) return res.status(400).json({ error: 'Pick a panel channel first' });
-            if (!cfg.roleId) return res.status(400).json({ error: 'Could not create verified role' });
-            cfg.enabled = true;
-            if (req.body?.lockServer) {
-                cfg.lockedChannelIds = await verify.applyGateLock(req.guild, cfg);
-                cfg.lockApplied = true;
-            }
-            try {
-                const panel = await verify.postPanel(req.guild, cfg, cfg.channelId);
-                cfg.messageId = panel.messageId;
-                cfg.channelId = panel.channelId;
-                const saved = await verify.saveConfig(db, req.params.guildId, cfg);
-                res.json({ success: true, panel, config: saved });
-            } catch (err) {
-                if (err.code === 'HIERARCHY' || err.code === 'MANAGED_ROLE' || err.code === 'EVERYONE' || err.code === 'NO_PERMS') {
-                    return res.status(403).json({ error: err.message, code: err.code });
-                }
-                throw err;
-            }
-        } catch (err) { next(err); }
-    });
-
-    router.post('/verification/fix-hierarchy', requirePerm(3), rl.botMessaging(), async (req, res, next) => {
-        try {
-            const result = await verify.fixHierarchy(req.guild, db);
-            res.json({ success: true, ...result });
-        } catch (err) {
-            if (err.code === 'NO_PERMS' || err.code === 'FIX_FAILED' || err.code === 'NO_BOT_MEMBER' || err.code === 'HIERARCHY') {
-                return res.status(403).json({ error: err.message, code: err.code });
-            }
-            next(err);
-        }
-    });
+    // Verification routes live in ./guilds/verification.js (second extraction
+    // of the monolithic router). Registered here — not at the bottom with
+    // analytics — so Express matching order is byte-identical to before.
+    registerVerificationRoutes(router, { requirePerm, rl, hierarchyError });
 
     const rr = require('eb-bot-shared/services/reaction-roles');
 
@@ -745,267 +496,16 @@ module.exports = (botClient) => {
         } catch (err) { next(err); }
     });
 
-    const suggestions = require('eb-bot-shared/services/suggestions');
-    const polls = require('eb-bot-shared/services/polls');
-    const tags = require('eb-bot-shared/services/tags');
-    const confessions = require('eb-bot-shared/services/confessions');
-    const board = require('eb-bot-shared/services/staff-board');
+    // Community routes live in ./guilds/community.js (fifth extraction).
+    registerCommunityRoutes(router, { requirePerm, botClient });
 
-    router.get('/suggestions', async (req, res, next) => {
-        try {
-            const items = await suggestions.list(db, req.params.guildId);
-            const config = await suggestions.getConfig(db, req.params.guildId);
-            // /suggest offers "anonymous — hide your username", and the posted embed
-            // honours it. The dashboard must honour it too: strip identity from
-            // anonymous suggestions below Moderator, or the promise is hollow.
-            const level = await getUserPermLevel(botClient, req.params.guildId, sessionUserId(req));
-            const visible = level >= 2
-                ? [...items].reverse()
-                : [...items].reverse().map((s) => (s.anonymous
-                    ? (({ authorId, authorTag, ...rest }) => rest)(s)
-                    : s));
-            res.json({
-                items: visible,
-                config,
-                pending: items.filter((s) => s.status === 'pending').length,
-            });
-        } catch (err) { next(err); }
-    });
+    // Staff-board routes live in ./guilds/board.js (first extraction of the
+    // monolithic router). Registered here — not at the bottom with analytics —
+    // so Express matching order is byte-identical to before the split.
+    registerBoardRoutes(router, { requirePerm, rl });
 
-    router.post('/suggestions/config', requirePerm(3), async (req, res, next) => {
-        try {
-            const current = await suggestions.getConfig(db, req.params.guildId);
-            const saved = await suggestions.saveConfig(db, req.params.guildId, { ...current, ...(req.body || {}) });
-            res.json(saved);
-        } catch (err) { next(err); }
-    });
-
-    router.post('/suggestions', requirePerm(2), async (req, res, next) => {
-        try {
-            const item = await suggestions.create(req.guild, db, {
-                message: req.body?.message,
-                anonymous: !!req.body?.anonymous,
-                channelId: req.body?.channelId,
-                authorId: req.session?.user?.id || 'dashboard',
-                authorTag: req.session?.user?.username || 'Dashboard',
-            });
-            res.json(item);
-        } catch (err) { next(err); }
-    });
-
-    router.post('/suggestions/:id/approve', requirePerm(2), async (req, res, next) => {
-        try {
-            const item = await suggestions.setStatus(req.guild, db, req.params.id, 'approved', {
-                note: req.body?.note,
-                reviewedBy: req.session?.user?.username || 'Dashboard',
-            });
-            res.json(item);
-        } catch (err) { next(err); }
-    });
-
-    router.post('/suggestions/:id/deny', requirePerm(2), async (req, res, next) => {
-        try {
-            const item = await suggestions.setStatus(req.guild, db, req.params.id, 'denied', {
-                note: req.body?.note,
-                reviewedBy: req.session?.user?.username || 'Dashboard',
-            });
-            res.json(item);
-        } catch (err) { next(err); }
-    });
-
-    router.delete('/suggestions/:id', requirePerm(2), async (req, res, next) => {
-        try {
-            res.json(await suggestions.remove(req.guild, db, req.params.id));
-        } catch (err) { next(err); }
-    });
-
-    router.get('/polls', async (req, res, next) => {
-        try {
-            const list = await polls.list(db, req.params.guildId);
-            const enriched = [];
-            for (const p of [...list].reverse()) {
-                const liveResults = p.closed ? (p.results || []) : await polls.tally(req.guild, p).catch(() => p.options || []);
-                enriched.push({ ...p, liveResults });
-            }
-            res.json({ polls: enriched, open: list.filter((p) => !p.closed).length });
-        } catch (err) { next(err); }
-    });
-
-    router.post('/polls', requirePerm(2), async (req, res, next) => {
-        try {
-            const poll = await polls.create(req.guild, db, {
-                channelId: req.body?.channelId,
-                question: req.body?.question,
-                options: req.body?.options,
-                durationMs: req.body?.durationMs,
-                authorId: req.session?.user?.id || 'dashboard',
-                authorTag: req.session?.user?.username || 'Dashboard',
-            });
-            res.json(poll);
-        } catch (err) { next(err); }
-    });
-
-    router.post('/polls/:id/close', requirePerm(2), async (req, res, next) => {
-        try {
-            res.json(await polls.close(req.guild, db, req.params.id));
-        } catch (err) { next(err); }
-    });
-
-    router.delete('/polls/:id', requirePerm(2), async (req, res, next) => {
-        try {
-            res.json(await polls.remove(req.guild, db, req.params.id));
-        } catch (err) { next(err); }
-    });
-
-    router.get('/tags', async (req, res, next) => {
-        try {
-            res.json({ tags: await tags.list(db, req.params.guildId) });
-        } catch (err) { next(err); }
-    });
-
-    router.post('/tags', requirePerm(2), async (req, res, next) => {
-        try {
-            const item = await tags.upsert(db, req.params.guildId, req.body?.name, req.body?.content, req.session?.user?.id || 'dashboard');
-            res.json(item);
-        } catch (err) { next(err); }
-    });
-
-    router.delete('/tags/:name', requirePerm(2), async (req, res, next) => {
-        try {
-            res.json(await tags.remove(db, req.params.guildId, req.params.name));
-        } catch (err) { next(err); }
-    });
-
-    router.get('/confessions', async (req, res, next) => {
-        try {
-            const config = await confessions.getConfig(db, req.params.guildId);
-            const items = [...(await confessions.list(db, req.params.guildId))].reverse();
-            // Confessions are anonymous by design. authorId/authorTag are only
-            // retained when staffLog is enabled, and must not be handed to every
-            // dashboard Viewer — strip them below Moderator (level 2).
-            const level = await getUserPermLevel(botClient, req.params.guildId, sessionUserId(req));
-            const safe = level >= 2
-                ? items
-                : items.map(({ authorId, authorTag, ...rest }) => rest);
-            res.json({ items: safe, config });
-        } catch (err) { next(err); }
-    });
-
-    router.post('/confessions/config', requirePerm(3), async (req, res, next) => {
-        try {
-            const current = await confessions.getConfig(db, req.params.guildId);
-            res.json(await confessions.saveConfig(db, req.params.guildId, { ...current, ...(req.body || {}) }));
-        } catch (err) { next(err); }
-    });
-
-    router.post('/confessions', requirePerm(2), async (req, res, next) => {
-        try {
-            const item = await confessions.create(req.guild, db, {
-                message: req.body?.message,
-                channelId: req.body?.channelId,
-                skipCooldown: true,
-                authorId: req.session?.user?.id || 'dashboard',
-                authorTag: req.session?.user?.username || 'Dashboard',
-            });
-            res.json(item);
-        } catch (err) { next(err); }
-    });
-
-    router.delete('/confessions/:id', requirePerm(2), async (req, res, next) => {
-        try {
-            res.json(await confessions.remove(req.guild, db, req.params.id));
-        } catch (err) { next(err); }
-    });
-
-    router.get('/board', async (req, res, next) => {
-        try {
-            const [announcements, afk, reminders] = await Promise.all([
-                board.listAnnouncements(db, req.params.guildId),
-                board.listAfk(req.guild, db),
-                board.listReminders(req.guild, db),
-            ]);
-            res.json({
-                announcements: [...announcements].reverse(),
-                afk,
-                reminders,
-            });
-        } catch (err) { next(err); }
-    });
-
-    router.post('/board/announce', requirePerm(2), rl.botMessaging(), async (req, res, next) => {
-        try {
-            res.json(await board.postAnnouncement(req.guild, db, {
-                ...(req.body || {}),
-                authorTag: req.session?.user?.username || 'Dashboard',
-            }));
-        } catch (err) { next(err); }
-    });
-
-    router.delete('/board/announce/:id', requirePerm(2), async (req, res, next) => {
-        try {
-            res.json(await board.deleteAnnouncement(req.guild, db, req.params.id));
-        } catch (err) { next(err); }
-    });
-
-    router.delete('/board/afk/:userId', requirePerm(2), async (req, res, next) => {
-        try {
-            res.json(await board.clearAfk(db, req.params.guildId, req.params.userId));
-        } catch (err) { next(err); }
-    });
-
-    router.post('/board/reminders', requirePerm(2), async (req, res, next) => {
-        try {
-            res.json(await board.addReminder(req.guild, db, {
-                ...(req.body || {}),
-                userId: req.session?.user?.id || 'dashboard',
-            }));
-        } catch (err) { next(err); }
-    });
-
-    router.delete('/board/reminders/:userId/:index', requirePerm(2), async (req, res, next) => {
-        try {
-            res.json(await board.cancelReminder(db, req.params.userId, Number(req.params.index)));
-        } catch (err) { next(err); }
-    });
-
-    // GET /tickets — list open tickets (unified from both storage formats)
-    router.get('/tickets', async (req, res, next) => {
-        try {
-            const { guildId } = req.params;
-            const allKeys = await db.allByPrefix(`ticket_${guildId}_`);
-            const structured = allKeys
-                .map(e => ({ id: e.id.replace(`ticket_${guildId}_`, ''), ...e.value }))
-                .filter(t => t && typeof t === 'object');
-
-            // Fallback: include tickets tracked via opentickets_ map (legacy bot format)
-            const openMap = await db.get(`opentickets_${guildId}`) || {};
-            const mapped = Object.entries(openMap).map(([userId, channelId]) => {
-                const id = String(channelId);
-                // Avoid duplicate if already in structured list
-                if (structured.some(t => String(t.channelId) === id || String(t.id) === id)) return null;
-                return {
-                    id,
-                    channelId: id,
-                    userId: String(userId),
-                    status: 'open',
-                    createdAt: null
-                };
-            }).filter(Boolean);
-
-            // Enrich mapped entries with any existing ticket_ record if available, otherwise keep mapped
-            const combined = [...structured, ...mapped];
-            // Deduplicate by id/channelId
-            const seen = new Set();
-            const deduped = [];
-            for (const t of combined) {
-                const key = String(t.channelId || t.id);
-                if (seen.has(key)) continue;
-                seen.add(key);
-                deduped.push(t);
-            }
-            res.json(deduped);
-        } catch (err) { next(err); }
-    });
+    // Ticket routes live in ./guilds/tickets.js (sixth extraction).
+    registerTicketsRoutes(router, { requirePerm, rl });
 
     router.get('/logging', async (req, res, next) => {
         try {
@@ -1079,410 +579,11 @@ module.exports = (botClient) => {
         } catch (err) { next(err); }
     });
 
-    router.get('/giveaways', async (req, res, next) => {
-        try {
-            const giveaways = (await db.get(`giveaways_${req.params.guildId}`) || [])
-                .sort((a, b) => (b.createdAt || b.endsAt || 0) - (a.createdAt || a.endsAt || 0));
-            res.json(giveaways.map(g => ({ ...g, id: g.messageId })));
-        } catch (err) { next(err); }
-    });
+    // Giveaway routes live in ./guilds/giveaways.js (fourth extraction).
+    registerGiveawaysRoutes(router, { requirePerm });
 
-    // Giveaway default settings prefill the dashboard create form.
-    router.get('/giveaways/settings', async (req, res, next) => {
-        try {
-            res.json(await db.get(`giveaway_settings_${req.params.guildId}`) || {});
-        } catch (err) { next(err); }
-    });
-
-    router.post('/giveaways/settings', requirePerm(2), async (req, res, next) => {
-        try {
-            const guild = req.guild;
-            const {
-                channelId = '', duration, winners = 1,
-                color = '#FF69B4', dmWinner = true, requiredRoleId = '', host = '',
-            } = req.body || {};
-            if (channelId && !guild.channels.cache.has(channelId)) {
-                return res.status(404).json({ error: 'Default channel not found' });
-            }
-            if (requiredRoleId && !guild.roles.cache.has(requiredRoleId)) {
-                return res.status(400).json({ error: 'Default required role not found' });
-            }
-            const durationMs = duration == null || duration === '' ? null : Number(duration);
-            if (durationMs != null && (!Number.isFinite(durationMs) || durationMs < 60 * 1000 || durationMs > 30 * 24 * 60 * 60 * 1000)) {
-                return res.status(400).json({ error: 'Default duration must be between 1 minute and 30 days' });
-            }
-            const winnerCount = Number(winners);
-            if (!Number.isInteger(winnerCount) || winnerCount < 1 || winnerCount > 20) {
-                return res.status(400).json({ error: 'Default winners must be between 1 and 20' });
-            }
-            const settings = {
-                channelId: channelId || '',
-                duration: durationMs,
-                winners: winnerCount,
-                color: /^#[0-9a-f]{6}$/i.test(String(color)) ? String(color) : '#FF69B4',
-                dmWinner: dmWinner !== false,
-                requiredRoleId: requiredRoleId || '',
-                host: String(host || '').trim().slice(0, 32),
-            };
-            await db.set(`giveaway_settings_${req.params.guildId}`, settings);
-            res.json(settings);
-        } catch (err) { next(err); }
-    });
-
-    router.post('/giveaways/create', requirePerm(2), async (req, res, next) => {
-        try {
-            const {
-                prize, description = '', duration, winners = 1, channelId,
-                requiredRoleId = '', color = '#FF69B4', dmWinner = true, host = ''
-            } = req.body;
-            const guild = req.guild;
-            const channel = guild.channels.cache.get(channelId);
-            if (!channel) return res.status(404).json({ error: 'Channel not found' });
-
-            const durationMs = Number(duration);
-            const winnerCount = Number(winners);
-            if (!String(prize || '').trim()) return res.status(400).json({ error: 'Prize is required' });
-            if (!Number.isFinite(durationMs) || durationMs < 60 * 1000 || durationMs > 30 * 24 * 60 * 60 * 1000) {
-                return res.status(400).json({ error: 'Duration must be between 1 minute and 30 days' });
-            }
-            if (!Number.isInteger(winnerCount) || winnerCount < 1 || winnerCount > 20) {
-                return res.status(400).json({ error: 'Winners must be between 1 and 20' });
-            }
-            if (requiredRoleId && !guild.roles.cache.has(requiredRoleId)) {
-                return res.status(400).json({ error: 'Required role not found' });
-            }
-            const hostName = String(host || '').trim().slice(0, 32);
-
-            const safeColor = /^#[0-9a-f]{6}$/i.test(color) ? color : '#FF69B4';
-            const endsAt = Date.now() + durationMs;
-            const details = [
-                description.trim(),
-                `**Prize:** ${String(prize).trim()}`,
-                `**Ends:** <t:${Math.round(endsAt / 1000)}:R>`,
-                `**Winners:** ${winnerCount}`,
-                requiredRoleId ? `**Requires:** <@&${requiredRoleId}>` : '',
-                hostName ? `**Hosted by:** ${hostName}` : '',
-                'React with 🎉 to enter!'
-            ].filter(Boolean).join('\n');
-            const embed = new EmbedBuilder()
-                .setTitle('🎉 GIVEAWAY 🎉')
-                .setDescription(details)
-                .setColor(safeColor)
-                .setFooter({ text: `${winnerCount} winner(s) • React with 🎉 to enter` })
-                .setTimestamp(endsAt);
-
-            const msg = await channel.send({ embeds: [embed] });
-            await msg.react(ENTRY_REACTION);
-
-            const giveaway = {
-                messageId: msg.id,
-                channelId: channel.id,
-                guildId: guild.id,
-                prize: String(prize).trim(),
-                description: description.trim(),
-                winners: winnerCount,
-                endsAt,
-                active: true,
-                hostId: 'Dashboard',
-                host: hostName,
-                requiredRoleId: requiredRoleId || null,
-                color: safeColor,
-                dmWinner: dmWinner !== false,
-                entries: 0,
-                winnerIds: [],
-                createdAt: Date.now()
-            };
-            const giveawaysKey = `giveaways_${guild.id}`;
-            await withKeyLock(giveawaysKey, async (lockedDb) => {
-                const giveaways = (await lockedDb.get(giveawaysKey)) || [];
-                giveaways.push(giveaway);
-                await lockedDb.set(giveawaysKey, giveaways);
-            }, db);
-            res.json({ success: true, giveaway: { ...giveaway, id: giveaway.messageId } });
-        } catch (err) { next(err); }
-    });
-
-    router.post('/giveaways/:id/end', requirePerm(2), async (req, res, next) => {
-        try {
-            const { guildId, id } = req.params;
-            // Read-modify-write on giveaways_<guild>. The scheduler runs the same
-            // sequence every 10s, so without the lock one side's write is lost and
-            // a finalised giveaway stays active — it is then drawn a second time
-            // and the prize is awarded twice.
-            const giveawaysKey = `giveaways_${guildId}`;
-            const result = await withKeyLock(giveawaysKey, async (lockedDb) => {
-                const giveaways = await lockedDb.get(giveawaysKey) || [];
-                const giveaway = giveaways.find(g => g.messageId === id && g.active);
-                if (!giveaway) return null;
-                await finalizeGiveaway(req.guild, giveaway, logger);
-                await lockedDb.set(giveawaysKey, giveaways);
-                return giveaway;
-            }, db);
-            if (!result) return res.status(404).json({ error: 'Active giveaway not found' });
-            res.json({ success: true, giveaway: { ...result, id: result.messageId } });
-        } catch (err) { next(err); }
-    });
-
-    router.post('/giveaways/:id/reroll', requirePerm(2), async (req, res, next) => {
-        try {
-            const { guildId, id } = req.params;
-            const giveawaysKey = `giveaways_${guildId}`;
-            const result = await withKeyLock(giveawaysKey, async (lockedDb) => {
-                const giveaways = await lockedDb.get(giveawaysKey) || [];
-                const giveaway = giveaways.find(g => g.messageId === id && !g.active);
-                if (!giveaway) return null;
-                const winner = await rerollGiveaway(req.guild, giveaway);
-                await lockedDb.set(giveawaysKey, giveaways);
-                return { winner, giveaway };
-            }, db);
-            if (!result) return res.status(404).json({ error: 'Giveaway not found' });
-            res.json({ success: true, winnerId: result.winner, giveaway: { ...result.giveaway, id: result.giveaway.messageId } });
-        } catch (err) { next(err); }
-    });
-
-    router.delete('/giveaways/:id', requirePerm(2), async (req, res, next) => {
-        try {
-            const { guildId, id } = req.params;
-            const giveawaysKey = `giveaways_${guildId}`;
-            const deleted = await withKeyLock(giveawaysKey, async (lockedDb) => {
-                const giveaways = await lockedDb.get(giveawaysKey) || [];
-                const giveaway = giveaways.find(g => g.messageId === id);
-                if (!giveaway) return false;
-                const channel = await req.guild.channels.fetch(giveaway.channelId).catch(() => null);
-                const message = channel ? await channel.messages.fetch(id).catch(() => null) : null;
-                if (message) await message.delete().catch(() => {});
-                await lockedDb.set(giveawaysKey, giveaways.filter(g => g.messageId !== id));
-                return true;
-            }, db);
-            if (!deleted) return res.status(404).json({ error: 'Giveaway not found' });
-            res.json({ success: true });
-        } catch (err) { next(err); }
-    });
-
-    router.get('/members', async (req, res, next) => {
-        try {
-            const query = (req.query.q || '').toLowerCase();
-            let members = req.guild.members.cache;
-            if (members.size < Math.min(req.guild.memberCount || 2, 5)) {
-                try {
-                    members = await Promise.race([
-                        req.guild.members.fetch(),
-                        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000)),
-                    ]);
-                } catch {
-                    members = req.guild.members.cache;
-                }
-            }
-            if (query) {
-                members = members.filter(m => m.user.username.toLowerCase().includes(query) || (m.nickname && m.nickname.toLowerCase().includes(query)) || m.id.includes(query));
-            }
-            if (req.query.staff === '1') {
-                members = members.filter(m => !m.user.bot && m.permissions.has(PermissionsBitField.Flags.ManageMessages));
-            }
-            const limit = req.query.staff === '1' ? 100 : 50;
-            const data = members.first(limit).map(m => ({
-                id: m.id,
-                username: m.user.username,
-                displayName: m.displayName,
-                avatar: m.user.displayAvatarURL({ size: 64 }),
-                joinedAt: m.joinedAt,
-                roles: m.roles.cache.size - 1,
-                isStaff: m.permissions.has(PermissionsBitField.Flags.ManageMessages),
-                isBot: !!m.user.bot,
-                timedOut: !!(m.communicationDisabledUntil && m.communicationDisabledUntil > Date.now()),
-                highestRole: m.roles.highest && m.roles.highest.name !== '@everyone' ? m.roles.highest.name : null,
-            }));
-            res.json(data);
-        } catch (err) { next(err); }
-    });
-
-    router.post('/members/:userId/action', requirePerm(2), async (req, res, next) => {
-        try {
-            const { userId } = req.params;
-            const { action, reason, duration } = req.body;
-            const member = await req.guild.members.fetch(userId);
-            if (!member) return res.status(404).json({ error: 'Member not found' });
-
-            // Note actions are record-keeping only; everything else touches the user.
-            if (action !== 'note') {
-                const hErr = await hierarchyError(req, member);
-                if (hErr) return res.status(403).json({ error: hErr, code: 'HIERARCHY' });
-            }
-
-            if (action === 'kick') await member.kick(reason || 'Dashboard Action');
-            else if (action === 'ban') await member.ban({ reason: reason || 'Dashboard Action' });
-            else if (action === 'softban') {
-                await member.ban({ deleteMessageSeconds: 86400, reason: reason || 'Dashboard softban' });
-                await req.guild.members.unban(userId, reason || 'Dashboard softban');
-            }
-            else if (action === 'timeout') await member.timeout(duration || 60000, reason || 'Dashboard Action');
-            else if (action === 'untimeout') await member.timeout(null, reason || 'Dashboard unmute');
-            else if (action === 'nickname') {
-                const nick = typeof req.body.nickname === 'string' ? req.body.nickname.trim() : '';
-                if (nick.length > 32) return res.status(400).json({ error: 'Nickname must be 32 characters or less' });
-                await member.setNickname(nick || null, reason || 'Dashboard nickname');
-            }
-            else if (action === 'warn') {
-                const { randomUUID } = require('crypto');
-                const warnings = await db.get(`warnings_${req.params.guildId}_${userId}`) || [];
-                warnings.push({
-                    id: randomUUID().split('-')[0],
-                    // Bound both the entry and the list: `reason` was unbounded, so a
-                    // 100 kb body became a 100 kb record, and the array itself never
-                    // stopped growing. Keep the most recent 200.
-                    reason: String(reason || 'Dashboard Action').slice(0, 500),
-                    moderator: req.session?.user?.username || 'Dashboard',
-                    timestamp: Date.now(),
-                });
-                await db.set(`warnings_${req.params.guildId}_${userId}`, warnings.slice(-200));
-            } else {
-                return res.status(400).json({ error: 'Unknown action' });
-            }
-            res.json({ success: true });
-        } catch (err) { next(err); }
-    });
-
-    function normalizeNotes(list) {
-        return (list || []).map((n, i) => ({
-            id: n.id || `legacy-${n.ts || n.timestamp || i}`,
-            text: n.text,
-            mod: n.mod || n.moderator || 'Unknown',
-            ts: n.ts || n.timestamp || 0,
-        }));
-    }
-
-    router.get('/notes', async (req, res, next) => {
-        try {
-            const { guildId } = req.params;
-            const allKeys = await db.allByPrefix(`notes_${guildId}_`);
-            const notes = allKeys
-                .flatMap(e => normalizeNotes(e.value || []).map(n => ({
-                    userId: e.id.replace(`notes_${guildId}_`, ''),
-                    ...n,
-                })))
-                .sort((a, b) => (b.ts || 0) - (a.ts || 0));
-            res.json(notes);
-        } catch (err) { next(err); }
-    });
-
-    router.get('/members/:userId/notes', async (req, res, next) => {
-        try {
-            const list = await db.get(`notes_${req.params.guildId}_${req.params.userId}`) || [];
-            res.json(normalizeNotes(list));
-        } catch (err) { next(err); }
-    });
-
-    router.post('/members/:userId/notes', requirePerm(2), async (req, res, next) => {
-        try {
-            const text = typeof req.body.text === 'string' ? req.body.text.trim() : '';
-            if (!text) return res.status(400).json({ error: 'Note text required' });
-            if (text.length > 500) return res.status(400).json({ error: 'Note must be 500 characters or less' });
-            const { randomUUID } = require('crypto');
-            const key = `notes_${req.params.guildId}_${req.params.userId}`;
-            const list = normalizeNotes(await db.get(key) || []);
-            list.push({
-                id: randomUUID().split('-')[0],
-                text,
-                mod: req.session?.user?.username || 'Dashboard',
-                ts: Date.now(),
-            });
-            const capped = list.slice(-200);   // text was bounded, the list was not
-            await db.set(key, capped);
-            res.json(capped);
-        } catch (err) { next(err); }
-    });
-
-    router.delete('/members/:userId/notes/:noteId', requirePerm(2), async (req, res, next) => {
-        try {
-            const key = `notes_${req.params.guildId}_${req.params.userId}`;
-            const list = normalizeNotes(await db.get(key) || []).filter(n => n.id !== req.params.noteId);
-            await db.set(key, list);
-            res.json(list);
-        } catch (err) { next(err); }
-    });
-
-    router.delete('/members/:userId/notes', requirePerm(2), async (req, res, next) => {
-        try {
-            await db.set(`notes_${req.params.guildId}_${req.params.userId}`, []);
-            res.json([]);
-        } catch (err) { next(err); }
-    });
-
-    router.patch('/members/:userId/warnings/:warningId', requirePerm(2), async (req, res, next) => {
-        try {
-            const key = `warnings_${req.params.guildId}_${req.params.userId}`;
-            const reason = typeof req.body.reason === 'string' ? req.body.reason.trim() : '';
-            if (!reason) return res.status(400).json({ error: 'Reason required' });
-            const list = (await db.get(key) || []).map((w, i) => {
-                const id = w.id || String(w.timestamp || i);
-                return id === req.params.warningId ? { ...w, id, reason } : w;
-            });
-            await db.set(key, list);
-            res.json(list);
-        } catch (err) { next(err); }
-    });
-
-    router.delete('/members/:userId/warnings/:warningId', requirePerm(2), async (req, res, next) => {
-        try {
-            const key = `warnings_${req.params.guildId}_${req.params.userId}`;
-            const list = (await db.get(key) || []).filter((w, i) => {
-                const id = w.id || String(w.timestamp || i);
-                return id !== req.params.warningId;
-            });
-            await db.set(key, list);
-            res.json(list);
-        } catch (err) { next(err); }
-    });
-
-    router.delete('/members/:userId/warnings', requirePerm(2), async (req, res, next) => {
-        try {
-            await db.set(`warnings_${req.params.guildId}_${req.params.userId}`, []);
-            res.json([]);
-        } catch (err) { next(err); }
-    });
-
-    router.delete('/warnings', requirePerm(3), rl.bulkModeration(), async (req, res, next) => {
-        try {
-            const { guildId } = req.params;
-            const keys = await db.allByPrefix(`warnings_${guildId}_`);
-            await Promise.all(keys.map(e => db.set(e.id, [])));
-            res.json({ success: true, cleared: keys.length });
-        } catch (err) { next(err); }
-    });
-
-    router.post('/members/:userId/roles', requirePerm(3), async (req, res, next) => {
-        try {
-            const { userId } = req.params;
-            const { roles } = req.body;
-            if (!Array.isArray(roles)) return res.status(400).json({ error: 'roles must be an array' });
-            const member = await req.guild.members.fetch(userId);
-            if (!member) return res.status(404).json({ error: 'Member not found' });
-
-            const hErr = await hierarchyError(req, member);
-            if (hErr) return res.status(403).json({ error: hErr, code: 'HIERARCHY' });
-
-            // Privilege escalation guard: roles.set() previously accepted ANY role id,
-            // so a level-3 dashboard user could grant themselves or others a role above
-            // their own — or a managed/integration role the bot must not touch.
-            const botTop = req.guild.members.me?.roles.highest.position ?? 0;
-            const actorId = sessionUserId(req);
-            let actorTop = Infinity;   // localhost dev bypass has no Discord identity
-            if (actorId && actorId !== req.guild.ownerId) {
-                const actor = await req.guild.members.fetch(actorId).catch(() => null);
-                actorTop = actor ? actor.roles.highest.position : 0;
-            }
-            for (const rid of roles) {
-                const role = req.guild.roles.cache.get(String(rid));
-                if (!role) return res.status(400).json({ error: `Unknown role: ${rid}` });
-                if (role.managed) return res.status(403).json({ error: `${role.name} is managed by an integration`, code: 'MANAGED_ROLE' });
-                if (role.position >= botTop) return res.status(403).json({ error: `${role.name} is above the bot's highest role`, code: 'HIERARCHY' });
-                if (role.position >= actorTop) return res.status(403).json({ error: `${role.name} is at or above your highest role`, code: 'HIERARCHY' });
-            }
-
-            await member.roles.set(roles);
-            res.json({ success: true });
-        } catch (err) { next(err); }
-    });
+    // Member routes live in ./guilds/members.js (third extraction).
+    registerMembersRoutes(router, { requirePerm, rl, hierarchyError, sessionUserId });
 
     router.get('/rewards', async (req, res, next) => {
         const rewards = await db.get(`rewards_${req.params.guildId}`) || [];
@@ -1547,74 +648,6 @@ module.exports = (botClient) => {
         } catch (err) { next(err); }
     });
 
-    router.post('/tickets', requirePerm(3), async (req, res, next) => {
-        try {
-            const { guildId } = req.params;
-            const { categoryId, transcriptChannelId, supportRoleId, maxOpen } = req.body;
-            const SNOWFLAKE = /^\d{17,20}$/;
-            const guild = req.guild;
-
-            // Validate inputs before persisting
-            if (categoryId !== undefined && categoryId !== null && String(categoryId).trim() !== '') {
-                const cid = String(categoryId).trim();
-                if (!SNOWFLAKE.test(cid)) return res.status(400).json({ error: 'Invalid category ID', code: 'INVALID_CATEGORY' });
-                const cat = guild.channels.cache.get(cid);
-                if (!cat) return res.status(404).json({ error: 'Category channel not found', code: 'NOT_FOUND' });
-                if (cat.type !== 4) return res.status(400).json({ error: 'Selected channel is not a category', code: 'INVALID_CATEGORY' });
-            }
-            if (transcriptChannelId !== undefined && transcriptChannelId !== null && String(transcriptChannelId).trim() !== '') {
-                const tid = String(transcriptChannelId).trim();
-                if (!SNOWFLAKE.test(tid)) return res.status(400).json({ error: 'Invalid transcript channel ID', code: 'INVALID_CHANNEL' });
-                const ch = guild.channels.cache.get(tid);
-                if (!ch) return res.status(404).json({ error: 'Transcript channel not found', code: 'NOT_FOUND' });
-                if (![0, 5].includes(ch.type)) return res.status(400).json({ error: 'Transcript channel must be a text channel', code: 'INVALID_CHANNEL' });
-            }
-            if (supportRoleId !== undefined && supportRoleId !== null && String(supportRoleId).trim() !== '') {
-                const rid = String(supportRoleId).trim();
-                if (!SNOWFLAKE.test(rid)) return res.status(400).json({ error: 'Invalid support role ID', code: 'INVALID_ROLE' });
-                const role = guild.roles.cache.get(rid);
-                if (!role) return res.status(404).json({ error: 'Support role not found', code: 'NOT_FOUND' });
-                if (role.managed) return res.status(400).json({ error: 'Support role is managed by an integration', code: 'MANAGED_ROLE' });
-                // Hierarchy check: bot must be able to see the role
-                const botMember = guild.members.me;
-                if (botMember && role.position >= botMember.roles.highest.position) {
-                    return res.status(403).json({ error: 'Support role is above the bot role', code: 'HIERARCHY' });
-                }
-            }
-            if (maxOpen !== undefined && maxOpen !== null && String(maxOpen).trim() !== '') {
-                const n = Number(maxOpen);
-                if (!Number.isInteger(n) || n < 1 || n > 10) return res.status(400).json({ error: 'Max open tickets must be between 1 and 10', code: 'INVALID_MAXOPEN' });
-            }
-
-            let config = await db.get(`tickets_${guildId}`);
-            if (!config) {
-                const legacy = await db.get(`ticket_config_${guildId}`);
-                config = legacy || { categoryId: null, transcriptChannelId: null };
-            }
-            if (categoryId !== undefined) {
-                const v = categoryId === '' || categoryId === null ? null : String(categoryId).trim() || null;
-                config.categoryId = v;
-                config.category = v;
-            }
-            if (transcriptChannelId !== undefined) {
-                const v = transcriptChannelId === '' || transcriptChannelId === null ? null : String(transcriptChannelId).trim() || null;
-                config.transcriptChannelId = v;
-                config.logChannel = v;
-            }
-            if (supportRoleId !== undefined) {
-                const v = supportRoleId === '' || supportRoleId === null ? null : String(supportRoleId).trim() || null;
-                config.supportRoleId = v;
-                config.supportRole = v;
-            }
-            if (maxOpen !== undefined) {
-                config.maxOpen = maxOpen === '' || maxOpen === null ? 1 : Math.min(10, Math.max(1, Number(maxOpen) || 1));
-            }
-            config.enabled = true;
-            await db.set(`tickets_${guildId}`, config);
-            res.json(config);
-        } catch (err) { next(err); }
-    });
-
     // POST /welcome/test — send a test welcome message to a channel
     router.post('/welcome/test', requirePerm(2), rl.botMessaging(), async (req, res, next) => {
         try {
@@ -1628,112 +661,6 @@ module.exports = (botClient) => {
             const msg = formatWelcomeVars(config.message || 'Welcome {user} to {guild}!', { member });
             await channel.send({ content: `**[Test Welcome]** ${msg}` });
             res.json({ success: true });
-        } catch (err) { next(err); }
-    });
-
-    // POST /tickets/panel — post a ticket button panel embed in a channel
-    router.post('/tickets/panel', requirePerm(2), rl.botMessaging(), async (req, res, next) => {
-        try {
-            const { channelId, title, description } = req.body;
-            const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-            const guild = req.guild;
-            const channel = guild.channels.cache.get(channelId);
-            if (!channel) return res.status(400).json({ error: 'Channel not found', code: 'NOT_FOUND' });
-            if (![0, 5].includes(channel.type)) return res.status(400).json({ error: 'Panel channel must be a text channel', code: 'INVALID_CHANNEL' });
-
-            // Warn if ticket system not yet configured — panel would immediately error with "not configured"
-            const cfg = await db.get(`tickets_${guild.id}`) || await db.get(`ticket_config_${guild.id}`);
-            if (!cfg) {
-                // Allow posting but inform caller that setup is missing — dashboard will toast a hint
-                // Do not block; admin may want to post panel before full config.
-            }
-
-            if (title != null && String(title).length > 256) {
-                return res.status(400).json({ error: 'Title must be 256 characters or fewer', code: 'INVALID_TITLE' });
-            }
-            if (description != null && String(description).length > 4000) {
-                return res.status(400).json({ error: 'Description must be 4000 characters or fewer', code: 'INVALID_DESC' });
-            }
-
-            const embed = new EmbedBuilder()
-                .setTitle(String(title || 'Support Tickets').slice(0, 256))
-                .setDescription(String(description || 'Click the button below to open a support ticket.').slice(0, 4000))
-                .setColor(0x00FFFF)
-                .setFooter({ text: guild.name });
-            const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId('create_ticket')
-                    .setLabel('Open Ticket')
-                    .setStyle(ButtonStyle.Primary)
-                    .setEmoji('🎫')
-            );
-            try {
-                await channel.send({ embeds: [embed], components: [row] });
-            } catch (sendErr) {
-                const msg = String(sendErr.message || '');
-                if (/Missing Permissions|Missing Access/i.test(msg)) {
-                    return res.status(403).json({ error: 'Bot lacks permission to send in that channel', code: 'NO_PERMS' });
-                }
-                throw sendErr;
-            }
-            res.json({ success: true, warned: !cfg ? 'Ticket system not yet configured — save configuration before members use the panel.' : undefined });
-        } catch (err) { next(err); }
-    });
-
-    // POST /tickets/:ticketId/close — mark a ticket closed (dashboard)
-    router.post('/tickets/:ticketId/close', requirePerm(2), async (req, res, next) => {
-        try {
-            const { guildId, ticketId } = req.params;
-            const key = `ticket_${guildId}_${ticketId}`;
-            let ticket = await db.get(key);
-            // Fallback to opentickets map if structured record missing (bot-created tickets)
-            let channelId = ticket?.channelId || ticket?.channel || ticketId;
-            let ownerId = ticket?.userId || null;
-            if (!ticket) {
-                const openMap = await db.get(`opentickets_${guildId}`) || {};
-                // Find owner by channelId
-                for (const [uid, cid] of Object.entries(openMap)) {
-                    if (String(cid) === String(ticketId) || String(cid) === String(channelId)) {
-                        ownerId = uid;
-                        channelId = String(cid);
-                        ticket = { userId: uid, channelId, status: 'open', id: ticketId };
-                        break;
-                    }
-                }
-                // Also try ticketId as channelId directly
-                if (!ticket) {
-                    const cid = String(ticketId);
-                    const ch = await req.guild.channels.fetch(cid).catch(() => null);
-                    if (ch && ch.name.startsWith('ticket-')) {
-                        ticket = { channelId: cid, status: 'open', id: ticketId };
-                        channelId = cid;
-                    }
-                }
-                if (!ticket) return res.status(404).json({ error: 'Ticket not found', code: 'NOT_FOUND' });
-            }
-            ticket.status = 'closed';
-            ticket.closedAt = Date.now();
-            ticket.closedBy = req.session?.user?.id || 'dashboard';
-            await db.set(key, ticket);
-
-            // Clean opentickets map
-            try {
-                const ext = await db.get(`opentickets_${guildId}`) || {};
-                let toDelete = ownerId;
-                if (!toDelete) {
-                    for (const [uid, cid] of Object.entries(ext)) {
-                        if (String(cid) === String(channelId)) { toDelete = uid; break; }
-                    }
-                }
-                if (toDelete && ext[toDelete]) {
-                    delete ext[toDelete];
-                    await db.set(`opentickets_${guildId}`, ext);
-                }
-            } catch { /* ignore */ }
-
-            const channel = await req.guild.channels.fetch(String(channelId)).catch(() => null);
-            if (channel) await channel.delete('Closed from dashboard').catch(() => {});
-            res.json({ success: true, ticket });
         } catch (err) { next(err); }
     });
 
@@ -1913,7 +840,6 @@ module.exports = (botClient) => {
         } catch (err) { next(err); }
     });
 
-
     // ── XP Announce ──────────────────────────────────────────────────────────
     router.get('/xp/announce', async (req, res, next) => {
         try {
@@ -2050,7 +976,6 @@ module.exports = (botClient) => {
             res.json({ success: true, cleared: xpCount + statsCount });
         } catch (err) { next(err); }
     });
-
 
     // Domain modules register on this already-protected router so the global
     // guild access stack and route ordering remain authoritative.

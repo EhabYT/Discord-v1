@@ -57,22 +57,26 @@ function unlockSucceeded(ip) {
     unlockHits.delete(ip);
 }
 
-function tailFile(file, lines = 120) {
-    const raw = fs.readFileSync(file, 'utf8');
+// Developer-only helpers are async: tailFile/safeStat previously used
+// readFileSync/statSync inside authenticated request handlers, blocking the
+// event loop on every Developer page poll. The async versions yield while the
+// kernel serves the file.
+async function tailFile(file, lines = 120) {
+    const raw = await fs.promises.readFile(file, 'utf8');
     const arr = raw.split(/\r?\n/);
     return arr.slice(Math.max(0, arr.length - lines)).join('\n');
 }
 
-function safeStat(p) {
+async function safeStat(p) {
     try {
-        const s = fs.statSync(p);
+        const s = await fs.promises.stat(p);
         return { exists: true, size: s.size, mtime: s.mtimeMs };
     } catch {
         return { exists: false, size: 0, mtime: null };
     }
 }
 
-function procs() {
+async function procs() {
     const names = [
         { id: 'bot', re: /node index\.js/ },
         { id: 'watchdog', re: /keep-tunnel\.sh/ },
@@ -82,9 +86,17 @@ function procs() {
     // `ps` does not exist on Windows; probing would only spam the console
     // with a shell error on every /overview poll, so report offline there.
     if (process.platform === 'win32') return offline;
+    // Async spawn: the previous execSync blocked the event loop up to 3s per
+    // /overview poll while `ps` ran.
+    const { execFile } = require('child_process');
     let text = '';
     try {
-        text = require('child_process').execSync('ps -eo pid,etime,rss,args --no-headers', { encoding: 'utf8', timeout: 3000, stdio: ['ignore', 'pipe', 'ignore'] });
+        text = await new Promise((resolve, reject) => {
+            execFile('ps', ['-eo', 'pid,etime,rss,args', '--no-headers'], { timeout: 3000 }, (err, stdout) => {
+                if (err) reject(err);
+                else resolve(stdout);
+            });
+        });
     } catch {
         return offline;
     }
@@ -168,12 +180,14 @@ module.exports = (botClient) => {
         try {
             const mem = process.memoryUsage();
             const publicUrl = readPublicUrl();
-            const dead = (() => {
-                try {
-                    return fs.readFileSync(path.join(LOG_DIR, 'dead-hosts.txt'), 'utf8')
-                        .split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
-                } catch { return []; }
-            })();
+            const [deadRaw, processes, flags, envStat, urlStat] = await Promise.all([
+                fs.promises.readFile(path.join(LOG_DIR, 'dead-hosts.txt'), 'utf8').catch(() => ''),
+                procs(),
+                db.get('dev_flags').catch(() => null),
+                safeStat(path.join(ROOT, '.env')),
+                safeStat(path.join(ROOT, '.dashboard-url')),
+            ]);
+            const dead = deadRaw.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
             res.json({
                 node: process.version,
                 pid: process.pid,
@@ -203,13 +217,13 @@ module.exports = (botClient) => {
                 },
                 publicUrl,
                 sseClients: clientCount(),
-                processes: procs(),
+                processes,
                 deadHosts: dead.slice(-40),
                 ownerCount: ownerIds(botClient).size,
-                flags: (await db.get('dev_flags')) || { maintenance: false, verbose: false },
+                flags: flags || { maintenance: false, verbose: false },
                 files: {
-                    env: safeStat(path.join(ROOT, '.env')),
-                    dashboardUrl: safeStat(path.join(ROOT, '.dashboard-url')),
+                    env: envStat,
+                    dashboardUrl: urlStat,
                 },
                 database: { provider: 'supabase-postgresql', configured: !!process.env.DATABASE_URL },
                 ts: Date.now(),
@@ -224,7 +238,7 @@ module.exports = (botClient) => {
         catch (err) { return next(err); }
     });
 
-    router.get('/logs', developerOnly, (req, res, next) => {
+    router.get('/logs', developerOnly, async (req, res, next) => {
         const name = String(req.query.file || 'general.log');
         if (!ALLOWED_LOGS.has(name)) return res.status(400).json({ error: 'Unknown log file' });
         const file = path.join(LOG_DIR, name);
@@ -232,7 +246,8 @@ module.exports = (botClient) => {
         const lines = Math.min(400, Math.max(20, parseInt(req.query.lines, 10) || 120));
         try {
             recordDeveloperAction(req, 'logs.read', name, 'success', { lines });
-            res.json({ file: name, ...safeStat(file), text: tailFile(file, lines) });
+            const [stat, text] = await Promise.all([safeStat(file), tailFile(file, lines).catch(() => '')]);
+            res.json({ file: name, ...stat, text });
         } catch (err) {
             next(err);
         }

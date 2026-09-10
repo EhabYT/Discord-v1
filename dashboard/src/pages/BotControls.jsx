@@ -216,7 +216,7 @@ export default function BotControls({ guild, guildData, setGuildData }) {
               role="radio"
               aria-checked={status === opt.value}
               onClick={() => { setStatus(opt.value); setDirty(true); }}
-              className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all duration-200 ${
+              className={`flex flex-col items-center gap-2 p-4 min-h-[88px] rounded-2xl border transition-all duration-200 ${
                 status === opt.value
                   ? 'border-cyan-300/50 bg-gradient-to-b from-cyan-400/[0.14] to-cyan-400/[0.05] shadow-[0_0_24px_rgba(34,211,238,0.12)]'
                   : 'border-white/[0.06] bg-white/[0.02] hover:border-white/15 hover:bg-white/[0.04]'
@@ -244,13 +244,13 @@ export default function BotControls({ guild, guildData, setGuildData }) {
               role="radio"
               aria-checked={actType === value}
               onClick={() => { setActType(value); setDirty(true); }}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-semibold transition-all duration-200 ${
+              className={`flex items-center gap-2 px-3.5 py-2 min-h-[40px] rounded-xl border text-xs font-semibold transition-all duration-200 ${
                 actType === value
                   ? 'border-cyan-300/50 bg-cyan-400/[0.12] text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,0.12)]'
                   : 'border-white/[0.06] bg-white/[0.02] text-zinc-400 hover:text-zinc-100 hover:border-white/15'
               }`}
             >
-              <Icon size={13} />
+              <Icon size={13} aria-hidden="true" />
               {label}
             </button>
           ))}

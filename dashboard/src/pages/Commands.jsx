@@ -106,13 +106,13 @@ export default function Commands({ guild, permLevel = 0 }) {
 
       <div className="cyber-card p-4 space-y-3">
         <div className="relative">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+          <Search size={13} className="absolute start-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search /fun meme, weather, blackjack…"
             aria-label="Search slash commands"
-            className="cyber-input pl-9 text-xs"
+            className="cyber-input ps-9 text-xs"
           />
         </div>
         <div className="flex flex-wrap gap-1.5" role="group" aria-label="Command categories">

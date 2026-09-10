@@ -32,19 +32,19 @@ export default function LanguageMenu({ className = '' }) {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="listbox"
-        aria-label={t('common.language', 'Language')}
+        aria-label={`${t('common.language', 'Language')}: ${active.native}`}
         title={active.native}
-        className="w-8 h-8 flex items-center justify-center rounded-xl text-zinc-500 hover:text-cyan-200 hover:bg-white/[0.07] border border-transparent hover:border-cyan-300/20 transition-all"
+        className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-400 hover:text-cyan-200 hover:bg-white/[0.07] border border-transparent hover:border-cyan-300/20 transition-all"
       >
-        <Languages size={15} />
+        <Languages size={15} aria-hidden="true" />
       </button>
       {open && (
         <div
           role="listbox"
           aria-label={t('common.language', 'Language')}
-          className="glass-popover absolute right-0 top-full mt-2 w-52 p-1.5 z-50 animate-palette-in"
+          className="glass-popover absolute end-0 top-full mt-2 w-52 p-1.5 z-50 animate-palette-in"
         >
-          <p className="px-2.5 pt-1.5 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500">
+          <p className="px-2.5 pt-1.5 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-400" aria-hidden="true">
             {t('common.language', 'Language')}
           </p>
           {locales.map((l) => {
@@ -56,7 +56,7 @@ export default function LanguageMenu({ className = '' }) {
                 aria-selected={selected}
                 onClick={() => { setLocale(l.id); setOpen(false); }}
                 className={clsx(
-                  'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left text-xs transition-all border border-transparent',
+                  'w-full flex items-center gap-2.5 px-2.5 py-2.5 min-h-[48px] rounded-xl text-left text-xs transition-all border border-transparent',
                   selected
                     ? 'bg-cyan-400/[0.09] border-cyan-300/20 text-cyan-100'
                     : 'text-zinc-300 hover:bg-white/[0.05] hover:border-white/[0.06]'
@@ -64,9 +64,9 @@ export default function LanguageMenu({ className = '' }) {
               >
                 <span className="min-w-0 flex-1">
                   <span className="block font-semibold truncate">{l.native}</span>
-                  <span className="block text-[10px] text-zinc-500">{l.name}</span>
+                  <span className="block text-[10px] text-zinc-400">{l.name}</span>
                 </span>
-                {selected && <Check size={13} className="text-cyan-300 flex-shrink-0" />}
+                {selected && <Check size={13} className="text-cyan-300 flex-shrink-0" aria-hidden="true" />}
               </button>
             );
           })}

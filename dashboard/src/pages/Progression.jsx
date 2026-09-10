@@ -147,16 +147,16 @@ export default function Progression({ guild, guildData }) {
     catch (_) {}
   };
 
-  if (!guild) return <div className="p-6 text-gray-500 text-sm">Select a server first.</div>;
+  if (!guild) return <div className="p-6 text-zinc-400 text-sm">Select a server first.</div>;
 
   return (
     <div className="page-shell-sm animate-fade-in">
       <PageHeader icon={TrendingUp} title="Progression & XP" subtitle="Leveling system, role rewards, and XP multipliers" />
 
-      <div className="seg-tabs">
+      <div className="seg-tabs" role="tablist" aria-label="Progression sections">
         {TABS.map(({ id, icon: Icon, label }) => (
-          <button key={id} onClick={() => setTab(id)} className={tab === id ? 'seg-tab-active' : 'seg-tab'}>
-            <Icon size={13} />{label}
+          <button key={id} onClick={() => setTab(id)} role="tab" aria-selected={tab === id} className={tab === id ? 'seg-tab-active' : 'seg-tab'}>
+            <Icon size={13} aria-hidden="true" />{label}
           </button>
         ))}
       </div>
@@ -324,39 +324,39 @@ export default function Progression({ guild, guildData }) {
               Members with these roles earn XP at a different rate. The highest applicable multiplier is used.
             </p>
             <div className="flex gap-2 mb-4">
-              <select value={newMultRole} onChange={e => setNewMultRole(e.target.value)} className="cyber-select flex-1">
+              <select value={newMultRole} onChange={e => setNewMultRole(e.target.value)} aria-label="Role for XP multiplier" className="cyber-select flex-1">
                 <option value="">— Select Role —</option>
                 {roles.filter(r => !roleMultipliers.find(m => m.roleId === r.id))
                   .map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
               </select>
-              <input type="number" placeholder="2.0" min="0.1" max="10" step="0.1" value={newMultValue}
+              <input type="number" placeholder="2.0" aria-label="XP multiplier value" min="0.1" max="10" step="0.1" value={newMultValue}
                 onChange={e => setNewMultValue(e.target.value)} className="cyber-input w-20" />
-              <span className="flex items-center text-sm text-gray-400">×</span>
-              <button onClick={addRoleMultiplier} className="cyber-button-solid flex-shrink-0 flex items-center gap-1 px-3">
-                <Plus size={14} />
+              <span className="flex items-center text-sm text-zinc-500" aria-hidden="true">×</span>
+              <button onClick={addRoleMultiplier} aria-label="Add role XP multiplier" className="cyber-button-solid flex-shrink-0 flex items-center gap-1 px-3 min-h-[40px]">
+                <Plus size={14} aria-hidden="true" />
               </button>
             </div>
             {roleMultipliers.length === 0 ? (
-              <p className="text-xs text-gray-600 text-center py-6">No role multipliers configured</p>
+              <p className="text-xs text-zinc-500 text-center py-6">No role multipliers configured</p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-2" role="list" aria-label="Role XP multipliers">
                 {roleMultipliers.map((m) => {
                   const role = roles.find(r => r.id === m.roleId);
                   const pct  = Math.min(100, ((m.value - 0.1) / 9.9) * 100);
                   return (
-                    <div key={m.roleId} className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.04] border border-white/[0.05]">
+                    <div key={m.roleId} role="listitem" aria-label={`${role?.name || m.roleId}: ${m.value} times XP`} className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.04] border border-white/[0.05]">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-xs font-medium text-white truncate">{role?.name || m.roleId}</span>
-                          <span className="ml-auto text-xs font-bold text-cyan-400 flex-shrink-0">{m.value}×</span>
+                          <span className="ml-auto text-xs font-bold text-cyan-300 tabular-nums flex-shrink-0">{m.value}×</span>
                         </div>
-                        <div className="h-1 rounded-full bg-white/10 overflow-hidden">
+                        <div className="h-1 rounded-full bg-white/10 overflow-hidden" aria-hidden="true">
                           <div className="h-full bg-gradient-to-r from-cyan-500/60 to-cyan-400 rounded-full" style={{ width: `${pct}%` }} />
                         </div>
                       </div>
                       <button onClick={() => removeRoleMultiplier(m.roleId)}
-                        className="text-gray-600 hover:text-red-400 transition-colors flex-shrink-0">
-                        <Trash2 size={13} />
+                        className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0" title="Remove multiplier" aria-label={`Remove XP multiplier for ${role?.name || m.roleId}`}>
+                        <Trash2 size={13} aria-hidden="true" />
                       </button>
                     </div>
                   );
@@ -365,8 +365,8 @@ export default function Progression({ guild, guildData }) {
             )}
           </div>
           <div className="cyber-card p-4">
-            <p className="text-xs text-gray-500">
-              <span className="text-cyan-400 font-medium">How it works:</span> When a message earns XP, the bot checks all the sender's roles and picks the highest multiplier. If no role multiplier applies, the global multiplier ({parseFloat(multiplier).toFixed(1)}×) is used instead.
+            <p className="text-xs text-zinc-400">
+              <span className="text-cyan-300 font-medium">How it works:</span> When a message earns XP, the bot checks all the sender's roles and picks the highest multiplier. If no role multiplier applies, the global multiplier ({parseFloat(multiplier).toFixed(1)}×) is used instead.
             </p>
           </div>
         </div>
@@ -375,16 +375,16 @@ export default function Progression({ guild, guildData }) {
       {/* ── LEADERBOARD ── */}
       {tab === 'leaderboard' && (
         <div className="cyber-card p-4">
-          <div className="flex items-center gap-3 mb-4">
-            <Trophy size={16} className="text-cyan-400" />
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
+            <Trophy size={16} className="text-cyan-300" aria-hidden="true" />
             <h2 className="text-sm font-semibold text-white">Server Leaderboard</h2>
-            <div className="ml-auto flex rounded-lg bg-white/[0.04] p-0.5 border border-white/[0.06]">
+            <div className="ml-auto flex rounded-lg bg-white/[0.04] p-0.5 border border-white/[0.06]" role="group" aria-label="Leaderboard type">
               {LB_TABS.map(({ id, icon: Icon, label }) => (
-                <button key={id} onClick={() => setLbTab(id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                    lbTab === id ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'text-gray-500 hover:text-gray-300'
+                <button key={id} onClick={() => setLbTab(id)} aria-pressed={lbTab === id}
+                  className={`flex items-center gap-1.5 px-3 py-2 min-h-[36px] rounded-md text-xs font-medium transition-all ${
+                    lbTab === id ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'text-zinc-400 hover:text-zinc-200 border border-transparent'
                   }`}>
-                  <Icon size={10} />{label}
+                  <Icon size={10} aria-hidden="true" />{label}
                 </button>
               ))}
             </div>
@@ -395,20 +395,20 @@ export default function Progression({ guild, guildData }) {
               {[...Array(6)].map((_, i) => <div key={i} className="h-14 rounded-lg bg-white/[0.04] animate-pulse" />)}
             </div>
           ) : leaderboard.length === 0 ? (
-            <p className="text-sm text-gray-600 text-center py-8">No data yet — members earn XP by chatting</p>
+            <p className="text-sm text-zinc-500 text-center py-8">No data yet — members earn XP by chatting</p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-2" role="list" aria-label="Server leaderboard">
               {leaderboard.map((entry, i) => {
                 const xpNeeded = (entry.textLevel || 1) * 100;
                 const prog     = Math.min(100, Math.round(((entry.textXp || 0) / xpNeeded) * 100));
                 return (
-                  <div key={entry.userId} className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.04] border border-white/[0.05] hover:border-cyan-500/10 transition-all">
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                      i === 0 ? 'bg-yellow-500/20 text-yellow-400 shadow-[0_0_8px_rgba(234,179,8,0.3)]'
-                    : i === 1 ? 'bg-gray-400/20 text-gray-300'
-                    : i === 2 ? 'bg-orange-500/20 text-orange-400'
-                    : 'bg-white/[0.04] text-gray-600'
-                    }`}>
+                  <div key={entry.userId} role="listitem" aria-label={`Rank ${i + 1}: ${entry.username}`} className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.04] border border-white/[0.05] hover:border-cyan-500/10 transition-all">
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 tabular-nums ${
+                      i === 0 ? 'bg-yellow-500/20 text-yellow-300 shadow-[0_0_8px_rgba(234,179,8,0.3)]'
+                    : i === 1 ? 'bg-zinc-400/20 text-zinc-300'
+                    : i === 2 ? 'bg-orange-500/20 text-orange-300'
+                    : 'bg-white/[0.04] text-zinc-500'
+                    }`} aria-hidden="true">
                       {i + 1}
                     </div>
                     <Avatar user={entry} />
@@ -417,17 +417,17 @@ export default function Progression({ guild, guildData }) {
                       <div className="flex items-center gap-3 mt-0.5">
                         {lbTab === 'xp' && (
                           <>
-                            <span className="text-xs text-cyan-400 font-medium">Lv. {entry.textLevel || 1}</span>
-                            <span className="text-xs text-gray-600">{(entry.textXp || 0).toLocaleString()} XP</span>
+                            <span className="text-xs text-cyan-300 font-medium tabular-nums">Lv. {entry.textLevel || 1}</span>
+                            <span className="text-xs text-zinc-500 tabular-nums">{(entry.textXp || 0).toLocaleString()} XP</span>
                           </>
                         )}
-                        {lbTab === 'messages' && <span className="text-xs text-cyan-400">{(entry.messages || 0).toLocaleString()} messages</span>}
-                        {lbTab === 'voice' && <span className="text-xs text-cyan-400">{Math.round((entry.voiceTime || entry.voiceXp || 0) / 60000)}m voice</span>}
+                        {lbTab === 'messages' && <span className="text-xs text-cyan-300 tabular-nums">{(entry.messages || 0).toLocaleString()} messages</span>}
+                        {lbTab === 'voice' && <span className="text-xs text-cyan-300 tabular-nums">{Math.round((entry.voiceTime || entry.voiceXp || 0) / 60000)}m voice</span>}
                       </div>
                     </div>
                     {lbTab === 'xp' && (
                       <div className="w-16 flex-shrink-0">
-                        <div className="h-1 rounded-full bg-white/10 overflow-hidden">
+                        <div className="h-1 rounded-full bg-white/10 overflow-hidden" role="progressbar" aria-label={`${entry.username} progress to next level`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={prog}>
                           <div className="h-full bg-cyan-500 rounded-full" style={{ width: `${prog}%` }} />
                         </div>
                         <p className="text-[10px] text-zinc-500 text-right mt-0.5 tabular-nums">{prog}%</p>

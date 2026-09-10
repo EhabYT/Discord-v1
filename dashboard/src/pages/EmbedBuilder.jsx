@@ -143,11 +143,11 @@ export default function EmbedBuilder({ guild, guildData, permLevel }) {
   return (
     <div className="page-shell-sm animate-fade-in">
       <PageHeader icon={Send} title="Embed Builder" subtitle={`Compose and send rich embeds in ${guild.name}`} badge="Owner" badgeColor="yellow">
-        <button onClick={() => setShowJson(v => !v)} className="cyber-button flex items-center gap-1.5 text-xs">
-          {showJson ? <ChevronUp size={12} /> : <Download size={12} />} JSON
+        <button onClick={() => setShowJson(v => !v)} aria-expanded={showJson} className="cyber-button flex items-center gap-1.5 text-xs">
+          {showJson ? <ChevronUp size={12} aria-hidden="true" /> : <Download size={12} aria-hidden="true" />} JSON
         </button>
-        <button onClick={() => setShowTpl(v => !v)} className="cyber-button flex items-center gap-1.5 text-xs">
-          <Save size={12} /> Templates{templates.length > 0 && <span className="cyber-badge-cyan ml-1">{templates.length}</span>}
+        <button onClick={() => setShowTpl(v => !v)} aria-expanded={showTpl} className="cyber-button flex items-center gap-1.5 text-xs">
+          <Save size={12} aria-hidden="true" /> Templates{templates.length > 0 && <span className="cyber-badge-cyan ml-1 tabular-nums">{templates.length}</span>}
         </button>
       </PageHeader>
 
@@ -155,18 +155,18 @@ export default function EmbedBuilder({ guild, guildData, permLevel }) {
       {showJson && (
         <div className="cyber-card p-4 animate-fade-in">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Embed JSON</span>
+            <span className="text-xs font-semibold text-zinc-300 uppercase tracking-wide">Embed JSON</span>
             <div className="flex gap-2">
               <button onClick={importJson} className="cyber-button flex items-center gap-1 text-xs">
-                <Upload size={11} /> Import
+                <Upload size={11} aria-hidden="true" /> Import
               </button>
               <button onClick={exportJson} className="cyber-button flex items-center gap-1 text-xs">
-                {copied ? <Check size={11} className="text-green-400" /> : <Copy size={11} />}
+                {copied ? <Check size={11} className="text-green-300" aria-hidden="true" /> : <Copy size={11} aria-hidden="true" />}
                 {copied ? 'Copied!' : 'Copy JSON'}
               </button>
             </div>
           </div>
-          <pre className="text-[10px] text-cyan-400/80 font-mono leading-relaxed overflow-x-auto max-h-48 bg-black/20 rounded-xl p-3">
+          <pre aria-label="Embed JSON source" className="text-[10px] text-cyan-300/80 font-mono leading-relaxed overflow-x-auto max-h-48 bg-black/20 rounded-xl p-3 tabular-nums">
             {JSON.stringify(embed, null, 2)}
           </pre>
         </div>
@@ -175,18 +175,18 @@ export default function EmbedBuilder({ guild, guildData, permLevel }) {
       {/* Templates panel */}
       {showTpl && (
         <div className="cyber-card p-4 animate-fade-in space-y-3">
-          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Saved Templates</span>
+          <span className="text-xs font-semibold text-zinc-300 uppercase tracking-wide">Saved Templates</span>
           <div className="flex gap-2">
-            <input type="text" placeholder="Template name…" value={tplName}
+            <input type="text" placeholder="Template name…" aria-label="Template name" value={tplName}
               onChange={e => setTplName(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && saveTpl()}
               className="cyber-input text-xs" />
-            <button onClick={saveTpl} className="cyber-button-solid flex-shrink-0 flex items-center gap-1 text-xs px-3">
-              <Save size={11} /> Save
+            <button onClick={saveTpl} className="cyber-button-solid flex-shrink-0 flex items-center gap-1 text-xs px-3 min-h-[40px]">
+              <Save size={11} aria-hidden="true" /> Save
             </button>
           </div>
           {templates.length === 0 ? (
-            <p className="text-xs text-gray-600 text-center py-3">No saved templates yet</p>
+            <p className="text-xs text-zinc-500 text-center py-3">No saved templates yet</p>
           ) : (
             <div className="space-y-1.5 max-h-40 overflow-y-auto">
               {templates.map(t => (
@@ -256,7 +256,7 @@ export default function EmbedBuilder({ guild, guildData, permLevel }) {
       <div className="cyber-card p-5 space-y-4">
         {/* Destination + Color */}
         <div>
-          <label className="cyber-label mb-1.5 flex items-center gap-1"><Hash size={10} /> Destination Channel</label>
+          <label className="cyber-label mb-1.5 flex items-center gap-1"><Hash size={10} aria-hidden="true" /> Destination Channel</label>
           <select value={embed.channelId} onChange={e => setEmbed(em => ({ ...em, channelId: e.target.value }))} className="cyber-select">
             <option value="">— Select channel —</option>
             {channels.map(c => <option key={c.id} value={c.id}>#{c.name}</option>)}
@@ -265,7 +265,7 @@ export default function EmbedBuilder({ guild, guildData, permLevel }) {
 
         {/* Color + presets */}
         <div>
-          <label className="cyber-label mb-2 flex items-center gap-1"><Palette size={10} /> Accent Color</label>
+          <label className="cyber-label mb-2 flex items-center gap-1"><Palette size={10} aria-hidden="true" /> Accent Color</label>
           <div className="flex flex-wrap gap-1.5 mb-2">
             {COLOR_PRESETS.map(p => (
               <button key={p.hex} type="button" title={p.label} aria-label={`Accent color ${p.label} ${p.hex}`} aria-pressed={embed.color === p.hex} onClick={() => setEmbed(em => ({ ...em, color: p.hex }))}

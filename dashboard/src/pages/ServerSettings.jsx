@@ -133,7 +133,7 @@ export default function ServerSettings({ guild, guildData, setGuildData }) {
     setLeaveOpen(false);
   };
 
-  if (!guild) return <div className="p-6 text-gray-500 text-sm">Select a server first.</div>;
+  if (!guild) return <div className="p-6 text-zinc-400 text-sm">Select a server first.</div>;
 
   const filteredCmds = commands.filter((c) => c.name.includes(cmdQuery.toLowerCase()));
   const disabledCount = commands.filter((c) => !c.enabled).length;
@@ -147,15 +147,15 @@ export default function ServerSettings({ guild, guildData, setGuildData }) {
       <div className="grid grid-cols-3 gap-3">
         <div className="cyber-card p-3 text-center">
           <p className="text-xl font-bold text-white tabular-nums">{guild.memberCount?.toLocaleString?.() || '—'}</p>
-          <p className="text-[10px] text-zinc-500">Members</p>
+          <p className="text-[10px] text-zinc-400">Members</p>
         </div>
         <div className="cyber-card p-3 text-center">
           <p className="text-xl font-bold text-cyan-300 tabular-nums">{commands.length}</p>
-          <p className="text-[10px] text-zinc-500">Commands</p>
+          <p className="text-[10px] text-zinc-400">Commands</p>
         </div>
         <div className="cyber-card p-3 text-center">
           <p className="text-xl font-bold text-yellow-300 tabular-nums">{disabledCount}</p>
-          <p className="text-[10px] text-zinc-500">Disabled</p>
+          <p className="text-[10px] text-zinc-400">Disabled</p>
         </div>
       </div>
 
@@ -181,8 +181,8 @@ export default function ServerSettings({ guild, guildData, setGuildData }) {
 
       <Section icon={Settings} title="Slash commands" desc="Disable a command in this server without removing it globally.">
         <div className="relative">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
-          <input value={cmdQuery} onChange={(e) => setCmdQuery(e.target.value)} placeholder="Filter commands…" aria-label="Filter slash commands" className="cyber-input pl-9 text-xs" />
+          <Search size={13} className="absolute start-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+          <input value={cmdQuery} onChange={(e) => setCmdQuery(e.target.value)} placeholder="Filter commands…" aria-label="Filter slash commands" className="cyber-input ps-9 text-xs" />
         </div>
         <div className="max-h-64 overflow-y-auto grid sm:grid-cols-2 gap-1.5">
           {filteredCmds.map((c) => (
@@ -191,7 +191,7 @@ export default function ServerSettings({ guild, guildData, setGuildData }) {
               <input type="checkbox" checked={c.enabled} onChange={(e) => toggleCommand(c.name, e.target.checked)} className="accent-cyan-400" />
             </label>
           ))}
-          {filteredCmds.length === 0 && <p className="text-xs text-zinc-500 col-span-2 text-center py-4">No commands match.</p>}
+          {filteredCmds.length === 0 && <p className="text-xs text-zinc-400 col-span-2 text-center py-4">No commands match.</p>}
         </div>
       </Section>
 
@@ -211,7 +211,7 @@ export default function ServerSettings({ guild, guildData, setGuildData }) {
           </button>
         </div>
         {customFilters.length === 0 ? (
-          <p className="text-xs text-zinc-500 text-center py-3">No custom filters added</p>
+          <p className="text-xs text-zinc-400 text-center py-3">No custom filters added</p>
         ) : (
           <div className="space-y-1.5 max-h-48 overflow-y-auto">
             {customFilters.map((f, i) => (
@@ -231,6 +231,7 @@ export default function ServerSettings({ guild, guildData, setGuildData }) {
           <input
             type="url"
             placeholder="https://discord.com/api/webhooks/…"
+            aria-label="Audit webhook URL"
             value={webhook}
             onChange={(e) => setWebhook(e.target.value)}
             className="cyber-input text-xs"
@@ -244,18 +245,23 @@ export default function ServerSettings({ guild, guildData, setGuildData }) {
       <Section icon={Download} title="Backup & restore" desc="Download this server’s config or restore from a JSON file.">
         <div className="flex flex-wrap gap-2">
           <button onClick={downloadBackup} className="cyber-button flex items-center gap-1.5 text-xs">
-            <Download size={12} /> Download backup
+            <Download size={12} aria-hidden="true" /> Download backup
           </button>
-          <label className="cyber-button flex items-center gap-1.5 text-xs cursor-pointer">
-            <Upload size={12} /> Restore…
-            <input type="file" accept="application/json" className="hidden" onChange={(e) => restoreBackup(e.target.files?.[0])} />
+          <label
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.querySelector('input')?.click(); } }}
+            className="cyber-button flex items-center gap-1.5 text-xs cursor-pointer"
+          >
+            <Upload size={12} aria-hidden="true" /> Restore…
+            <input type="file" accept="application/json" className="hidden" tabIndex={-1} aria-hidden="true" onChange={(e) => restoreBackup(e.target.files?.[0])} />
           </label>
         </div>
       </Section>
 
       <Section icon={LogOut} title="Danger zone" desc="The bot will leave this server. You can re-invite it later.">
         <button onClick={() => setLeaveOpen(true)} className="cyber-button-danger text-xs flex items-center gap-1.5">
-          <LogOut size={12} /> Leave server
+          <LogOut size={12} aria-hidden="true" /> Leave server
         </button>
       </Section>
 

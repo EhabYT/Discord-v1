@@ -354,12 +354,12 @@ export default function WelcomeAutoResponse({ guild, guildData }) {
 
           <div className="flex gap-2">
             <button onClick={save} disabled={saving} className="cyber-button-solid flex items-center gap-2">
-              {saving ? <Loader size={13} className="animate-spin" /> : <Save size={13} />}
+              {saving ? <Loader size={13} className="animate-spin" aria-hidden="true" /> : <Save size={13} aria-hidden="true" />}
               {saving ? 'Saving…' : 'Save Configuration'}
             </button>
             <button onClick={test} disabled={testing || !join.channelId} className="cyber-button flex items-center gap-2"
-              title={!join.channelId ? 'Set a welcome channel first' : ''}>
-              {testing ? <Loader size={13} className="animate-spin" /> : <Send size={13} />}
+              title={!join.channelId ? 'Set a welcome channel first' : 'Send a test welcome message'}>
+              {testing ? <Loader size={13} className="animate-spin" aria-hidden="true" /> : <Send size={13} aria-hidden="true" />}
               {testing ? 'Sending…' : 'Test Welcome'}
             </button>
           </div>
@@ -370,8 +370,8 @@ export default function WelcomeAutoResponse({ guild, guildData }) {
       {tab === 'leave' && (
         <div className="space-y-4 animate-fade-in">
           <div className="cyber-info">
-            <Info size={14} className="text-cyan-400 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-gray-400 leading-relaxed">
+            <Info size={14} className="text-cyan-300 flex-shrink-0 mt-0.5" aria-hidden="true" />
+            <p className="text-xs text-zinc-300 leading-relaxed">
               Leave messages are sent when a member leaves <strong>or is kicked</strong>. Uses the same variables as join messages.
             </p>
           </div>
@@ -412,7 +412,7 @@ export default function WelcomeAutoResponse({ guild, guildData }) {
           </Section>
 
           <button onClick={save} disabled={saving} className="cyber-button-solid flex items-center gap-2">
-            {saving ? <Loader size={13} className="animate-spin" /> : <Save size={13} />}
+            {saving ? <Loader size={13} className="animate-spin" aria-hidden="true" /> : <Save size={13} aria-hidden="true" />}
             {saving ? 'Saving…' : 'Save Leave Settings'}
           </button>
         </div>
@@ -422,8 +422,8 @@ export default function WelcomeAutoResponse({ guild, guildData }) {
       {tab === 'dm' && (
         <div className="space-y-4 animate-fade-in">
           <div className="cyber-warning">
-            <Info size={14} className="text-yellow-400 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-gray-400 leading-relaxed">
+            <Info size={14} className="text-amber-300 flex-shrink-0 mt-0.5" aria-hidden="true" />
+            <p className="text-xs text-amber-200/90 leading-relaxed">
               The DM is sent to new members directly. If a member has DMs disabled, the message will silently fail — this is normal Discord behavior.
             </p>
           </div>
@@ -446,7 +446,7 @@ export default function WelcomeAutoResponse({ guild, guildData }) {
                 className="cyber-input resize-none"
                 placeholder="Welcome to {guild}, {userName}! Here are some useful links…"
               />
-              <p className="text-[10px] text-gray-600 mt-1">Supports the same variables as the join message.</p>
+              <p className="text-[10px] text-zinc-500 mt-1">Supports the same variables as the join message.</p>
             </div>
           </Section>
 
@@ -457,17 +457,17 @@ export default function WelcomeAutoResponse({ guild, guildData }) {
                   <img src="/eb_logo.svg" alt="" className="w-full h-full object-cover rounded-full" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[11px] text-gray-500 mb-1">
-                    <span className="text-white font-semibold">EB</span> → <span className="text-cyan-400">NewMember</span>
+                  <p className="text-[11px] text-zinc-500 mb-1">
+                    <span className="text-white font-semibold">EB</span> → <span className="text-cyan-300">NewMember</span>
                     <span className="ml-2">Private Message</span>
                   </p>
-                  <p className="text-sm text-gray-200 leading-relaxed">
+                  <p className="text-sm text-zinc-200 leading-relaxed">
                     {dm.message
                       ?.replace(/{user}/g, '@NewMember')
                       .replace(/{userName}/g, 'NewMember')
                       .replace(/{guild}/g, guild.name)
                       .replace(/{count}/g, '1,234')
-                      || <span className="text-gray-600 italic">No message set</span>}
+                      || <span className="text-zinc-500 italic">No message set</span>}
                   </p>
                 </div>
               </div>
@@ -475,7 +475,7 @@ export default function WelcomeAutoResponse({ guild, guildData }) {
           </Section>
 
           <button onClick={save} disabled={saving} className="cyber-button-solid flex items-center gap-2">
-            {saving ? <Loader size={13} className="animate-spin" /> : <Save size={13} />}
+            {saving ? <Loader size={13} className="animate-spin" aria-hidden="true" /> : <Save size={13} aria-hidden="true" />}
             {saving ? 'Saving…' : 'Save DM Settings'}
           </button>
         </div>

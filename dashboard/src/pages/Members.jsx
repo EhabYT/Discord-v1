@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import PageHeader from '../components/PageHeader.jsx';
 import EmptyState from '../components/EmptyState.jsx';
+import ConfirmModal from '../components/ConfirmModal.jsx';
 import MemberProfile from '../components/MemberProfile.jsx';
 import { useToast } from '../components/Toast.jsx';
 import api from '../api.js';
@@ -41,9 +42,11 @@ function ActionMenu({ member, guildId, onAction, onOpenNotes }) {
   const ref = useRef(null);
 
   useEffect(() => {
-    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
+    const onDown = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    window.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDown); window.removeEventListener('keydown', onKey); };
   }, []);
 
   const submit = async () => {
@@ -69,26 +72,28 @@ function ActionMenu({ member, guildId, onAction, onOpenNotes }) {
 
   return (
     <div className="relative" ref={ref}>
-      <button onClick={() => setOpen(!open)} className="cyber-button flex items-center gap-1 text-xs">
-        Staff <ChevronDown size={10} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+      <button onClick={() => setOpen(!open)} aria-expanded={open} aria-haspopup="menu" aria-label={`Staff actions for ${member.displayName || member.username || ''}`} className="cyber-button flex items-center gap-1 text-xs">
+        Staff <ChevronDown size={10} className={`transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-64 glass-popover shadow-2xl z-30 p-3 space-y-2 animate-palette-in" role="menu" aria-label={`Staff actions for ${member.displayName || member.username}`} style={{ transformOrigin: 'top right' }}>
-          <div className="flex gap-1.5 flex-wrap">
+        <div className="absolute end-0 mt-2 w-64 glass-popover shadow-2xl z-30 p-3 space-y-2 animate-palette-in" role="menu" aria-label={`Staff actions for ${member.displayName || member.username}`} style={{ transformOrigin: 'top right' }}>
+          <div className="flex gap-1.5 flex-wrap" role="group" aria-label="Moderation actions">
             {ACTIONS.map((a) => {
               const Icon = a.icon;
               return (
                 <button
                   key={a.id}
+                  role="menuitemradio"
+                  aria-checked={action === a.id}
                   onClick={() => {
                     if (a.id === 'note') { onOpenNotes(member); setOpen(false); return; }
                     setAction(action === a.id ? '' : a.id);
                   }}
-                  className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs border font-medium transition-all ${
-                    action === a.id ? a.color : 'text-zinc-500 border-white/10 hover:border-white/20'
+                  className={`flex items-center gap-1 px-2.5 py-2 min-h-[32px] rounded-lg text-xs border font-medium transition-all ${
+                    action === a.id ? a.color : 'text-zinc-400 border-white/10 hover:border-white/20'
                   }`}
                 >
-                  <Icon size={10} />{a.label}
+                  <Icon size={10} aria-hidden="true" />{a.label}
                 </button>
               );
             })}
@@ -96,14 +101,14 @@ function ActionMenu({ member, guildId, onAction, onOpenNotes }) {
           {action && action !== 'note' && (
             <>
               {action === 'nickname' ? (
-                <input type="text" placeholder="New nick (blank = reset)" value={nickname}
+                <input type="text" placeholder="New nick (blank = reset)" aria-label="New nickname, blank resets" value={nickname}
                   onChange={(e) => setNickname(e.target.value)} className="cyber-input text-xs" maxLength={32} />
               ) : (
-                <input type="text" placeholder="Reason (optional)" value={reason}
+                <input type="text" placeholder="Reason (optional)" aria-label="Moderation reason" value={reason}
                   onChange={(e) => setReason(e.target.value)} className="cyber-input text-xs" />
               )}
               {action === 'timeout' && (
-                <select value={duration} onChange={(e) => setDuration(Number(e.target.value))} className="cyber-select text-xs">
+                <select value={duration} onChange={(e) => setDuration(Number(e.target.value))} aria-label="Timeout duration" className="cyber-select text-xs">
                   <option value={60000}>1 minute</option>
                   <option value={300000}>5 minutes</option>
                   <option value={1800000}>30 minutes</option>
@@ -113,10 +118,10 @@ function ActionMenu({ member, guildId, onAction, onOpenNotes }) {
                 </select>
               )}
               <button onClick={submit} disabled={pending}
-                className={`w-full text-xs py-1.5 rounded-lg border font-medium transition-all capitalize ${
+                className={`w-full text-xs py-2 min-h-[40px] rounded-lg border font-medium transition-all capitalize ${
                   ACTIONS.find((x) => x.id === action)?.color || ''
                 }`}>
-                {pending ? <Loader2 size={12} className="animate-spin mx-auto" /> : (action === 'clearwarns' ? 'Confirm delete warnings' : `Confirm ${action}`)}
+                {pending ? <Loader2 size={12} className="animate-spin mx-auto" aria-hidden="true" /> : (action === 'clearwarns' ? 'Confirm delete warnings' : `Confirm ${action}`)}
               </button>
             </>
           )}
@@ -149,11 +154,13 @@ function DeleteConfirm({ onConfirm, title = 'Delete', confirmLabel = 'Confirm de
       onClick={click}
       disabled={pending}
       title={armed ? confirmLabel : title}
+      aria-label={armed ? confirmLabel : title}
+      aria-live="polite"
       className={`${armed
-        ? 'cyber-button-danger text-[10px] px-2 py-1'
-        : 'text-zinc-600 hover:text-red-400 transition-colors'} ${className}`}
+        ? 'cyber-button-danger text-[11px] px-3 min-h-[36px]'
+        : 'w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors'} ${className}`}
     >
-      {pending ? <Loader2 size={12} className="animate-spin" /> : armed ? confirmLabel : <Trash2 size={13} />}
+      {pending ? <Loader2 size={12} className="animate-spin" aria-hidden="true" /> : armed ? confirmLabel : <Trash2 size={13} aria-hidden="true" />}
     </button>
   );
 }
@@ -185,6 +192,7 @@ function NotesPanel({ guild, member, onClose, onChanged }) {
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
 
   const load = useCallback(async () => {
     if (!guild?.id || !member?.id) return;
@@ -195,6 +203,18 @@ function NotesPanel({ guild, member, onClose, onChanged }) {
   }, [guild?.id, member?.id]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Match MemberProfile: Escape closes, body scroll locks behind the drawer.
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };
+    window.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onClose]);
 
   const add = async () => {
     if (!text.trim()) return;
@@ -231,14 +251,19 @@ function NotesPanel({ guild, member, onClose, onChanged }) {
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <div className="absolute inset-0 bg-black/55 backdrop-blur-sm" onClick={onClose} />
-      <aside className="relative z-10 w-full max-w-md h-full bg-[#070A0F] border-l border-white/10 flex flex-col animate-slide-in">
+      <aside
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Staff notes for ${member.displayName || member.username || ''}`}
+        className="relative z-10 w-full max-w-md h-full bg-[#070A0F] border-l border-white/10 flex flex-col animate-slide-in"
+      >
         <div className="flex items-center gap-3 px-5 py-4 border-b border-white/[0.06]">
           <MemberAvatar member={member} />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-white truncate">{member.displayName || member.username}</p>
-            <p className="text-[11px] text-zinc-500">Staff notes · @{member.username}</p>
+            <p className="text-[11px] text-zinc-400">Staff notes · @{member.username}</p>
           </div>
-          <button onClick={onClose} className="cyber-icon-button" aria-label="Close"><X size={16} /></button>
+          <button onClick={onClose} className="cyber-icon-button" aria-label="Close notes" autoFocus><X size={16} aria-hidden="true" /></button>
         </div>
 
         <div className="p-4 border-b border-white/[0.06] space-y-2">
@@ -247,14 +272,15 @@ function NotesPanel({ guild, member, onClose, onChanged }) {
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) add(); }}
             placeholder="Add a staff note… (Ctrl+Enter)"
+            aria-label={`New staff note for ${member.displayName || member.username || ''}`}
             maxLength={500}
             rows={3}
             className="cyber-textarea"
           />
           <div className="flex items-center justify-between">
-            <span className="text-[10px] text-zinc-600">{text.length}/500</span>
+            <span className="text-[10px] text-zinc-500 tabular-nums">{text.length}/500</span>
             <button onClick={add} disabled={saving || !text.trim()} className="cyber-button-solid flex items-center gap-1.5 text-xs">
-              {saving ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} Add note
+              {saving ? <Loader2 size={12} className="animate-spin" aria-hidden="true" /> : <Plus size={12} aria-hidden="true" />} Add note
             </button>
           </div>
         </div>
@@ -279,12 +305,22 @@ function NotesPanel({ guild, member, onClose, onChanged }) {
 
         {notes.length > 0 && (
           <div className="p-4 border-t border-white/[0.06]">
-            <button onClick={clearAll} className="cyber-button-danger w-full text-xs flex items-center justify-center gap-1.5">
-              <Trash2 size={12} /> Clear all notes
+            <button onClick={() => setConfirmClear(true)} className="cyber-button-danger w-full text-xs flex items-center justify-center gap-1.5">
+              <Trash2 size={12} aria-hidden="true" /> Clear all notes
             </button>
           </div>
         )}
       </aside>
+
+      <ConfirmModal
+        open={confirmClear}
+        title="Clear all notes?"
+        message={`This permanently deletes all ${notes.length} staff note(s) for ${member.displayName || member.username || 'this member'}. This cannot be undone.`}
+        confirmLabel="Clear all"
+        variant="danger"
+        onCancel={() => setConfirmClear(false)}
+        onConfirm={() => { setConfirmClear(false); clearAll(); }}
+      />
     </div>
   );
 }
@@ -314,9 +350,9 @@ function GroupedLog({ items, members, emptyTitle, emptySub, accent = 'yellow', o
     <div className="space-y-4">
       <div className="cyber-card p-3">
         <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+          <Search size={14} className="absolute start-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
           <input type="text" placeholder="Filter by username or user ID..." aria-label="Filter by username or user ID" value={filter}
-            onChange={(e) => setFilter(e.target.value)} className="cyber-input pl-9" />
+            onChange={(e) => setFilter(e.target.value)} className="cyber-input ps-9" />
         </div>
       </div>
       {grouped.length === 0 ? (
@@ -398,9 +434,11 @@ function WarningActions({ guildId, userId, warning, member, onDeleted, onEdited,
   const id = warningId(warning);
 
   useEffect(() => {
-    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
+    const onDown = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') { setOpen(false); setEditing(false); } };
+    document.addEventListener('mousedown', onDown);
+    window.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDown); window.removeEventListener('keydown', onKey); };
   }, []);
 
   const run = async (label, fn) => {
@@ -412,14 +450,14 @@ function WarningActions({ guildId, userId, warning, member, onDeleted, onEdited,
 
   return (
     <div className="relative" ref={ref}>
-      <button onClick={() => setOpen((v) => !v)} className="cyber-icon-button" title="Warning options">
-        <MoreHorizontal size={14} />
+      <button onClick={() => setOpen((v) => !v)} className="cyber-icon-button" title="Warning options" aria-label="Warning options" aria-expanded={open} aria-haspopup="menu">
+        <MoreHorizontal size={14} aria-hidden="true" />
       </button>
       {open && (
-        <div className="absolute right-0 mt-1 w-56 cyber-card shadow-xl z-30 p-2 space-y-1">
+        <div className="absolute end-0 mt-1 w-56 cyber-card shadow-xl z-30 p-2 space-y-1" role="menu" aria-label="Warning options">
           {editing ? (
             <div className="p-1 space-y-2">
-              <input className="cyber-input text-xs" value={reason} onChange={(e) => setReason(e.target.value)} />
+              <input className="cyber-input text-xs" value={reason} onChange={(e) => setReason(e.target.value)} aria-label="Warning reason" />
               <div className="flex gap-1">
                 <button className="cyber-button flex-1 text-[11px]" onClick={() => setEditing(false)}>Cancel</button>
                 <button
@@ -436,27 +474,27 @@ function WarningActions({ guildId, userId, warning, member, onDeleted, onEdited,
             </div>
           ) : (
             <>
-              <button className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-zinc-300 hover:bg-white/[0.06]"
+              <button role="menuitem" className="w-full flex items-center gap-2 px-2 py-2 min-h-[40px] rounded-lg text-xs text-zinc-300 hover:bg-white/[0.06]"
                 onClick={() => { setReason(warning.reason || ''); setEditing(true); }}>
-                <Pencil size={12} className="text-violet-300" /> Edit reason
+                <Pencil size={12} className="text-violet-300 flex-shrink-0" aria-hidden="true" /> Edit reason
               </button>
-              <button className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-zinc-300 hover:bg-white/[0.06]"
+              <button role="menuitem" className="w-full flex items-center gap-2 px-2 py-2 min-h-[40px] rounded-lg text-xs text-zinc-300 hover:bg-white/[0.06]"
                 onClick={() => run('note', async () => {
                   const text = warning.reason ? `From warning: ${warning.reason}` : 'Note from warning';
                   await api.post(`/api/guild/${guildId}/members/${userId}/notes`, { text });
                   toast.success('Note created from warning');
                   onOpenNotes?.(member || { id: userId, username: userId });
                 })}>
-                <StickyNote size={12} className="text-cyan-300" /> Add as note
+                <StickyNote size={12} className="text-cyan-300 flex-shrink-0" aria-hidden="true" /> Add as note
               </button>
-              <button className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-zinc-300 hover:bg-white/[0.06]"
+              <button role="menuitem" className="w-full flex items-center gap-2 px-2 py-2 min-h-[40px] rounded-lg text-xs text-zinc-300 hover:bg-white/[0.06]"
                 onClick={() => {
                   navigator.clipboard?.writeText(id).then(() => toast.success('Warning ID copied')).catch(() => {});
                   setOpen(false);
                 }}>
-                <Copy size={12} className="text-zinc-400" /> Copy ID
+                <Copy size={12} className="text-zinc-400 flex-shrink-0" aria-hidden="true" /> Copy ID
               </button>
-              <button className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-zinc-300 hover:bg-white/[0.06]"
+              <button role="menuitem" className="w-full flex items-center gap-2 px-2 py-2 min-h-[40px] rounded-lg text-xs text-zinc-300 hover:bg-white/[0.06]"
                 disabled={pending === 'timeout'}
                 onClick={() => run('timeout', async () => {
                   await api.post(`/api/guild/${guildId}/members/${userId}/action`, {
@@ -464,10 +502,10 @@ function WarningActions({ guildId, userId, warning, member, onDeleted, onEdited,
                   });
                   toast.success('Timed out 10 minutes');
                 })}>
-                <Clock size={12} className="text-yellow-300" /> Timeout 10m
+                <Clock size={12} className="text-yellow-300 flex-shrink-0" aria-hidden="true" /> Timeout 10m
               </button>
-              <div className="h-px bg-white/[0.06] my-1" />
-              <button className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-red-300 hover:bg-red-500/10"
+              <div className="h-px bg-white/[0.06] my-1" aria-hidden="true" />
+              <button role="menuitem" className="w-full flex items-center gap-2 px-2 py-2 min-h-[40px] rounded-lg text-xs text-red-300 hover:bg-red-500/10"
                 disabled={pending === 'delete'}
                 onClick={() => run('delete', async () => {
                   await api.delete(`/api/guild/${guildId}/members/${userId}/warnings/${id}`);
@@ -585,9 +623,9 @@ function WarningsDesk({ guild, warnings, members, onDeleted, onEdited, onCleared
       )}
       <div className="cyber-card p-3">
         <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+          <Search size={14} className="absolute start-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
           <input type="text" placeholder="Filter by username or user ID..." aria-label="Filter by username or user ID" value={filter}
-            onChange={(e) => setFilter(e.target.value)} className="cyber-input pl-9" />
+            onChange={(e) => setFilter(e.target.value)} className="cyber-input ps-9" />
         </div>
       </div>
       {grouped.length === 0 ? (
@@ -650,14 +688,14 @@ function WarningsDesk({ guild, warnings, members, onDeleted, onEdited, onCleared
                         <div className="w-5 h-5 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-[10px] font-bold text-yellow-400 flex-shrink-0 mt-0.5">
                           {i + 1}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-white">{row.reason || <span className="text-zinc-600 italic">No reason</span>}</p>
-                          <div className="flex items-center gap-3 mt-1 flex-wrap">
-                            <span className="flex items-center gap-1 text-[11px] text-zinc-600"><User size={9} />{row.moderator || 'Unknown'}</span>
-                            <span className="flex items-center gap-1 text-[11px] text-zinc-600"><Clock size={9} />{row.timestamp ? new Date(row.timestamp).toLocaleString() : '—'}</span>
-                            {row.id && <span className="text-[10px] text-zinc-700 font-mono">{row.id}</span>}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-white">{row.reason || <span className="text-zinc-500 italic">No reason</span>}</p>
+                            <div className="flex items-center gap-3 mt-1 flex-wrap">
+                              <span className="flex items-center gap-1 text-[11px] text-zinc-500"><User size={9} aria-hidden="true" />{row.moderator || 'Unknown'}</span>
+                              <span className="flex items-center gap-1 text-[11px] text-zinc-500"><Clock size={9} aria-hidden="true" />{row.timestamp ? new Date(row.timestamp).toLocaleString() : '—'}</span>
+                              {row.id && <span className="text-[10px] text-zinc-500 font-mono">{row.id}</span>}
+                            </div>
                           </div>
-                        </div>
                         <div className="flex items-center gap-1.5 flex-shrink-0">
                           <DeleteConfirm
                             title="Delete this warning"
@@ -914,16 +952,16 @@ export default function Members({ guild }) {
           {tab === 'members' && (
             <div className="cyber-card p-3 mb-4">
               <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+                <Search size={14} className="absolute start-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
                 <input
                   type="text"
                   placeholder="Search by username, display name, or user ID..."
                   aria-label="Search members"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  className="cyber-input pl-9"
+                  className="cyber-input ps-9"
                 />
-                {searching && <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-cyan-400 animate-spin" />}
+                {searching && <Loader2 size={14} className="absolute end-3 top-1/2 -translate-y-1/2 text-cyan-400 animate-spin" aria-hidden="true" />}
               </div>
             </div>
           )}

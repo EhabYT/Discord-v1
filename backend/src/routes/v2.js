@@ -7,6 +7,17 @@ const { config: botConfig } = require('eb-bot-shared/config/bot-config');
 const RELEASE = '2.0.0';
 const DASHBOARD_INDEX = path.join(__dirname, '..', '..', '..', 'dashboard', 'public', 'index.html');
 
+async function dashboardBuilt() {
+    // Async stat: the previous existsSync blocked the event loop on every
+    // /v2/status + /v2/ready poll.
+    try {
+        await fs.promises.stat(DASHBOARD_INDEX);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 async function systemSnapshot(botClient) {
     let databaseOnline = false;
     let databaseError = databaseConfigIssue();
@@ -17,12 +28,12 @@ async function systemSnapshot(botClient) {
             databaseError = 'Database connection failed';
         }
     }
-    const dashboardBuilt = fs.existsSync(DASHBOARD_INDEX);
+    const built = await dashboardBuilt();
     const botOnline = !!botClient?.user?.id && botClient.isReady?.() !== false;
     const discordConfigured = /^\d{17,20}$/.test(String(process.env.CLIENT_ID || ''))
         && !!process.env.DISCORD_TOKEN;
     const oauthConfigured = discordConfigured && !!process.env.DISCORD_CLIENT_SECRET;
-    const ready = dashboardBuilt && databaseOnline && discordConfigured && botOnline;
+    const ready = built && databaseOnline && discordConfigured && botOnline;
     return {
         release: RELEASE,
         apiVersion: 'v2',
@@ -35,7 +46,7 @@ async function systemSnapshot(botClient) {
         },
         status: ready ? 'ready' : 'degraded',
         checks: {
-            dashboardBuilt,
+            dashboardBuilt: built,
             databaseOnline,
             discordConfigured,
             oauthConfigured,

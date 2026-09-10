@@ -1,6 +1,5 @@
 const express = require('express');
 const http = require('http');
-const fs = require('fs');
 const session = require('express-session');
 const { createSessionStore } = require('./session-store');
 const path = require('path');
@@ -42,12 +41,14 @@ function rateLimiter(req, res, next) {
     next();
 }
 
-setInterval(() => {
+const rateLimitSweeper = setInterval(() => {
     const now = Date.now();
     for (const [ip, limit] of rateLimits.entries()) {
         if (now > limit.resetAt + (30 * 60 * 1000)) rateLimits.delete(ip);
     }
 }, 15 * 60 * 1000);
+// Never hold the process (or a test runner) open for the sweeper alone.
+if (typeof rateLimitSweeper.unref === 'function') rateLimitSweeper.unref();
 
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
@@ -148,13 +149,25 @@ app.use((req, res, next) => {
 
 app.use(compression());
 app.use(express.static(path.join(__dirname, '..', '..', 'dashboard', 'public'), {
-    maxAge: 0,
-    etag: false,
+    // Hashed Vite assets under /assets/* are content-addressed and safe to
+    // cache immutably for a year; HTML and root icons must revalidate so
+    // deploys pick up the new hashed filenames immediately. Previously every
+    // JS/CSS response was `no-store` with `etag: false`, forcing repeat
+    // visitors to re-download the ~430 kB bundle on every navigation.
+    maxAge: '1y',
+    etag: true,
+    lastModified: true,
     setHeaders: (res, filePath) => {
-        if (filePath.endsWith('.html') || filePath.endsWith('.js') || filePath.endsWith('.css')) {
+        if (filePath.endsWith('.html')) {
             res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
             res.setHeader('Pragma', 'no-cache');
             res.setHeader('Expires', '0');
+        } else if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        } else {
+            // Root icons, fonts, and other unhashed static files: allow a day
+            // of caching with revalidation instead of no-store.
+            res.setHeader('Cache-Control', 'public, max-age=86400');
         }
     }
 }));
@@ -505,10 +518,16 @@ function startDashboard(botClient) {
 
     const dashboardIndex = path.join(__dirname, '..', '..', 'dashboard', 'public', 'index.html');
     const sendDashboard = (req, res, next) => {
-        if (!fs.existsSync(dashboardIndex)) {
-            return res.status(503).type('html').send(`<!doctype html><html><head><meta charset="utf-8"><title>Dashboard build missing</title></head><body style="font-family:system-ui;background:#070a0f;color:#e5e7eb;padding:2rem"><h1>Dashboard build missing</h1><p>The API is online, but the React bundle was not built.</p><code>npm --prefix dashboard ci && npm run build:dashboard</code></body></html>`);
-        }
-        return res.sendFile(dashboardIndex, (err) => err ? next(err) : undefined);
+        // No fs.existsSync here: it is a blocking syscall on every SPA
+        // fallback request. sendFile already reports ENOENT via its callback,
+        // so a missing build returns 503 without stalling the event loop.
+        return res.sendFile(dashboardIndex, (err) => {
+            if (!err) return undefined;
+            if (err.code === 'ENOENT') {
+                return res.status(503).type('html').send(`<!doctype html><html><head><meta charset="utf-8"><title>Dashboard build missing</title></head><body style="font-family:system-ui;background:#070a0f;color:#e5e7eb;padding:2rem"><h1>Dashboard build missing</h1><p>The API is online, but the React bundle was not built.</p><code>npm --prefix dashboard ci && npm run build:dashboard</code></body></html>`);
+            }
+            return next(err);
+        });
     };
 
     app.get('/', sendDashboard);

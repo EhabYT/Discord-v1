@@ -49,16 +49,20 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
     // Profile pages render exclusively through locale dictionaries: every
     // t('profile.*') / t('aset.*') key used must exist in all five
     // non-English dictionaries so no locale ever shows a raw key or falls
-    // back to English silently.
-    const i18n = read('dashboard/src/i18n.jsx');
+    // back to English silently. Dictionaries live in code-split
+    // dashboard/src/locales/*.js (loaded on demand); i18n.jsx only holds the
+    // registry and loader.
     const used = new Set();
     for (const source of [profile, hub]) {
         for (const m of source.matchAll(/t\('((?:profile|aset)\.[A-Za-z]+)'/g)) used.add(m[1]);
     }
     assert(used.size > 120, `profile i18n key coverage looks thin (${used.size} keys)`);
     const dicts = {};
-    for (const m of i18n.matchAll(/const (AR|DE|FR|ES|TR) = \{([\s\S]*?)\n\};/g)) dicts[m[1]] = m[2];
-    assert.deepStrictEqual(Object.keys(dicts).sort(), ['AR', 'DE', 'ES', 'FR', 'TR'], 'all five locale dictionaries must exist');
+    for (const name of ['ar', 'de', 'fr', 'es', 'tr']) dicts[name] = read(`dashboard/src/locales/${name}.js`);
+    const i18n = read('dashboard/src/i18n.jsx');
+    for (const name of Object.keys(dicts)) {
+        assert(i18n.includes(`./locales/${name}.js`), `i18n loader must reference locale ${name}`);
+    }
     const missing = [];
     for (const key of [...used].sort()) {
         for (const [name, body] of Object.entries(dicts)) {

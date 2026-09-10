@@ -156,7 +156,7 @@ export default function Sidebar({
         >
           <div className="p-2 border-b border-white/[0.06]">
             <div className="relative">
-              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+              <Search size={12} className="absolute start-2.5 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
               <input
                 ref={(el) => {
                   // Autofocus only on precise pointers: on touch devices it
@@ -167,7 +167,7 @@ export default function Sidebar({
                 onChange={(e) => setGuildQuery(e.target.value)}
                 placeholder={t('side.findServer', 'Find a server… (name or id)')}
                 aria-label={t('side.findServer', 'Find a server… (name or id)')}
-                className="cyber-input pl-7 py-2 min-h-[40px] text-xs"
+                className="cyber-input ps-7 py-2 min-h-[40px] text-xs"
               />
             </div>
           </div>

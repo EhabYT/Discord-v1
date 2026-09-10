@@ -22,15 +22,27 @@ module.exports = {
             const xp      = xpData.textXp    || 0;
             const xpNeeded = level * 100;
 
-            // Calculate rank: count members with higher (level * 100 + xp)
+            // Calculate rank: count members with higher (level * 100 + xp).
+            // Database-side COUNT aggregate — previously this transferred up to
+            // 1,000 full rows (scanPrefix default page) and silently mis-ranked
+            // guilds past 1,000 XP rows. Two scalars, correct at any size.
             const prefix  = `xp_${guildId}_`;
-            const { rows: allKeys } = await db.scanPrefix(prefix).catch(() => ({ rows: [] }));
-            const scores  = allKeys
-                .map(e => ({ userId: e.id.replace(prefix, ''), score: (e.value.textLevel || 1) * 100 + (e.value.textXp || 0) }));
-
             const myScore = level * 100 + xp;
-            const rank    = scores.filter(s => s.score > myScore).length + 1;
-            const totalUsers = scores.length || 1;
+            let rank = 1;
+            let totalUsers = 1;
+            if (typeof db.rankCounts === 'function') {
+                const counts = await db.rankCounts(prefix, { sort: 'xp', score: myScore }).catch(() => null);
+                if (counts) {
+                    rank = counts.above + 1;
+                    totalUsers = counts.total || 1;
+                }
+            } else {
+                const { rows: allKeys } = await db.scanPrefix(prefix).catch(() => ({ rows: [] }));
+                const scores  = allKeys
+                    .map(e => ({ userId: e.id.replace(prefix, ''), score: (e.value.textLevel || 1) * 100 + (e.value.textXp || 0) }));
+                rank = scores.filter(s => s.score > myScore).length + 1;
+                totalUsers = scores.length || 1;
+            }
 
             // Fetch guild member for display name
             const member = await interaction.guild.members.fetch(target.id).catch(() => null);

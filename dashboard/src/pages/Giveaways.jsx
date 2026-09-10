@@ -5,6 +5,7 @@ import {
   Trash2, Copy, Shield, Info, Star, SlidersHorizontal
 } from 'lucide-react';
 import PageHeader from '../components/PageHeader.jsx';
+import EmptyState from '../components/EmptyState.jsx';
 import { useToast } from '../components/Toast.jsx';
 import api from '../api.js';
 
@@ -93,8 +94,8 @@ function DurationInput({ value, onChange }) {
           className="cyber-select">
           {TIME_UNITS.map(u => <option key={u.ms} value={u.ms}>{u.label}</option>)}
         </select>
-        <button onClick={() => onChange(DURATIONS[4].ms)} title="Back to presets"
-          className="px-2 text-[11px] text-gray-500 hover:text-cyan-300 transition-colors flex-shrink-0">
+        <button onClick={() => onChange(DURATIONS[4].ms)} title="Back to presets" aria-label="Back to duration presets"
+          className="px-3 min-h-[40px] text-[11px] font-medium text-zinc-400 hover:text-cyan-300 transition-colors flex-shrink-0">
           Presets
         </button>
       </div>
@@ -159,16 +160,16 @@ function GiveawayCard({ g, channels, roles, onEnd, onReroll, onDelete, onDuplica
             </div>
 
             {g.description && (
-              <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{g.description}</p>
+              <p className="text-xs text-zinc-400 mt-0.5 line-clamp-1">{g.description}</p>
             )}
 
             <div className="flex items-center gap-4 mt-2 flex-wrap">
-              <span className="flex items-center gap-1.5 text-xs text-gray-500">
-                <Trophy size={10} className="text-yellow-600" />
+              <span className="flex items-center gap-1.5 text-xs text-zinc-400 tabular-nums">
+                <Trophy size={10} className="text-yellow-500/70 flex-shrink-0" aria-hidden="true" />
                 {g.winners} {g.winners === 1 ? 'winner' : 'winners'}
               </span>
-              <span className="flex items-center gap-1.5 text-xs text-gray-500">
-                <Hash size={10} className="text-gray-600" />
+              <span className="flex items-center gap-1.5 text-xs text-zinc-400">
+                <Hash size={10} className="text-zinc-500 flex-shrink-0" aria-hidden="true" />
                 #{chanName}
               </span>
               <span className="flex items-center gap-1.5 text-xs">
@@ -178,8 +179,8 @@ function GiveawayCard({ g, channels, roles, onEnd, onReroll, onDelete, onDuplica
                 </span>
               </span>
               {typeof g.entries === 'number' && (
-                <span className="flex items-center gap-1.5 text-xs text-gray-500">
-                  <Users size={10} className="text-gray-600" />
+                <span className="flex items-center gap-1.5 text-xs text-zinc-400 tabular-nums">
+                  <Users size={10} className="text-zinc-500 flex-shrink-0" aria-hidden="true" />
                   {g.entries} {g.entries === 1 ? 'entry' : 'entries'}
                 </span>
               )}
@@ -188,10 +189,10 @@ function GiveawayCard({ g, channels, roles, onEnd, onReroll, onDelete, onDuplica
             {/* Winners display for ended */}
             {!isActive && g.winnerIds?.length > 0 && (
               <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-                <Star size={10} className="text-yellow-400" />
-                <span className="text-[10px] text-gray-600">Winners:</span>
+                <Star size={10} className="text-yellow-300 flex-shrink-0" aria-hidden="true" />
+                <span className="text-[10px] text-zinc-500">Winners:</span>
                 {g.winnerIds.map(id => (
-                    <span key={id} className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 font-mono">
+                    <span key={id} className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/20 text-yellow-300 font-mono">
                       {`<@${id}>`}
                     </span>
                 ))}
@@ -248,33 +249,34 @@ function GiveawayCard({ g, channels, roles, onEnd, onReroll, onDelete, onDuplica
         <div className="border-t border-white/[0.05] px-5 py-4 bg-white/[0.01] space-y-3 animate-fade-in">
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div>
-              <p className="text-gray-600 text-[10px] uppercase tracking-wide mb-1">Message ID</p>
-              <p className="text-gray-400 font-mono text-[11px] truncate">{g.id}</p>
+              <p className="text-zinc-500 text-[10px] uppercase tracking-wide mb-1">Message ID</p>
+              <p className="text-zinc-300 font-mono text-[11px] truncate">{g.id}</p>
             </div>
             <div>
-              <p className="text-gray-600 text-[10px] uppercase tracking-wide mb-1">Hosted By</p>
-              <p className="text-gray-400 text-[11px]">{g.host ? g.host : (g.hostId === 'Dashboard' ? '🖥 Dashboard' : `<@${g.hostId}>`)}</p>
+              <p className="text-zinc-500 text-[10px] uppercase tracking-wide mb-1">Hosted By</p>
+              <p className="text-zinc-300 text-[11px]">{g.host ? g.host : (g.hostId === 'Dashboard' ? '🖥 Dashboard' : `<@${g.hostId}>`)}</p>
             </div>
             <div>
-              <p className="text-gray-600 text-[10px] uppercase tracking-wide mb-1">End Time</p>
-              <p className="text-gray-400 text-[11px]">{new Date(g.endsAt).toLocaleString()}</p>
+              <p className="text-zinc-500 text-[10px] uppercase tracking-wide mb-1">End Time</p>
+              <p className="text-zinc-300 text-[11px] tabular-nums">{new Date(g.endsAt).toLocaleString()}</p>
             </div>
             {g.description && (
               <div>
-                <p className="text-gray-600 text-[10px] uppercase tracking-wide mb-1">Description</p>
-                <p className="text-gray-400 text-[11px]">{g.description}</p>
+                <p className="text-zinc-500 text-[10px] uppercase tracking-wide mb-1">Description</p>
+                <p className="text-zinc-300 text-[11px]">{g.description}</p>
               </div>
             )}
           </div>
           <div className="flex gap-2 pt-1">
-            <button onClick={() => onDuplicate(g)}
-              className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 text-cyan-400 transition-all">
-              <Copy size={10} /> Duplicate
+            <button onClick={() => onDuplicate(g)} aria-label={`Duplicate giveaway ${g.prize || ''}`}
+              className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-2 min-h-[36px] rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 text-cyan-300 transition-all">
+              <Copy size={10} aria-hidden="true" /> Duplicate
             </button>
             <button onClick={() => onDelete(g.id)}
               disabled={actionPending === deleteId}
-              className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg bg-red-500/[0.08] hover:bg-red-500/15 border border-red-500/20 text-red-400/80 transition-all disabled:opacity-40 ml-auto">
-              <Trash2 size={10} />
+              aria-label={`Delete giveaway ${g.prize || ''}`}
+              className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-2 min-h-[36px] rounded-lg bg-red-500/[0.08] hover:bg-red-500/15 border border-red-500/20 text-red-300 transition-all disabled:opacity-40 disabled:cursor-not-allowed ml-auto">
+              <Trash2 size={10} aria-hidden="true" />
               {actionPending === deleteId ? 'Deleting…' : 'Delete'}
             </button>
           </div>
@@ -426,7 +428,7 @@ export default function Giveaways({ guild, guildData, permLevel }) {
     toast.success('Form pre-filled — adjust and launch!');
   };
 
-  if (!guild) return <div className="p-6 text-gray-500 text-sm">Select a server first.</div>;
+  if (!guild) return <div className="p-6 text-zinc-400 text-sm">Select a server first.</div>;
 
   const canCreate = permLevel >= 2;
   const q = query.trim().toLowerCase();
@@ -437,18 +439,18 @@ export default function Giveaways({ guild, guildData, permLevel }) {
   return (
     <div className="page-shell-sm animate-fade-in">
       <PageHeader icon={Gift} title="Giveaways" subtitle={`${guild.name} · ${active.length} active`}>
-        <button onClick={load} disabled={loading}
-          className="w-8 h-8 flex items-center justify-center rounded-lg border border-white/[0.08] text-gray-500 hover:text-cyan-400 hover:border-cyan-500/30 transition-all">
-          <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+        <button onClick={load} disabled={loading} aria-label="Refresh giveaways"
+          className="w-9 h-9 flex items-center justify-center rounded-lg border border-white/[0.08] text-zinc-400 hover:text-cyan-300 hover:border-cyan-500/30 transition-all">
+          <RefreshCw size={13} className={loading ? 'animate-spin' : ''} aria-hidden="true" />
         </button>
         {canCreate && (
-          <button onClick={() => setShowSettings(v => { if (!v) openSettings(); return !v; })}
-            className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+          <button onClick={() => setShowSettings(v => { if (!v) openSettings(); return !v; })} aria-expanded={showSettings}
+            className={`flex items-center gap-2 px-3 py-2 min-h-[40px] text-xs font-semibold rounded-lg transition-all ${
               showSettings
-                ? 'bg-white/[0.05] border border-white/10 text-gray-400'
-                : 'border border-white/10 text-gray-400 hover:text-cyan-300 hover:border-cyan-500/30'
+                ? 'bg-white/[0.05] border border-white/10 text-zinc-300'
+                : 'border border-white/10 text-zinc-400 hover:text-cyan-300 hover:border-cyan-500/30'
             }`}>
-            <SlidersHorizontal size={13} />
+            <SlidersHorizontal size={13} aria-hidden="true" />
             Defaults
           </button>
         )}
@@ -508,8 +510,8 @@ export default function Giveaways({ guild, guildData, permLevel }) {
               </div>
             </div>
             <div>
-              <label className="cyber-label mb-1.5">Default Host <span className="text-gray-600">(optional)</span></label>
-              <input type="text" placeholder="e.g. EB Team" maxLength={32}
+              <label className="cyber-label mb-1.5">Default Host <span className="text-zinc-500">(optional)</span></label>
+              <input type="text" placeholder="e.g. EB Team" maxLength={32} aria-label="Default host"
                 value={draft.host || ''}
                 onChange={e => setDraft(d => ({ ...d, host: e.target.value }))}
                 className="cyber-input" />
@@ -518,21 +520,22 @@ export default function Giveaways({ guild, guildData, permLevel }) {
               <div>
                 <label className="cyber-label mb-1.5">Default Color</label>
                 <div className="flex gap-2 items-center">
-                  <input type="color" value={draft.color}
+                  <input type="color" value={draft.color} aria-label="Default embed color"
                     onChange={e => setDraft(d => ({ ...d, color: e.target.value }))}
-                    className="h-8 w-10 rounded-lg border border-cyan-500/20 cursor-pointer p-0.5 bg-transparent" />
-                  <input type="text" value={draft.color} maxLength={7}
+                    className="h-10 w-14 rounded-lg border border-cyan-500/20 cursor-pointer p-1 bg-transparent" />
+                  <input type="text" value={draft.color} maxLength={7} aria-label="Default embed color hex"
                     onChange={e => setDraft(d => ({ ...d, color: e.target.value }))}
                     className="cyber-input font-mono text-xs w-24" />
                 </div>
               </div>
-              <label className="flex items-center gap-2.5 cursor-pointer group pb-1">
-                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
-                  draft.dmWinner ? 'bg-cyan-500 border-cyan-500' : 'border-white/20 group-hover:border-cyan-500/40'
-                }`} onClick={() => setDraft(d => ({ ...d, dmWinner: !d.dmWinner }))}>
-                  {draft.dmWinner && <span className="text-[8px] text-black font-bold">✓</span>}
-                </div>
-                <p className="text-xs text-gray-300">DM winners by default</p>
+              <label className="flex items-center gap-3 cursor-pointer group pb-1 min-h-[44px] select-none">
+                <input
+                  type="checkbox"
+                  checked={draft.dmWinner}
+                  onChange={() => setDraft(d => ({ ...d, dmWinner: !d.dmWinner }))}
+                  className="w-4 h-4 rounded accent-cyan-500 flex-shrink-0"
+                />
+                <p className="text-xs text-zinc-200">DM winners by default</p>
               </label>
             </div>
             <div className="flex gap-2 pt-1">
@@ -540,7 +543,7 @@ export default function Giveaways({ guild, guildData, permLevel }) {
                 {savingSettings ? 'Saving…' : 'Save Defaults'}
               </button>
               <button onClick={() => { setShowSettings(false); setDraft(null); }}
-                className="px-4 py-2 text-sm text-gray-500 hover:text-gray-300 transition-colors">
+                className="px-4 py-2 min-h-[40px] text-sm text-zinc-400 hover:text-zinc-200 transition-colors">
                 Cancel
               </button>
             </div>
@@ -556,13 +559,13 @@ export default function Giveaways({ guild, guildData, permLevel }) {
       {giveaways.length > 0 && (
         <div className="grid grid-cols-3 gap-3">
           {[
-            { label: 'Total', value: giveaways.length, color: 'text-gray-400' },
-            { label: 'Active', value: active.length, color: 'text-green-400' },
-            { label: 'Ended', value: ended.length, color: 'text-gray-500' },
+            { label: 'Total', value: giveaways.length, color: 'text-zinc-300' },
+            { label: 'Active', value: active.length, color: 'text-green-300' },
+            { label: 'Ended', value: ended.length, color: 'text-zinc-400' },
           ].map(s => (
             <div key={s.label} className="cyber-card p-3 text-center">
-              <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
-              <p className="text-[10px] text-gray-600 uppercase tracking-wide mt-0.5">{s.label}</p>
+              <p className={`text-2xl font-bold tabular-nums ${s.color}`}>{s.value}</p>
+              <p className="text-[10px] text-zinc-500 uppercase tracking-wide mt-0.5">{s.label}</p>
             </div>
           ))}
         </div>
@@ -633,8 +636,8 @@ export default function Giveaways({ guild, guildData, permLevel }) {
 
             {/* Host */}
             <div>
-              <label className="cyber-label mb-1.5">Host <span className="text-gray-600">(optional, shown on card + panel)</span></label>
-              <input type="text" placeholder="e.g. EB Team" maxLength={32}
+              <label className="cyber-label mb-1.5">Host <span className="text-zinc-500">(optional, shown on card + panel)</span></label>
+              <input type="text" placeholder="e.g. EB Team" maxLength={32} aria-label="Giveaway host"
                 value={form.host}
                 onChange={e => setForm(f => ({ ...f, host: e.target.value }))}
                 className="cyber-input" />
@@ -654,7 +657,7 @@ export default function Giveaways({ guild, guildData, permLevel }) {
                 <input type="color" value={form.color} aria-label="Custom embed color"
                   onChange={e => setForm(f => ({ ...f, color: e.target.value }))}
                   className="h-10 w-14 rounded-lg border border-cyan-500/20 cursor-pointer p-1 bg-transparent" />
-                <input type="text" value={form.color} maxLength={7}
+                <input type="text" value={form.color} maxLength={7} aria-label="Custom embed color hex"
                   onChange={e => setForm(f => ({ ...f, color: e.target.value }))}
                   className="cyber-input font-mono text-xs w-24" />
               </div>
@@ -676,24 +679,24 @@ export default function Giveaways({ guild, guildData, permLevel }) {
 
             {/* Summary */}
             {form.prize && form.channelId && (
-              <div className="px-3 py-2.5 rounded-xl border text-xs"
+              <div className="px-3 py-2.5 rounded-xl border text-xs" role="status" aria-label="Giveaway summary"
                 style={{ background: `${form.color}10`, borderColor: `${form.color}30` }}>
                 <span style={{ color: form.color }}>🎉 <strong>{form.prize}</strong></span>
-                <span className="text-gray-500"> · {form.winners} winner{form.winners !== 1 ? 's' : ''}</span>
-                <span className="text-gray-500"> · #{channels.find(c => c.id === form.channelId)?.name}</span>
-                <span className="text-gray-500"> · ends in {fmtDuration(form.duration)}</span>
-                {form.requiredRoleId && <span className="text-purple-400"> · 🛡 {roles.find(r => r.id === form.requiredRoleId)?.name}</span>}
-                {form.host && <span className="text-cyan-400"> · by {form.host}</span>}
+                <span className="text-zinc-400"> · {form.winners} winner{form.winners !== 1 ? 's' : ''}</span>
+                <span className="text-zinc-400"> · #{channels.find(c => c.id === form.channelId)?.name}</span>
+                <span className="text-zinc-400"> · ends in {fmtDuration(form.duration)}</span>
+                {form.requiredRoleId && <span className="text-purple-300"> · 🛡 {roles.find(r => r.id === form.requiredRoleId)?.name}</span>}
+                {form.host && <span className="text-cyan-300"> · by {form.host}</span>}
               </div>
             )}
 
             <div className="flex gap-2 pt-1">
               <button onClick={create} disabled={creating} className="cyber-button-solid flex items-center gap-2">
-                <Gift size={14} className={creating ? 'animate-bounce' : ''} />
+                <Gift size={14} className={creating ? 'animate-bounce' : ''} aria-hidden="true" />
                 {creating ? 'Launching…' : 'Launch Giveaway'}
               </button>
               <button onClick={() => { setShowForm(false); setForm(DEFAULT_FORM); }}
-                className="px-4 py-2 text-sm text-gray-500 hover:text-gray-300 transition-colors">
+                className="px-4 py-2 min-h-[40px] text-sm text-zinc-400 hover:text-zinc-200 transition-colors">
                 Cancel
               </button>
             </div>
@@ -702,23 +705,21 @@ export default function Giveaways({ guild, guildData, permLevel }) {
       )}
 
       {/* Active */}
-      <section>
-        <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-3 flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.7)]" />
+      <section aria-label="Active giveaways">
+        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.7)]" aria-hidden="true" />
           Active ({active.length})
         </p>
         {loading ? (
-          <div className="space-y-3">
+          <div className="space-y-3" role="status" aria-label="Loading giveaways">
             {[0, 1].map(i => <div key={i} className="cyber-card h-28 animate-pulse bg-white/[0.03]" />)}
           </div>
         ) : active.length === 0 ? (
-          <div className="cyber-card p-10 text-center">
-            <Gift size={30} className="text-gray-700 mx-auto mb-3" />
-            <p className="text-sm text-gray-500 font-medium">No active giveaways</p>
-            <p className="text-xs text-gray-700 mt-1">
-              {canCreate ? 'Hit "New Giveaway" to launch one.' : 'Ask a moderator to start one.'}
-            </p>
-          </div>
+          <EmptyState
+            icon={Gift}
+            title="No active giveaways"
+            subtitle={canCreate ? 'Hit "New Giveaway" to launch one.' : 'Ask a moderator to start one.'}
+          />
         ) : (
           <div className="space-y-3">
             {active.map((g, i) => (
@@ -735,9 +736,9 @@ export default function Giveaways({ guild, guildData, permLevel }) {
 
       {/* Ended */}
       {ended.length > 0 && (
-        <section>
-          <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-3 flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-gray-600" />
+        <section aria-label="Recently ended giveaways">
+          <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-zinc-500" aria-hidden="true" />
             Recently Ended ({ended.length})
           </p>
           <div className="space-y-3">
@@ -754,13 +755,11 @@ export default function Giveaways({ guild, guildData, permLevel }) {
       )}
 
       {!loading && giveaways.length === 0 && !showForm && (
-        <div className="cyber-card p-14 text-center">
-          <Gift size={40} className="text-gray-700 mx-auto mb-4" />
-          <p className="text-base font-semibold text-gray-500">No giveaways yet</p>
-          <p className="text-xs text-gray-700 mt-1 max-w-xs mx-auto">
-            {canCreate ? 'Launch your first giveaway to get started.' : 'A moderator can start giveaways here.'}
-          </p>
-        </div>
+        <EmptyState
+          icon={Gift}
+          title="No giveaways yet"
+          subtitle={canCreate ? 'Launch your first giveaway to get started.' : 'A moderator can start giveaways here.'}
+        />
       )}
     </div>
   );

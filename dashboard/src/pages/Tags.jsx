@@ -88,8 +88,8 @@ export default function Tags({ guild }) {
       </div>
 
       <div className="relative">
-        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
-        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search tags…" aria-label="Search tags" className="cyber-input pl-9 text-xs" />
+        <Search size={13} className="absolute start-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search tags…" aria-label="Search tags" className="cyber-input ps-9 text-xs" />
       </div>
 
       {loading ? (

@@ -113,8 +113,8 @@ export default function Confessions({ guild, guildData }) {
             </button>
           </div>
           <div className="relative">
-            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search…" aria-label="Search confessions" className="cyber-input pl-9 text-xs" />
+            <Search size={13} className="absolute start-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search…" aria-label="Search confessions" className="cyber-input ps-9 text-xs" />
           </div>
           {loading ? (
             <div className="space-y-2">{[...Array(3)].map((_, i) => <div key={i} className="h-16 skeleton rounded-xl" />)}</div>

@@ -227,6 +227,19 @@ const db = {
     allByPrefix: async (prefix) => [...mem.entries()]
         .filter(([id]) => id.startsWith(prefix))
         .map(([id, value]) => ({ id, value })),
+    mget: async (keys) => Object.fromEntries(
+        (Array.isArray(keys) ? keys.slice(0, 100) : []).map((k) => [String(k), mem.has(String(k)) ? mem.get(String(k)) : null])
+    ),
+    rankCounts: async (prefix, { score = 0 } = {}) => {
+        let above = 0;
+        let total = 0;
+        for (const [id, value] of mem.entries()) {
+            if (!id.startsWith(prefix)) continue;
+            total += 1;
+            if ((Number(value?.textLevel) || 0) * 100 + (Number(value?.textXp) || 0) > score) above += 1;
+        }
+        return { above, total };
+    },
     deletePrefix: async (prefix) => {
         let deleted = 0;
         for (const key of [...mem.keys()]) {

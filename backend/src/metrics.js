@@ -6,6 +6,7 @@ const methods = new Map();
 const paths = new Map();
 const durations = [];
 const MAX_SAMPLES = 1000;
+let durationsIdx = 0;
 const MAX_PATHS = 200;
 const eventLoop = monitorEventLoopDelay({ resolution: 20 });
 eventLoop.enable();
@@ -35,8 +36,14 @@ function observe(method, path, status, durationMs) {
         if (status >= 500) row.errors++;
         paths.set(path, row);
     }
-    durations.push(durationMs);
-    if (durations.length > MAX_SAMPLES) durations.shift();
+    // Ring buffer: overwriting the oldest sample in place is O(1),
+    // while shift() memmoves up to 1000 entries on every request.
+    if (durations.length < MAX_SAMPLES) {
+        durations.push(durationMs);
+    } else {
+        durations[durationsIdx] = durationMs;
+        durationsIdx = (durationsIdx + 1) % MAX_SAMPLES;
+    }
 }
 
 function metricsMiddleware(req, res, next) {
@@ -99,7 +106,7 @@ function metricsSnapshot() {
 function closeMetrics() { eventLoop.disable(); }
 function resetForTests() {
     Object.assign(totals, { requests: 0, errors: 0, authFailures: 0, forbidden: 0, rateLimited: 0, latencyMs: 0, maxLatencyMs: 0 });
-    methods.clear(); paths.clear(); durations.length = 0; eventLoop.reset();
+    methods.clear(); paths.clear(); durations.length = 0; durationsIdx = 0; eventLoop.reset();
 }
 
 module.exports = { metricsMiddleware, metricsSnapshot, normalizedPath, observe, closeMetrics, resetForTests };

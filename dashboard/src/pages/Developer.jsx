@@ -316,7 +316,7 @@ export default function Developer({ initialTab = 'overview' }) {
           </div>
 
           <div className="cyber-card p-4 space-y-2">
-            <p className="text-xs font-semibold text-white flex items-center gap-1.5"><Cpu size={13} /> Processes</p>
+            <p className="text-xs font-semibold text-white flex items-center gap-1.5"><Cpu size={13} aria-hidden="true" /> Processes</p>
             <div className="grid sm:grid-cols-3 gap-2">
               {p.map((x) => (
                 <div key={x.id} className="px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06]">
@@ -324,7 +324,7 @@ export default function Developer({ initialTab = 'overview' }) {
                     <span className="text-xs text-zinc-300">{x.id}</span>
                     <Pill ok={x.running} label={x.running ? `pid ${x.pid}` : 'down'} />
                   </div>
-                  {x.running && <p className="text-[10px] text-zinc-600 mt-1">{x.etime} · {bytes((x.rssKb || 0) * 1024)}</p>}
+                  {x.running && <p className="text-[10px] text-zinc-500 mt-1 tabular-nums">{x.etime} · {bytes((x.rssKb || 0) * 1024)}</p>}
                 </div>
               ))}
             </div>
@@ -332,7 +332,7 @@ export default function Developer({ initialTab = 'overview' }) {
 
           {systemLevel >= ROLE_LEVEL.SUPER_ADMIN && (
           <div className="cyber-card p-4 space-y-3">
-            <p className="text-xs font-semibold text-white flex items-center gap-1.5"><Shield size={13} /> Feature flags & deployment</p>
+            <p className="text-xs font-semibold text-white flex items-center gap-1.5"><Shield size={13} aria-hidden="true" /> Feature flags & deployment</p>
             <label className="flex items-center justify-between text-xs text-zinc-300">
               Maintenance
               <input type="checkbox" className="accent-fuchsia-400" checked={!!ov.flags?.maintenance} onChange={(e) => setFlag('maintenance', e.target.checked)} />
@@ -347,9 +347,10 @@ export default function Developer({ initialTab = 'overview' }) {
                 onChange={(e) => setMaintenanceMessage(e.target.value)}
                 maxLength={300}
                 placeholder="Maintenance message shown to users"
+                aria-label="Maintenance message shown to users"
                 className="cyber-input text-xs"
               />
-              <select value={maintenanceDuration} onChange={(e) => setMaintenanceDuration(e.target.value)} className="cyber-select text-xs sm:w-36">
+              <select value={maintenanceDuration} onChange={(e) => setMaintenanceDuration(e.target.value)} aria-label="Maintenance auto-end duration" className="cyber-select text-xs sm:w-36">
                 <option value="">No auto-end</option>
                 <option value="3600000">1 hour</option>
                 <option value="21600000">6 hours</option>
@@ -366,10 +367,9 @@ export default function Developer({ initialTab = 'overview' }) {
             </div>
           </div>
           )}
-
           {!!ov.deadHosts?.length && (
             <div className="cyber-card p-4">
-              <p className="text-xs font-semibold text-white mb-2 flex items-center gap-1.5"><Radio size={13} /> Dead hosts ({ov.deadHosts.length})</p>
+              <p className="text-xs font-semibold text-white mb-2 flex items-center gap-1.5"><Radio size={13} aria-hidden="true" /> Dead hosts ({ov.deadHosts.length})</p>
               <div className="max-h-36 overflow-auto font-mono text-[10px] text-zinc-500 space-y-0.5">
                 {ov.deadHosts.map((h) => <div key={h}>{h}</div>)}
               </div>
@@ -455,9 +455,10 @@ export default function Developer({ initialTab = 'overview' }) {
                       onChange={(e) => setMaintenanceMessage(e.target.value)}
                       maxLength={300}
                       placeholder="Maintenance message shown to users"
+                      aria-label="Maintenance message shown to users"
                       className="cyber-input text-xs"
                     />
-                    <select value={maintenanceDuration} onChange={(e) => setMaintenanceDuration(e.target.value)} className="cyber-select text-xs sm:w-36">
+                    <select value={maintenanceDuration} onChange={(e) => setMaintenanceDuration(e.target.value)} aria-label="Maintenance auto-end duration" className="cyber-select text-xs sm:w-36">
                       <option value="">No auto-end</option>
                       <option value="3600000">1 hour</option>
                       <option value="21600000">6 hours</option>
@@ -469,7 +470,7 @@ export default function Developer({ initialTab = 'overview' }) {
                   </button>
                 </>
               ) : (
-                <p className="text-[11px] text-zinc-600">Flag writes require SUPER_ADMIN — this view is read-only for your role.</p>
+                <p className="text-[11px] text-zinc-500">Flag writes require SUPER_ADMIN — this view is read-only for your role.</p>
               )}
             </>
           )}
@@ -478,20 +479,21 @@ export default function Developer({ initialTab = 'overview' }) {
 
       {tab === 'logs' && (
         <div className="cyber-card p-4 space-y-3">
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Log files">
             {LOGS.map((f) => (
               <button
                 key={f.id}
                 onClick={() => setLogFile(f.id)}
-                className={`text-[11px] px-2 py-1 rounded-lg border ${
-                  logFile === f.id ? 'border-cyan-400/40 text-cyan-200' : 'border-white/10 text-zinc-500'
+                aria-pressed={logFile === f.id}
+                className={`text-[11px] font-medium px-3 py-2 min-h-[32px] rounded-lg border transition-all ${
+                  logFile === f.id ? 'border-cyan-300/40 text-cyan-200 bg-cyan-400/10' : 'border-white/10 text-zinc-400 hover:text-zinc-200 hover:border-white/20'
                 }`}
               >
-                <FileText size={10} className="inline mr-1" />{f.label}
+                <FileText size={10} className="inline mr-1" aria-hidden="true" />{f.label}
               </button>
             ))}
           </div>
-          <pre className="max-h-[28rem] overflow-auto text-[10px] leading-relaxed text-zinc-400 bg-black/30 rounded-lg p-3 whitespace-pre-wrap break-all">{log || '—'}</pre>
+          <pre aria-label={`Backend log: ${logFile}`} className="max-h-[28rem] overflow-auto text-[10px] leading-relaxed text-zinc-400 bg-black/30 rounded-lg p-3 whitespace-pre-wrap break-all tabular-nums">{log || '—'}</pre>
         </div>
       )}
 
@@ -526,8 +528,8 @@ export default function Developer({ initialTab = 'overview' }) {
             {cmds.commands.map((c) => (
               <div key={c.name} className="flex items-baseline gap-2 px-2 py-1 rounded bg-white/[0.02]">
                 <span className="font-mono text-[11px] text-cyan-300">/{c.name}</span>
-                <span className="text-[10px] text-zinc-600 truncate flex-1">{c.description}</span>
-                <span className="text-[10px] text-zinc-600 tabular-nums">{c.size}b</span>
+                <span className="text-[10px] text-zinc-500 truncate flex-1">{c.description}</span>
+                <span className="text-[10px] text-zinc-500 tabular-nums">{c.size}b</span>
                 {c.subs?.length ? <span className="text-[10px] text-fuchsia-300/80">{c.subs.length} subs</span> : null}
               </div>
             ))}

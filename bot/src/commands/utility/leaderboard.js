@@ -17,12 +17,19 @@ module.exports = {
     const type = interaction.options.getString('type') || 'total';
     await interaction.deferReply();
     const members = await interaction.guild.members.fetch();
+    // One batched mget per 100 members instead of N sequential single-key
+    // round-trips: a 1,000-member guild went from 1,000 sequential queries to
+    // 10 parallel ones. mget caps at 100 keys per call, hence the chunks.
+    const memberIds = [...members.keys()];
+    const chunks = [];
+    for (let i = 0; i < memberIds.length; i += 100) chunks.push(memberIds.slice(i, i + 100));
+    const batches = await Promise.all(chunks.map((ids) =>
+        db.mget(ids.map((id) => `stats_${interaction.guild.id}_${id}`)).catch(() => ({}))
+    ));
+    const statsById = Object.assign({}, ...batches);
     const entries = [];
-    for (const [memberId
-        ] of members) {
-      const stats = await db.get(`stats_${interaction.guild.id
-            }_${memberId
-            }`) || { messages: 0, voiceTime: 0, reactions: 0
+    for (const memberId of memberIds) {
+      const stats = statsById[`stats_${interaction.guild.id}_${memberId}`] || { messages: 0, voiceTime: 0, reactions: 0
             };
       let value = 0;
       if (type === 'messages') value = stats.messages;

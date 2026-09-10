@@ -21,12 +21,52 @@ function normalizePrefixOptions(prefix, options = {}) {
     return { prefix: cleanPrefix, likePrefix, limit, cursor };
 }
 
+// Leaderboard orderings shared by the Memory and Postgres adapters so both
+// return identical rankings. SQL guards each field with a numeric regex:
+// a hand-edited or legacy row holding a string must sort as 0, never abort
+// the query with a cast error (the old JS sort rendered such rows as NaN).
+function numField(value) {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : 0;
+}
+
+const TOP_SORTS = {
+    xp: {
+        sql: `(CASE WHEN value->>'textLevel' ~ '^-?[0-9]+$' THEN (value->>'textLevel')::bigint ELSE 0 END * 100 + CASE WHEN value->>'textXp' ~ '^-?[0-9]+$' THEN (value->>'textXp')::bigint ELSE 0 END)`,
+        score: (value) => numField(value?.textLevel) * 100 + numField(value?.textXp),
+    },
+    messages: {
+        sql: `CASE WHEN value->>'messages' ~ '^-?[0-9]+$' THEN (value->>'messages')::bigint ELSE 0 END`,
+        score: (value) => numField(value?.messages),
+    },
+    voice: {
+        sql: `CASE WHEN value->>'voiceTime' ~ '^-?[0-9]+$' THEN (value->>'voiceTime')::bigint ELSE 0 END`,
+        score: (value) => numField(value?.voiceTime),
+    },
+};
+
+function normalizeTopOptions(prefix, options = {}) {
+    const base = normalizePrefixOptions(prefix, { limit: 1000 });
+    const sort = String(options.sort || 'xp');
+    if (!TOP_SORTS[sort]) throw new Error(`unknown top sort: ${sort}`);
+    const limit = Math.min(100, Math.max(1, Number(options.limit) || 15));
+    return { prefix: base.prefix, likePrefix: base.likePrefix, limit, sort };
+}
+
+function normalizeScoreThreshold(score) {
+    const n = Number(score);
+    return Number.isFinite(n) ? Math.floor(n) : 0;
+}
+
 class MemoryDatabase {
     constructor({ persist = false, snapshotPath = FALLBACK_SNAPSHOT } = {}) {
         this.data = new Map();
         this.persist = persist === true && !isTestProcess;
         this.snapshotPath = snapshotPath;
         this._lastMtimeMs = 0;
+        this._lastCheckMs = 0;
+        this._snapshotDirty = false;
+        this._saveTimer = null;
         if (this.persist) this.loadSnapshot();
     }
     loadSnapshot() {
@@ -47,6 +87,13 @@ class MemoryDatabase {
     }
     _maybeReload() {
         if (!this.persist) return;
+        // Throttle the statSync to max once per second: every db.get/mget/scan
+        // previously issued a blocking stat syscall, so a single dashboard
+        // overview (11 reads, now 1 mget) still stalled the event loop on
+        // filesystem metadata. External snapshot edits surface within ~1s.
+        const now = Date.now();
+        if (now - this._lastCheckMs < 1000) return;
+        this._lastCheckMs = now;
         try {
             const stat = fs.statSync(this.snapshotPath);
             const mtime = stat.mtimeMs || 0;
@@ -63,15 +110,38 @@ class MemoryDatabase {
     }
     saveSnapshot() {
         if (!this.persist) return;
+        // Debounce to max one write per second with a trailing flush: every
+        // set/delete previously ran JSON.stringify over the ENTIRE database
+        // plus two blocking syscalls, so XP updates on a busy guild (one per
+        // message) stalled the event loop on O(DB) work each time. The
+        // in-memory Map stays authoritative, so reads never observe stale
+        // data; only a crash inside the 1s window loses the tail. Ephemeral
+        // mode is explicitly non-durable across restarts already.
+        this._snapshotDirty = true;
+        if (this._saveTimer) return;
+        this._saveTimer = setTimeout(() => {
+            this._saveTimer = null;
+            this.flushSnapshot();
+        }, 1000);
+        // Deliberately NOT unref'd: a pending snapshot must flush before a
+        // one-shot script or a clean shutdown exits, otherwise the trailing
+        // second of dashboard config would vanish silently. Timers only exist
+        // in ephemeral-fallback mode (never in tests, never with Postgres).
+    }
+    flushSnapshot() {
+        if (!this.persist || !this._snapshotDirty) return;
+        this._snapshotDirty = false;
         try {
             fs.mkdirSync(path.dirname(this.snapshotPath), { recursive: true });
             fs.writeFileSync(this.snapshotPath, JSON.stringify(Object.fromEntries(this.data)), 'utf8');
             try {
                 const stat = fs.statSync(this.snapshotPath);
                 this._lastMtimeMs = stat.mtimeMs || 0;
+                this._lastCheckMs = Date.now();
             } catch { /* ignore */ }
         } catch {
             // Persistence is best-effort; the in-memory state stays authoritative.
+            this._snapshotDirty = true;
         }
     }
     ready() { return Promise.resolve(true); }
@@ -81,6 +151,16 @@ class MemoryDatabase {
     get(key) {
         if (this.persist) this._maybeReload();
         return Promise.resolve(this.data.has(String(key)) ? structuredClone(this.data.get(String(key))) : null);
+    }
+    mget(keys) {
+        if (this.persist) this._maybeReload();
+        const list = Array.isArray(keys) ? keys.slice(0, 100) : [];
+        const out = {};
+        for (const key of list) {
+            const k = String(key);
+            out[k] = this.data.has(k) ? structuredClone(this.data.get(k)) : null;
+        }
+        return Promise.resolve(out);
     }
     set(key, value) {
         this.data.set(String(key), structuredClone(value === undefined ? null : value));
@@ -112,6 +192,30 @@ class MemoryDatabase {
     allByPrefix(prefix, options = {}) {
         if (this.persist) this._maybeReload();
         return collectPrefixRows(this, prefix, options);
+    }
+    topPrefix(prefix, options = {}) {
+        if (this.persist) this._maybeReload();
+        const normalized = normalizeTopOptions(prefix, options);
+        const score = TOP_SORTS[normalized.sort].score;
+        return Promise.resolve([...this.data.entries()]
+            .filter(([id]) => id.startsWith(normalized.prefix))
+            .map(([id, value]) => ({ id, value: structuredClone(value) }))
+            .sort((a, b) => score(b.value) - score(a.value))
+            .slice(0, normalized.limit));
+    }
+    rankCounts(prefix, options = {}) {
+        if (this.persist) this._maybeReload();
+        const normalized = normalizeTopOptions(prefix, options);
+        const threshold = normalizeScoreThreshold(options.score);
+        const score = TOP_SORTS[normalized.sort].score;
+        let above = 0;
+        let total = 0;
+        for (const [id, value] of this.data.entries()) {
+            if (!id.startsWith(normalized.prefix)) continue;
+            total += 1;
+            if (score(value) > threshold) above += 1;
+        }
+        return Promise.resolve({ above, total });
     }
     deletePrefix(prefix) {
         const normalized = normalizePrefixOptions(prefix);
@@ -257,6 +361,17 @@ class PostgresDatabase {
         return result.rows.length ? result.rows[0].value : null;
     }
 
+    async mget(keys) {
+        await this.ready();
+        const list = Array.isArray(keys) ? [...new Set(keys.map(String))].slice(0, 100) : [];
+        if (list.length === 0) return {};
+        const result = await this.pool.query('SELECT key, value FROM bot_kv WHERE key = ANY($1)', [list]);
+        const out = {};
+        for (const k of list) out[k] = null;
+        for (const row of result.rows) out[row.key] = row.value;
+        return out;
+    }
+
     async set(key, value) {
         await this.ready();
         const safeValue = value === undefined ? null : value;
@@ -298,6 +413,44 @@ class PostgresDatabase {
 
     allByPrefix(prefix, options = {}) {
         return collectPrefixRows(this, prefix, options);
+    }
+
+    // Database-side leaderboard: ranks one prefix by a JSONB score and
+    // returns only the top rows. The previous caller transferred up to 50,000
+    // full JSONB rows to sort 15 in JavaScript (O(K) network/memory); this is
+    // one indexed prefix seek plus a top-N sort in Postgres, transferring
+    // O(limit) rows. `sort` is allow-listed so the ORDER BY fragment cannot
+    // be injected; unknown sorts throw instead of silently mis-ranking.
+    async topPrefix(prefix, options = {}) {
+        await this.ready();
+        const normalized = normalizeTopOptions(prefix, options);
+        const result = await this.pool.query(`
+            SELECT key AS id, value
+            FROM bot_kv
+            WHERE key LIKE $1 ESCAPE '\\'
+            ORDER BY ${TOP_SORTS[normalized.sort].sql} DESC
+            LIMIT $2
+        `, [normalized.likePrefix, normalized.limit]);
+        return result.rows;
+    }
+
+    // Rank aggregate for /rank: previously the command transferred up to
+    // 1,000 full JSONB rows (scanPrefix default page) to count higher scores
+    // in JavaScript — and guilds past 1,000 XP rows got WRONG ranks and totals
+    // because rows beyond the first page were invisible. Two scalar COUNTs,
+    // zero value transfer, correct at any guild size.
+    async rankCounts(prefix, options = {}) {
+        await this.ready();
+        const normalized = normalizeTopOptions(prefix, options);
+        const threshold = normalizeScoreThreshold(options.score);
+        const result = await this.pool.query(`
+            SELECT COUNT(*)::int AS total,
+                   COUNT(*) FILTER (WHERE ${TOP_SORTS[normalized.sort].sql} > $2)::int AS above
+            FROM bot_kv
+            WHERE key LIKE $1 ESCAPE '\\'
+        `, [normalized.likePrefix, threshold]);
+        const row = result.rows[0] || {};
+        return { above: row.above || 0, total: row.total || 0 };
     }
 
     async deletePrefix(prefix) {

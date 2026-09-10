@@ -112,7 +112,7 @@ export default function MusicController({ guild }) {
 
   const removeAt = (index) => action('queue/remove', { index }, 'Removed from queue');
 
-  if (!guild) return <div className="p-6 text-gray-500 text-sm">Select a server first.</div>;
+  if (!guild) return <div className="p-6 text-zinc-400 text-sm">Select a server first.</div>;
 
   const hasTrack = !!data?.current;
   const paused = !!data?.paused;
@@ -305,9 +305,9 @@ export default function MusicController({ guild }) {
       </div>
 
       <div className="cyber-card p-4 mt-4">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Search & Play</p>
+        <p className="text-xs font-semibold text-zinc-300 uppercase tracking-wide mb-3">Search & Play</p>
         <div className="flex gap-2 flex-wrap">
-          <select value={voiceId} onChange={(e) => setVoiceId(e.target.value)} className="cyber-select text-xs w-full sm:w-52">
+          <select value={voiceId} onChange={(e) => setVoiceId(e.target.value)} aria-label="Voice channel for playback" className="cyber-select text-xs w-full sm:w-52">
             <option value="">— Auto voice channel —</option>
             {voiceChannels.map((c) => (
               <option key={c.id} value={c.id}>#{c.name}{c.members ? ` · ${c.members}` : ''}</option>
@@ -349,23 +349,23 @@ export default function MusicController({ guild }) {
       {lyricsOpen && (
         <div className="cyber-card p-4 mt-4">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+            <p className="text-xs font-semibold text-zinc-300 uppercase tracking-wide">
               Lyrics {lyrics?.title ? `· ${lyrics.title}` : ''}
             </p>
             <button onClick={() => setLyricsOpen(false)} className="cyber-icon-button" aria-label="Close lyrics">
-              <X size={14} />
+              <X size={14} aria-hidden="true" />
             </button>
           </div>
           {lyricsLoading ? (
-            <div className="flex items-center gap-2 text-xs text-zinc-500 py-6 justify-center">
-              <Loader2 size={14} className="animate-spin" /> Fetching lyrics…
+            <div className="flex items-center gap-2 text-xs text-zinc-400 py-6 justify-center" role="status" aria-label="Fetching lyrics">
+              <Loader2 size={14} className="animate-spin" aria-hidden="true" /> Fetching lyrics…
             </div>
           ) : lyrics?.lyrics ? (
-            <pre className="text-xs text-zinc-300 whitespace-pre-wrap max-h-72 overflow-y-auto leading-relaxed font-sans">
+            <pre className="text-xs text-zinc-300 whitespace-pre-wrap max-h-72 overflow-y-auto leading-relaxed font-sans" aria-label={lyrics?.title ? `Lyrics for ${lyrics.title}` : 'Lyrics'}>
               {lyrics.lyrics}
             </pre>
           ) : (
-            <p className="text-xs text-zinc-600 text-center py-6">No lyrics found for this track.</p>
+            <p className="text-xs text-zinc-500 text-center py-6">No lyrics found for this track.</p>
           )}
         </div>
       )}

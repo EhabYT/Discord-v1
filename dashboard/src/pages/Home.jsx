@@ -200,7 +200,7 @@ export default function Home({ health, auth, onEnter }) {
                 {s.label}
               </p>
               <p className="text-2xl font-bold text-white mt-1 tabular-nums tracking-tight">{s.value}</p>
-              <p className="text-[11px] text-zinc-500 mt-0.5">{s.sub}</p>
+              <p className="text-[11px] text-zinc-400 mt-0.5">{s.sub}</p>
             </div>
           ))}
         </div>
@@ -258,7 +258,7 @@ export default function Home({ health, auth, onEnter }) {
                 <Icon size={15} />
               </span>
               <p className="text-xs font-semibold text-white">{t(`nav.${id}`, label)}</p>
-              <p className="text-[10px] text-zinc-500">{t(`home.ph.${id}`, hint)}</p>
+              <p className="text-[10px] text-zinc-400">{t(`home.ph.${id}`, hint)}</p>
             </button>
           ))}
         </div>
@@ -274,7 +274,7 @@ export default function Home({ health, auth, onEnter }) {
             <p className="cyber-label !text-cyan-200">In Discord</p>
           </div>
           <h2 className="text-xl font-bold text-white mb-2">{t('home.commandsTitle', '100 slash commands. One bot.')}</h2>
-          <p className="text-xs text-zinc-500 mb-5">{t('home.commandsSub', 'Full commands with extra features in subcommands.')}</p>
+          <p className="text-xs text-zinc-400 mb-5">{t('home.commandsSub', 'Full commands with extra features in subcommands.')}</p>
           <div className="flex flex-wrap gap-2 mb-6">
             {COMMANDS.map((c) => (
               <span key={c} className="font-mono text-xs px-3 py-1.5 rounded-xl bg-black/30 border border-white/10 text-cyan-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] hover:border-cyan-300/30 transition-colors">{c}</span>
@@ -288,8 +288,8 @@ export default function Home({ health, auth, onEnter }) {
               </div>
             ))}
           </div>
-          <p className="text-xs text-zinc-500 mt-5 inline-flex items-center gap-1.5">
-            <Radio size={12} className="text-cyan-400" /> {t('home.liveNote', 'Live feed and logs stay in the dashboard.')}
+          <p className="text-xs text-zinc-400 mt-5 inline-flex items-center gap-1.5">
+            <Radio size={12} className="text-cyan-300 flex-shrink-0" aria-hidden="true" /> {t('home.liveNote', 'Live feed and logs stay in the dashboard.')}
           </p>
         </div>
       </section>
@@ -302,7 +302,7 @@ export default function Home({ health, auth, onEnter }) {
             <img src="/eb_logo.svg" alt="" className="relative w-16 h-16 mx-auto rounded-2xl object-cover ring-1 ring-white/15" />
           </span>
           <h2 className="text-2xl font-bold text-white mb-2">{t('home.ready', 'Ready when you are.')}</h2>
-          <p className="text-sm text-zinc-500 mb-6 max-w-md mx-auto">
+          <p className="text-sm text-zinc-400 mb-6 max-w-md mx-auto">
             {t('home.readyText', 'Run your community from one fast, secure dashboard.')}
           </p>
           <div className="flex flex-wrap justify-center gap-3">
@@ -323,11 +323,11 @@ export default function Home({ health, auth, onEnter }) {
       </section>
 
       <footer className="border-t border-white/[0.06]">
-        <div className="max-w-6xl mx-auto px-5 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-500">
+        <div className="max-w-6xl mx-auto px-5 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-400">
           <span>EB BOT · Homepage · Dashboard + Discord</span>
           <div className="flex items-center gap-4">
-            <button onClick={() => go('home')} className="text-zinc-500 hover:text-zinc-300">#home</button>
-            <button onClick={() => go('overview')} className="text-cyan-300 hover:text-cyan-200">Dashboard →</button>
+            <button onClick={() => go('home')} className="min-h-[36px] px-2 text-zinc-400 hover:text-zinc-200">#home</button>
+            <button onClick={() => go('overview')} className="min-h-[36px] px-2 text-cyan-300 hover:text-cyan-200">Dashboard →</button>
           </div>
         </div>
       </footer>

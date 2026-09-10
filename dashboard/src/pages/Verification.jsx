@@ -422,16 +422,16 @@ export default function Verification({ guild, guildData }) {
       </div>
 
       {botCanManage === false && (
-        <div className="rounded-xl border border-red-400/30 bg-red-400/10 p-3 flex gap-2">
-          <AlertTriangle size={14} className="text-red-400 flex-shrink-0 mt-0.5" />
+        <div className="rounded-xl border border-red-400/30 bg-red-400/10 p-3 flex gap-2" role="alert">
+          <AlertTriangle size={14} className="text-red-300 flex-shrink-0 mt-0.5" aria-hidden="true" />
           <p className="text-xs text-red-200 leading-relaxed">
             The bot does not have the <strong>Manage Roles</strong> permission, so Verify clicks cannot assign any role.
           </p>
         </div>
       )}
       {verifiedAboveBot && (
-        <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 flex gap-3 items-start">
-          <AlertTriangle size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
+        <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 flex gap-3 items-start" role="alert">
+          <AlertTriangle size={14} className="text-amber-300 flex-shrink-0 mt-0.5" aria-hidden="true" />
           <div className="flex-1 min-w-0 space-y-2">
             <p className="text-xs text-amber-200 leading-relaxed">
               <strong>{verifiedRole.name}</strong> is above the bot&apos;s highest role. Move the bot role above it in Server Settings → Roles, or every Verify click will fail.
@@ -440,18 +440,18 @@ export default function Verification({ guild, guildData }) {
               <button
                 disabled={busyId === 'fix-hierarchy'}
                 onClick={fixHierarchy}
-                className="cyber-button-solid text-[11px] px-3 py-1.5 disabled:opacity-50"
+                className="cyber-button-solid text-xs px-3 min-h-[36px] disabled:opacity-50"
               >
                 {busyId === 'fix-hierarchy' ? 'Fixing…' : 'Try auto-fix'}
               </button>
-              <span className="text-[11px] text-amber-300/70">Tries to move it below the bot; if Discord blocks it, recreates it below the bot instead. Old role can be deleted manually.</span>
+              <span className="text-[11px] text-amber-200/70">Tries to move it below the bot; if Discord blocks it, recreates it below the bot instead. Old role can be deleted manually.</span>
             </div>
           </div>
         </div>
       )}
       {unverifiedAboveBot && (
-        <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 flex gap-3 items-start">
-          <AlertTriangle size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
+        <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 flex gap-3 items-start" role="alert">
+          <AlertTriangle size={14} className="text-amber-300 flex-shrink-0 mt-0.5" aria-hidden="true" />
           <div className="flex-1 min-w-0 space-y-2">
             <p className="text-xs text-amber-200 leading-relaxed">
               <strong>{unverifiedRole.name}</strong> (Unverified) is above the bot&apos;s highest role and the gate cannot hide channels from it. Move the bot role above it or every join will miss the Unverified role.
@@ -459,7 +459,7 @@ export default function Verification({ guild, guildData }) {
             <button
               disabled={busyId === 'fix-hierarchy'}
               onClick={fixHierarchy}
-              className="cyber-button-solid text-[11px] px-3 py-1.5 disabled:opacity-50"
+              className="cyber-button-solid text-xs px-3 min-h-[36px] disabled:opacity-50"
             >
               {busyId === 'fix-hierarchy' ? 'Fixing…' : 'Try auto-fix'}
             </button>
@@ -467,16 +467,16 @@ export default function Verification({ guild, guildData }) {
         </div>
       )}
       {verifiedRoleMissing && (
-        <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 flex gap-2">
-          <AlertTriangle size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
+        <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 flex gap-2" role="alert">
+          <AlertTriangle size={14} className="text-amber-300 flex-shrink-0 mt-0.5" aria-hidden="true" />
           <p className="text-xs text-amber-200 leading-relaxed">
             The saved verified role is no longer available (deleted or managed). Pick a new one below and re-post the panel — old Verify buttons will say “not set up” until then.
           </p>
         </div>
       )}
       {cfg.enabled && !cfg.roleId && (
-        <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 flex gap-2">
-          <AlertTriangle size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
+        <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 flex gap-2" role="alert">
+          <AlertTriangle size={14} className="text-amber-300 flex-shrink-0 mt-0.5" aria-hidden="true" />
           <p className="text-xs text-amber-200 leading-relaxed">
             Verification is on but no verified role is set. Pick one in Setup → Roles — Verify clicks reply “not set up” until then.
           </p>
@@ -484,20 +484,20 @@ export default function Verification({ guild, guildData }) {
       )}
       {!cfg.enabled && cfg.roleId && (
         <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 flex gap-2">
-          <Info size={14} className="text-zinc-400 flex-shrink-0 mt-0.5" />
+          <Info size={14} className="text-zinc-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
           <p className="text-xs text-zinc-400 leading-relaxed">
             Verification is disabled, so the Verify button replies that it is disabled. Enable it in Setup → Gate or use Quick → Go live.
           </p>
         </div>
       )}
 
-      <div className="seg-tabs">
+      <div className="seg-tabs" role="tablist" aria-label="Verification sections">
         {TABS.map(({ id, label, icon: Icon }) => (
-          <button key={id} onClick={() => setTab(id)} className={tab === id ? 'seg-tab-active' : 'seg-tab'}>
-            <Icon size={12} />
+          <button key={id} onClick={() => setTab(id)} role="tab" aria-selected={tab === id} className={tab === id ? 'seg-tab-active' : 'seg-tab'}>
+            <Icon size={12} aria-hidden="true" />
             {label}
-            {id === 'members' && pending.length > 0 && <span className="cyber-badge-yellow">{pending.length}</span>}
-            {id === 'logs' && log.length > 0 && <span className="cyber-badge-cyan">{log.length}</span>}
+            {id === 'members' && pending.length > 0 && <span className="cyber-badge-yellow tabular-nums">{pending.length}</span>}
+            {id === 'logs' && log.length > 0 && <span className="cyber-badge-cyan tabular-nums">{log.length}</span>}
           </button>
         ))}
       </div>
@@ -893,15 +893,15 @@ export default function Verification({ guild, guildData }) {
         <div className="space-y-4 animate-fade-in">
           <Section title="Find a member" icon={Search}>
             <div className="relative">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+              <Search size={13} className="absolute start-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
               <input
                 value={memberQ}
                 onChange={(e) => setMemberQ(e.target.value)}
                 placeholder="Search username or ID to verify / unverify…"
                 aria-label="Search members to verify or unverify"
-                className="cyber-input pl-9 text-xs"
+                className="cyber-input ps-9 text-xs"
               />
-              {searching && <Loader size={13} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-cyan-300" aria-hidden="true" />}
+              {searching && <Loader size={13} className="absolute end-3 top-1/2 -translate-y-1/2 animate-spin text-cyan-300" aria-hidden="true" />}
             </div>
             {found.length > 0 && (
               <div className="space-y-1.5">
@@ -945,8 +945,8 @@ export default function Verification({ guild, guildData }) {
             }
           >
             <div className="relative">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Filter pending…" aria-label="Filter pending members" className="cyber-input pl-9 text-xs" />
+              <Search size={13} className="absolute start-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Filter pending…" aria-label="Filter pending members" className="cyber-input ps-9 text-xs" />
             </div>
             {filteredPending.length === 0 ? (
               <EmptyState icon={UserCheck} title="No pending members" subtitle="New joins appear here when the gate is on." />
@@ -994,8 +994,8 @@ export default function Verification({ guild, guildData }) {
             }
           >
             <div className="relative">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
-              <input value={logQuery} onChange={(e) => setLogQuery(e.target.value)} placeholder="Search user, method, staff…" aria-label="Search verification log" className="cyber-input pl-9 text-xs" />
+              <Search size={13} className="absolute start-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+              <input value={logQuery} onChange={(e) => setLogQuery(e.target.value)} placeholder="Search user, method, staff…" aria-label="Search verification log" className="cyber-input ps-9 text-xs" />
             </div>
             {filteredLog.length === 0 ? (
               <EmptyState icon={ScrollText} title="No verifications yet" subtitle="Button clicks and staff verifies show up here." />

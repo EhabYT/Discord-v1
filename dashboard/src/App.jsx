@@ -4,7 +4,10 @@ import CommandPalette from './components/CommandPalette.jsx';
 import CopyButton from './components/CopyButton.jsx';
 import LanguageMenu from './components/LanguageMenu.jsx';
 import { ToastProvider } from './components/Toast.jsx';
-import Home from './pages/Home.jsx';
+// Home is the public landing page, not the authenticated shell: loading it
+// eagerly pulled ~22 kB of marketing UI plus 25 lucide icons into the initial
+// bundle paid by every login. Lazy-load it like every other page.
+const Home = lazy(() => import('./pages/Home.jsx'));
 
 // Load dashboard tools only when they are opened. The previous eager imports
 // shipped every admin page in one 617 kB bundle, slowing down login and mobile
@@ -260,13 +263,13 @@ function OAuthNotice() {
           ? 'border-emerald-400/30 bg-emerald-950/90 text-emerald-100'
           : 'border-amber-400/30 bg-amber-950/90 text-amber-100'
       }`}>
-        <Icon size={18} className="mt-0.5 flex-shrink-0" />
+        <Icon size={18} className="mt-0.5 flex-shrink-0" aria-hidden="true" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold">{success ? t('oauth.welcome', 'Welcome back') : t('oauth.attention', 'Login needs attention')}</p>
           <p className="text-xs opacity-75 mt-0.5 leading-relaxed">{message}</p>
         </div>
-        <button onClick={() => setResult(null)} className="p-1 rounded-lg hover:bg-white/10" aria-label="Dismiss notification">
-          <X size={14} />
+        <button onClick={() => setResult(null)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 flex-shrink-0" aria-label="Dismiss notification">
+          <X size={14} aria-hidden="true" />
         </button>
       </div>
     </div>
@@ -279,10 +282,10 @@ function PageErrorCard({ onOverview }) {
     <div className="min-h-full flex items-center justify-center p-6">
       <div className="cyber-card max-w-md w-full p-7 text-center animate-slide-up" role="alert">
         <div className="w-12 h-12 mx-auto mb-4 rounded-2xl flex items-center justify-center bg-red-500/10 border border-red-500/20 text-red-300">
-          <AlertTriangle size={22} />
+          <AlertTriangle size={22} aria-hidden="true" />
         </div>
         <h2 className="text-lg font-semibold text-white">{t('err.title', 'This page could not load')}</h2>
-        <p className="text-sm text-zinc-500 mt-2 leading-relaxed">
+        <p className="text-sm text-zinc-400 mt-2 leading-relaxed">
           {t('err.text', 'The dashboard may have been updated while it was open. Retry the page or return to Overview.')}
         </p>
         <div className="flex justify-center gap-2 mt-5">
@@ -610,7 +613,9 @@ export default function App() {
           {t('shell.skip', 'Skip to content')}
         </a>
         {isHome ? (
-          <Home health={health} auth={auth} onEnter={(id) => navigate(id || 'overview')} />
+          <Suspense fallback={<AuthLoading />}>
+            <Home health={health} auth={auth} onEnter={(id) => navigate(id || 'overview')} />
+          </Suspense>
         ) : (
         <div className="h-screen flex overflow-hidden">
           <Sidebar
@@ -751,9 +756,9 @@ export default function App() {
               {systemPageDenied || musicPageDenied || botControlsDenied || settingsDenied ? (
                 <div className="min-h-full flex items-center justify-center p-8">
                   <div className="cyber-card max-w-sm p-7 text-center">
-                    <AlertTriangle size={28} className="mx-auto text-red-300 mb-3" />
+                    <AlertTriangle size={28} className="mx-auto text-red-300 mb-3" aria-hidden="true" />
                     <p className="text-white font-semibold">{t('denied.title', 'System access required')}</p>
-                    <p className="text-sm text-zinc-500 mt-2">{musicPageDenied
+                    <p className="text-sm text-zinc-400 mt-2 leading-relaxed">{musicPageDenied
                       ? t('denied.music', 'The Music desk is available only to configured DEVELOPER or SUPER_ADMIN identities.')
                       : botControlsDenied
                         ? t('denied.botcontrols', 'Bot Controls are available only to configured DEVELOPER or SUPER_ADMIN identities.')
@@ -784,13 +789,13 @@ export default function App() {
                   <div className="text-center max-w-sm cyber-card p-8 animate-slide-up">
                     <img src="/eb_logo.svg" alt="EB BOT" className="w-14 h-14 mx-auto mb-4 rounded-2xl object-cover ring-1 ring-white/10" />
                     <p className="text-white font-semibold mb-2">{t('shell.noServer', 'No server selected')}</p>
-                    <p className="text-sm text-zinc-500 mb-5">
+                    <p className="text-sm text-zinc-400 mb-5 leading-relaxed">
                       {auth.oauthEnabled && !auth.loggedIn
                         ? t('shell.loginToSee', 'Log in with Discord to see the servers you can manage.')
                         : t('shell.inviteRefresh', 'Invite the bot to a server, then refresh this page.')}
                     </p>
                     {auth.oauthEnabled && !auth.loggedIn && (
-                      <a href="/api/auth/discord" className="cyber-button-solid inline-flex">{t('common.loginDiscord', 'Login with Discord')}</a>
+                      <a href="/api/auth/discord" className="cyber-button-solid inline-flex items-center min-h-[44px]">{t('common.loginDiscord', 'Login with Discord')}</a>
                     )}
                   </div>
                 </div>

@@ -103,20 +103,20 @@ export default function Birthdays({ guild, guildData }) {
         <StatCard icon={Settings} label="Announce" value={cfg.disabled ? 'Off' : (cfg.channelId ? 'Ready' : 'No channel')} color={cfg.channelId && !cfg.disabled ? 'green' : 'yellow'} />
       </div>
 
-      <div className="seg-tabs">
-        <button onClick={() => setTab('list')} className={tab === 'list' ? 'seg-tab-active' : 'seg-tab'}>
-          <Cake size={12} /> Upcoming
+      <div className="seg-tabs" role="tablist" aria-label="Birthday sections">
+        <button onClick={() => setTab('list')} role="tab" aria-selected={tab === 'list'} className={tab === 'list' ? 'seg-tab-active' : 'seg-tab'}>
+          <Cake size={12} aria-hidden="true" /> Upcoming
         </button>
-        <button onClick={() => setTab('settings')} className={tab === 'settings' ? 'seg-tab-active' : 'seg-tab'}>
-          <Settings size={12} /> Settings
+        <button onClick={() => setTab('settings')} role="tab" aria-selected={tab === 'settings'} className={tab === 'settings' ? 'seg-tab-active' : 'seg-tab'}>
+          <Settings size={12} aria-hidden="true" /> Settings
         </button>
       </div>
 
       {tab === 'list' && (
         <div className="space-y-4 animate-fade-in">
           <div className="relative">
-            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search member…" aria-label="Search birthdays by member" className="cyber-input pl-9 text-xs" />
+            <Search size={13} className="absolute start-3 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search member…" aria-label="Search birthdays by member" className="cyber-input ps-9 text-xs" />
           </div>
           {loading ? (
             <div className="space-y-2">{[...Array(4)].map((_, i) => <div key={i} className="h-14 skeleton rounded-xl" />)}</div>
