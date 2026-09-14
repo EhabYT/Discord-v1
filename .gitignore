@@ -16,6 +16,9 @@ json.sqlite-shm
 ephemeral-fallback.json
 database/ephemeral-fallback.json
 
+# Runtime backups (test fixtures + generated backups)
+backups/
+
 # Runtime logs & tunnel state
 logs/*
 !logs/.gitkeep
