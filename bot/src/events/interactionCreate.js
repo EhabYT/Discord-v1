@@ -1,11 +1,9 @@
-const crypto = require('crypto');
 const { Events, MessageFlags } = require('discord.js');
-const logger = require('../../../shared/lib/logger');
-const { safeReply } = require('../../../shared/utils/discord');
 const { handleTicketCreate, handleTicketClose } = require('../../../shared/services/tickets');
 const { handleMusicButton, handleMusicFilterSelect } = require('../../../shared/utils/music-interactions');
 const { handleHelpSelect } = require('../../../shared/utils/help-interactions');
 const { handleGameButton } = require('../../../shared/utils/game-interactions');
+const { guard } = require('../guards/command-guard');
 
 module.exports = {
     name: Events.InteractionCreate,
@@ -16,59 +14,18 @@ module.exports = {
             const command = client.commands.get(interaction.commandName);
             if (!command) return;
 
-            if (!interaction.inGuild()) {
-                return interaction.reply({
-                    content: '❌ This command only works in a server.',
-                    flags: [MessageFlags.Ephemeral]
-                }).catch(() => {});
-            }
-
-            try {
-                const flags = await db.get('dev_flags') || {};
-                const expired = flags.maintenanceUntil && Number(flags.maintenanceUntil) <= Date.now();
-                if (flags.maintenance && !expired) {
-                    const owner = process.env.OWNER_ID;
-                    if (!owner || interaction.user.id !== owner) {
-                        const message = String(flags.maintenanceMessage || 'EB is temporarily under maintenance.').slice(0, 300);
-                        return interaction.reply({
-                            content: `🛠️ ${message}`,
-                            flags: [MessageFlags.Ephemeral]
-                        }).catch(() => {});
-                    }
-                }
-            } catch { /* ignore flag read */ }
-
-            // Check if command is disabled via dashboard
-            const enabledMap = await db.get(`commands_enabled_${interaction.guildId}`) || {};
-            if (enabledMap[interaction.commandName] === false) {
-                return interaction.reply({
-                    content: '🚫 This command has been disabled by a server administrator via the dashboard.',
-                    flags: [MessageFlags.Ephemeral]
-                });
-            }
+            // Wrap command with security guard
+            const guardedExecute = guard(command.execute.bind(command), {
+                rateLimit: true,
+                validateGuild: true,
+            });
 
             // Defer immediately if the command is marked as requiring it, or if it's a known slow type
             if (command.defer) {
                 await interaction.deferReply({ flags: (command.ephemeral ? [MessageFlags.Ephemeral] : []) }).catch(() => { });
             }
 
-            logger.command(interaction.commandName, interaction.user, interaction.guild);
-            try { require('../../../shared/services/analytics').trackCommand(interaction.guildId, interaction.commandName); } catch(e) {}
-            try {
-                await command.execute(interaction, client, db);
-            } catch (err) {
-                const errorId = crypto.randomBytes(5).toString('hex');
-                logger.error(`Command error: /${interaction.commandName}`, {
-                    errorId, error: err.message, stack: err.stack,
-                    guildId: interaction.guildId, userId: interaction.user.id,
-                });
-                const EmbedHelper = require('../../../shared/utils/embed');
-                const embed = EmbedHelper.error(`The command could not be completed. Error ID: \`${errorId}\``, client);
-                await safeReply(interaction, {
-                    embeds: [embed],
-                    flags: [MessageFlags.Ephemeral]
-                });
-            }
+            await guardedExecute(interaction, client, db);
         }
         else if (interaction.isButton()) {
             if (!interaction.inGuild()) {

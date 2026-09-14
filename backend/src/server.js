@@ -1,6 +1,7 @@
 const express = require('express');
 const http = require('http');
 const session = require('express-session');
+const helmet = require('helmet');
 const { createSessionStore } = require('./session-store');
 const path = require('path');
 const compression = require('compression');
@@ -13,6 +14,7 @@ const { csrfGuard } = require('./middleware/csrf');
 const rl = require('./middleware/rate-limit');
 const { errorHandler } = require('./middleware/errors');
 const { maintenanceGuard } = require('./middleware/maintenance');
+const { requestTimeout } = require('./middleware/timeout');
 const { attachSessionSecurity, touchSessionSecurity } = require('../../shared/services/account-sessions');
 const { metricsMiddleware, closeMetrics } = require('./metrics');
 
@@ -104,8 +106,14 @@ const sessionMiddleware = session({
         secure: (process.env.DASHBOARD_SECURE === 'true' || IS_PROD) ? true : 'auto',
         httpOnly: true,
         sameSite: 'lax',
-        maxAge: 30 * 60 * 1000
-    }
+        maxAge: 30 * 60 * 1000,
+        // Restrict cookie path to API and auth routes only
+        path: '/',
+    },
+    // Genid function using crypto for secure session IDs
+    genid: () => crypto.randomBytes(32).toString('hex'),
+    // Trust proxy setting for secure cookies behind reverse proxy
+    proxy: IS_PROD,
 });
 app.use(sessionMiddleware);
 app.use((req, res, next) => {
@@ -124,26 +132,45 @@ app.use((req, res, next) => {
     return next();
 });
 
-// Security headers must precede express.static. Express ends a successful
-// static-file response immediately, so middleware registered after it never
-// runs for Dashboard HTML, JavaScript, CSS, images, or fonts.
+// Security headers via Helmet — replaces manual header setting.
+// Helmet provides production-ready defaults for CSP, HSTS, and more.
+// Must precede express.static. Express ends a successful static-file response
+// immediately, so middleware registered after it never runs for Dashboard HTML,
+// JavaScript, CSS, images, or fonts.
+
+// CSP nonce middleware — generates unique nonce per request for inline scripts
 app.use((req, res, next) => {
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-    res.setHeader('Referrer-Policy', 'no-referrer');
+    res.locals.cspNonce = crypto.randomBytes(16).toString('base64');
+    next();
+});
+
+app.use(helmet({
+    // Content Security Policy — allow inline styles for Tailwind, connect for WebSocket
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            baseUri: ["'self'"],
+            objectSrc: ["'none'"],
+            frameAncestors: ["'self'"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            fontSrc: ["'self'", "data:"],
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'", "ws:", "wss:"],
+        },
+    },
+    // HSTS in production only
+    hsts: IS_PROD ? { maxAge: 31536000, includeSubDomains: true } : false,
+    // Prevent MIME sniffing
+    noSniff: true,
+    // Prevent clickjacking
+    frameguard: { action: 'sameorigin' },
+    // Referrer policy
+    referrerPolicy: { policy: 'no-referrer' },
+}));
+// Permissions policy — Helmet doesn't set this by default
+app.use((req, res, next) => {
     res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-    res.setHeader('Content-Security-Policy', [
-        "default-src 'self'",
-        "base-uri 'self'",
-        "object-src 'none'",
-        "frame-ancestors 'self'",
-        "script-src 'self'",
-        "style-src 'self' 'unsafe-inline'",
-        "font-src 'self' data:",
-        "img-src 'self' data: https:",
-        "connect-src 'self' ws: wss:",
-    ].join('; '));
-    if (IS_PROD) res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     next();
 });
 
@@ -187,6 +214,8 @@ app.use(rateLimiter);
 // Origin check on unsafe methods; see middleware/csrf.js for why SameSite alone
 // is not treated as sufficient.
 app.use(csrfGuard);
+// Request timeout — prevent requests from hanging indefinitely
+app.use(requestTimeout(30_000, { excludePaths: ['/api/health'] }));
 
 let dashboardStarted = false;
 function startDashboard(botClient) {
@@ -241,6 +270,7 @@ function startDashboard(botClient) {
     app.use('/api/guild/:guildId/permissions', permissionsRouter);
     app.use('/api/guild/:guildId', guildsRouter);
     app.use('/api/music/:guildId', musicRouter);
+    app.use('/api', require('./routes/security'));
 
     app.get('/api/guilds', requireAuth, (req, res) => {
         if (!botClient || !botClient.user) return res.status(503).json({ error: 'Bot is initializing' });
@@ -557,6 +587,13 @@ function startDashboard(botClient) {
     });
 
     logAuthMode();
+
+    // Run startup security scan
+    try {
+        const { runSecurityScan } = require('./security/startup-scan');
+        runSecurityScan();
+    } catch { /* security scan must never block startup */ }
+
     httpServer.listen(PORT, '0.0.0.0', () => {
         logger.info(`✨ Dashboard active at http://0.0.0.0:${PORT}`);
     });

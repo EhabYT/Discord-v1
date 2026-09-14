@@ -65,6 +65,16 @@ function limit(name, max, windowMs) {
     };
 }
 
+function getStats() {
+    let totalEntries = 0;
+    let perIP = 0;
+    for (const [key, timestamps] of buckets) {
+        totalEntries += timestamps.length;
+        if (key.startsWith('ip:')) perIP++;
+    }
+    return { totalEntries, perIP, buckets: buckets.size };
+}
+
 module.exports = {
     limit,
     /** Mass Discord actions: kick sweeps, bulk deletes. */
@@ -75,5 +85,6 @@ module.exports = {
     heavyRead: () => limit('heavy-read', 10, 60 * 1000),
     /** Writes that replace large amounts of stored state. */
     restore: () => limit('restore', 3, 10 * 60 * 1000),
+    getStats,
     _buckets: buckets,
 };

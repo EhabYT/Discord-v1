@@ -3,7 +3,39 @@ const path = require('path');
 
 const LOG_DIR = path.join(__dirname, '..', '..', 'logs');
 const AUDIT_FILE = path.join(LOG_DIR, 'developer-audit.log');
+const SECURITY_ALERT_FILE = path.join(LOG_DIR, 'security-alerts.log');
 const SECRET_FIELD = /token|secret|password|credential|database.?url|authorization/i;
+
+// Security-critical actions that should trigger alerts
+const SECURITY_ACTIONS = new Set([
+    'authorization.denied',
+    'login.failed',
+    'login.success',
+    'unlock.denied',
+    'environment.inspect',
+    'database.inspect',
+    'session.revoke',
+    'password.change',
+    'mfa.enable',
+    'mfa.disable',
+    'account.deactivate',
+    'restore',
+    'restore.denied',
+    'backup.restore',
+]);
+
+// Severity levels for security events
+const SEVERITY = {
+    LOW: 'low',
+    MEDIUM: 'medium',
+    HIGH: 'high',
+    CRITICAL: 'critical',
+};
+
+// Track security event counts for escalation
+const securityEventCounts = new Map();
+const ESCALATION_WINDOW = 5 * 60 * 1000; // 5 minutes
+const ESCALATION_THRESHOLD = 10; // Alert if 10+ events in window
 
 // Phase 6: audit writes no longer block the request event loop. Recording a
 // developer action used to perform mkdir + append + chmod synchronously on
@@ -96,6 +128,71 @@ function flushDeveloperAudit() {
     }
 }
 
+/**
+ * Determine the severity of a security event.
+ */
+function getSeverity(action, result, metadata) {
+    // Failed authorization attempts are medium severity
+    if (action.includes('denied') || action.includes('failed')) {
+        // Multiple failures from same IP escalate severity
+        const ip = metadata?.ip || 'unknown';
+        const key = `failures:${ip}`;
+        const prev = securityEventCounts.get(key);
+        const count = (typeof prev === 'number' ? prev : prev?.count || 0) + 1;
+        securityEventCounts.set(key, { count, lastSeen: Date.now() });
+
+        if (count >= ESCALATION_THRESHOLD) return SEVERITY.CRITICAL;
+        if (count >= 5) return SEVERITY.HIGH;
+        return SEVERITY.MEDIUM;
+    }
+
+    // Successful privileged operations are low severity
+    if (action.includes('success')) return SEVERITY.LOW;
+
+    // Restore operations are high severity
+    if (action.includes('restore')) return SEVERITY.HIGH;
+
+    // Default to medium
+    return SEVERITY.MEDIUM;
+}
+
+/**
+ * Record a security alert to the alerts log.
+ */
+function recordSecurityAlert(event, severity) {
+    const alert = {
+        timestamp: event.timestamp,
+        severity,
+        action: event.action,
+        userId: event.userId,
+        ip: event.ip,
+        requestId: event.requestId,
+        target: event.target,
+        result: event.result,
+    };
+
+    try {
+        ensureDir();
+        fs.appendFileSync(SECURITY_ALERT_FILE, `${JSON.stringify(alert)}\n`, { mode: 0o600 });
+    } catch { /* alert logging must never fail */ }
+}
+
+/**
+ * Clean up old security event counts.
+ */
+function cleanupSecurityCounts() {
+    const now = Date.now();
+    for (const [key, data] of securityEventCounts.entries()) {
+        if (now - data.lastSeen > ESCALATION_WINDOW) {
+            securityEventCounts.delete(key);
+        }
+    }
+}
+
+// Run cleanup periodically
+const cleanupInterval = setInterval(cleanupSecurityCounts, ESCALATION_WINDOW);
+if (typeof cleanupInterval.unref === 'function') cleanupInterval.unref();
+
 function recordDeveloperAction(req, action, target, result = 'success', metadata = {}) {
     const forwarded = req.headers?.['x-forwarded-for'];
     const ip = (typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : null)
@@ -119,6 +216,15 @@ function recordDeveloperAction(req, action, target, result = 'success', metadata
         pendingLines = pendingLines.slice(-MAX_PENDING_LINES);
     }
     scheduleFlush();
+
+    // Security alert escalation for critical actions
+    if (SECURITY_ACTIONS.has(action.split('.')[0]) || SECURITY_ACTIONS.has(action)) {
+        const severity = getSeverity(action, result, { ip, ...metadata });
+        if (severity === SEVERITY.HIGH || severity === SEVERITY.CRITICAL) {
+            recordSecurityAlert(event, severity);
+        }
+    }
+
     return event;
 }
 
@@ -134,4 +240,45 @@ function readDeveloperAudit({ limit = 100, action = '', result = '' } = {}) {
         .slice(0, Math.min(500, Math.max(1, Number(limit) || 100)));
 }
 
-module.exports = { recordDeveloperAction, readDeveloperAudit, flushDeveloperAudit, safeObject, AUDIT_FILE };
+/**
+ * Read security alerts from the alerts log.
+ * @param {Object} options - { limit, severity, since }
+ * @returns {Array} Security alerts
+ */
+function readSecurityAlerts({ limit = 100, severity = '', since = '' } = {}) {
+    let raw = '';
+    try { raw = fs.readFileSync(SECURITY_ALERT_FILE, 'utf8'); } catch { return []; }
+    const rows = raw.split(/\r?\n/).filter(Boolean).slice(-500).map((line) => {
+        try { return JSON.parse(line); } catch { return null; }
+    }).filter(Boolean).reverse();
+
+    return rows.filter((row) => {
+        if (severity && row.severity !== severity) return false;
+        if (since && new Date(row.timestamp) < new Date(since)) return false;
+        return true;
+    }).slice(0, Math.min(200, Math.max(1, Number(limit) || 100)));
+}
+
+/**
+ * Queue/load statistics for monitoring endpoints (e.g. /api/security).
+ * Synchronous and side-effect free: never touches the filesystem.
+ */
+function getAuditStats() {
+    return {
+        queueLength: pendingLines.length,
+        trackedIps: securityEventCounts.size,
+    };
+}
+
+module.exports = {
+    recordDeveloperAction,
+    readDeveloperAudit,
+    readSecurityAlerts,
+    flushDeveloperAudit,
+    getAuditStats,
+    safeObject,
+    AUDIT_FILE,
+    SECURITY_ALERT_FILE,
+    SECURITY_ACTIONS,
+    SEVERITY,
+};

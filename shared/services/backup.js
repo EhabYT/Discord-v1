@@ -1,7 +1,26 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { WebhookClient, EmbedBuilder, AttachmentBuilder } = require('discord.js');
 const logger = require('../lib/logger');
+
+/**
+ * Verify incoming webhook signature using HMAC-SHA256.
+ * @param {string} payload - Raw request body
+ * @param {string} signature - Signature from header
+ * @param {string} secret - Webhook secret
+ * @returns {boolean} True if signature is valid
+ */
+function verifyWebhookSignature(payload, signature, secret) {
+    if (!secret || !signature) return false;
+    const expected = crypto.createHmac('sha256', secret).update(payload).digest('hex');
+    const received = signature.startsWith('sha256=') ? signature.slice(7) : signature;
+    try {
+        return crypto.timingSafeEqual(Buffer.from(received), Buffer.from(expected));
+    } catch {
+        return false;
+    }
+}
 
 const BACKUP_DIR = path.join(__dirname, '..', '..', 'backups');
 const MAX_WEBHOOK_FILE_SIZE = 8 * 1024 * 1024; // 8MB Discord webhook limit
@@ -57,6 +76,11 @@ async function performBackup(guildId, db) {
         exportedAt: new Date().toISOString(),
         botVersion: process.env.npm_package_version || '3.1.0',
     };
+    // Generate integrity checksum
+    backup._meta.checksum = generateChecksum(
+        { ...backup, _meta: { ...backup._meta, checksum: undefined } },
+        guildId
+    );
     return backup;
 }
 
@@ -136,4 +160,115 @@ async function scheduledBackup(guildId, client, db) {
     }
 }
 
-module.exports = { performBackup, writeBackup, uploadBackupToWebhook, scheduledBackup, getBackupDir, getWebhookUrl, pruneOldBackups, getBackupConfig, saveBackupConfig, DEFAULT_KEYS };
+/**
+ * Generate a checksum for backup integrity verification.
+ * Uses HMAC-SHA256 with a key derived from the guild ID.
+ */
+function generateChecksum(backup, guildId) {
+    const data = JSON.stringify(backup);
+    const key = crypto.createHash('sha256').update(`eb-backup-v1\0${guildId}`).digest('hex');
+    return crypto.createHmac('sha256', key).update(data).digest('hex');
+}
+
+/**
+ * Verify backup integrity by checking the checksum.
+ * @returns {{ valid: boolean, error?: string }}
+ */
+function verifyChecksum(backup, expectedChecksum, guildId) {
+    if (!backup || typeof backup !== 'object') {
+        return { valid: false, error: 'Invalid backup data' };
+    }
+
+    const actualChecksum = generateChecksum(backup, guildId);
+    if (actualChecksum !== expectedChecksum) {
+        return { valid: false, error: 'Backup integrity check failed — data may be corrupted or tampered with' };
+    }
+
+    return { valid: true };
+}
+
+/**
+ * Validate backup structure and content before restore.
+ * @returns {{ valid: boolean, errors?: string[] }}
+ */
+function validateBackupStructure(backup, guildId) {
+    const errors = [];
+
+    if (!backup || typeof backup !== 'object' || Array.isArray(backup)) {
+        return { valid: false, errors: ['Backup must be a JSON object'] };
+    }
+
+    // Check for forbidden keys (prototype pollution)
+    const FORBIDDEN = new Set(['__proto__', 'constructor', 'prototype']);
+    for (const key of Object.keys(backup)) {
+        if (FORBIDDEN.has(key)) {
+            errors.push(`Forbidden key: ${key}`);
+        }
+    }
+
+    // Validate _meta if present
+    if (backup._meta) {
+        if (typeof backup._meta !== 'object') {
+            errors.push('_meta must be an object');
+        } else {
+            if (backup._meta.guildId && backup._meta.guildId !== guildId) {
+                errors.push('Backup belongs to a different server');
+            }
+        }
+    }
+
+    // Validate all values are JSON-serializable
+    for (const [key, value] of Object.entries(backup)) {
+        if (FORBIDDEN.has(key)) continue;
+        try {
+            JSON.parse(JSON.stringify(value));
+        } catch {
+            errors.push(`Key "${key}" contains non-serializable data`);
+        }
+    }
+
+    // Check key count limit
+    const keyCount = Object.keys(backup).filter(k => !FORBIDDEN.has(k)).length;
+    if (keyCount > 100) {
+        errors.push('Backup contains too many keys');
+    }
+
+    return { valid: errors.length === 0, errors };
+}
+
+/**
+ * Sanitize backup data before restore.
+ * Removes forbidden keys, validates guild ownership.
+ */
+function sanitizeBackup(backup, guildId) {
+    const FORBIDDEN = new Set(['__proto__', 'constructor', 'prototype']);
+    const sanitized = {};
+
+    for (const [key, value] of Object.entries(backup)) {
+        if (FORBIDDEN.has(key)) continue;
+        // Only restore keys belonging to this guild
+        if (key.endsWith(`_${guildId}`) && typeof value !== 'undefined') {
+            sanitized[key] = value;
+        }
+    }
+
+    return sanitized;
+}
+
+module.exports = {
+    performBackup,
+    writeBackup,
+    uploadBackupToWebhook,
+    scheduledBackup,
+    getBackupDir,
+    getWebhookUrl,
+    pruneOldBackups,
+    getBackupConfig,
+    saveBackupConfig,
+    generateChecksum,
+    verifyChecksum,
+    validateBackupStructure,
+    sanitizeBackup,
+    verifyWebhookSignature,
+    DEFAULT_KEYS,
+};

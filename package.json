@@ -27,8 +27,8 @@
     "lint:fix": "eslint . --fix",
     "lint:gate": "node scripts/lint-gate.js",
     "validate:release": "node scripts/validate-release-config.js",
-    "test:unit": "node tests/unit/command-loader.test.js && node tests/unit/bot-config.test.js && node tests/unit/welcome-vars.test.js && node tests/unit/scheduler.test.js && node tests/unit/backup.test.js && node tests/unit/guild-analytics-routes.test.js && node tests/unit/accounts.test.js && node tests/unit/passwords.test.js && node tests/unit/account-mail.test.js && node tests/unit/account-tokens.test.js && node tests/unit/account-avatars.test.js && node tests/unit/account-mfa.test.js && node tests/unit/account-mfa-store.test.js && node tests/unit/account-sessions.test.js && node tests/unit/developer-audit.test.js && node tests/unit/suggestions.test.js && node tests/unit/community-errors.test.js && node tests/unit/dashboard-api-errors.test.js",
-    "test:security": "node tests/security/auth.test.js && node tests/security/hierarchy.test.js && node tests/security/isolation.test.js && node tests/security/oauth.test.js && node tests/security/abuse.test.js && node tests/security/concurrency.test.js && node tests/security/resilience.test.js && node tests/security/errors.test.js && node tests/security/audit-sweep.test.js && node tests/security/dependency-patches.test.js && node tests/security/session-store.test.js && node tests/security/postgres.test.js && node tests/security/migration.test.js && node tests/security/sse.test.js && node tests/security/setup.test.js && node tests/security/v2.test.js && node tests/security/developer-access.test.js && node tests/security/developer-routes.test.js && node tests/security/metrics.test.js && node tests/security/maintenance.test.js && node tests/security/transaction-locks.test.js && node tests/security/live-smoke.test.js && node tests/security/account-contract.test.js",
+    "test:unit": "node tests/unit/command-loader.test.js && node tests/unit/bot-config.test.js && node tests/unit/welcome-vars.test.js && node tests/unit/scheduler.test.js && node tests/unit/backup.test.js && node tests/unit/guild-analytics-routes.test.js && node tests/unit/accounts.test.js && node tests/unit/passwords.test.js && node tests/unit/account-mail.test.js && node tests/unit/account-tokens.test.js && node tests/unit/account-avatars.test.js && node tests/unit/account-mfa.test.js && node tests/unit/account-mfa-store.test.js && node tests/unit/account-sessions.test.js && node tests/unit/developer-audit.test.js && node tests/unit/suggestions.test.js && node tests/unit/community-errors.test.js && node tests/unit/dashboard-api-errors.test.js && node tests/unit/security-middleware.test.js",
+    "test:security": "node tests/security/auth.test.js && node tests/security/hierarchy.test.js && node tests/security/isolation.test.js && node tests/security/oauth.test.js && node tests/security/abuse.test.js && node tests/security/concurrency.test.js && node tests/security/resilience.test.js && node tests/security/errors.test.js && node tests/security/audit-sweep.test.js && node tests/security/dependency-patches.test.js && node tests/security/session-store.test.js && node tests/security/postgres.test.js && node tests/security/migration.test.js && node tests/security/sse.test.js && node tests/security/setup.test.js && node tests/security/v2.test.js && node tests/security/developer-access.test.js && node tests/security/developer-routes.test.js && node tests/security/metrics.test.js && node tests/security/maintenance.test.js && node tests/security/transaction-locks.test.js && node tests/security/live-smoke.test.js && node tests/security/account-contract.test.js && node tests/security/headers.test.js",
     "test": "npm run test:unit && npm run test:security",
     "verify": "npm run validate:release && npm run lint:gate && npm test && npm run audit:prod && npm run build:dashboard",
     "audit:prod": "npm audit --omit=dev --audit-level=high && npm --prefix dashboard audit --omit=dev --audit-level=high",
@@ -56,6 +56,7 @@
     "ffmpeg-static": "^5.3.0",
     "file-type": "^22.0.2",
     "genius-lyrics": "^4.4.7",
+    "helmet": "^8.3.0",
     "mediaplex": "^1.0.0",
     "multer": "^2.3.0",
     "pg": "^8.16.3",
@@ -74,8 +75,21 @@
     "qs": "^6.16.0"
   },
   "nodemonConfig": {
-    "watch": ["bot/src", "backend/src", "shared", "database/*.js", "config"],
-    "ignore": ["logs/*", "*.log", "database/ephemeral-fallback.json", "dashboard/*", "node_modules", ".git"],
+    "watch": [
+      "bot/src",
+      "backend/src",
+      "shared",
+      "database/*.js",
+      "config"
+    ],
+    "ignore": [
+      "logs/*",
+      "*.log",
+      "database/ephemeral-fallback.json",
+      "dashboard/*",
+      "node_modules",
+      ".git"
+    ],
     "ext": "js,json",
     "delay": 1500
   }

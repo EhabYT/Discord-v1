@@ -1,5 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 const config = require('../config/bot-config').config;
+const { sanitizeString, escapeMarkdown } = require('./sanitize');
 
 /**
  * Standardized Embed Utility for EB Bot "Elite" Branding
@@ -13,8 +14,9 @@ class EmbedHelper {
      * @param {string} [options.type='info'] info, success, warning, error, primary
      * @param {Object} [options.client] Bot client for brand footer info
      * @param {Object} [options.user] Optional author to set
+     * @param {boolean} [options.sanitize=true] Sanitize user-provided content
      */
-    static create({ title, description, type = 'info', client, user, footerText }) {
+    static create({ title, description, type = 'info', client, user, footerText, sanitize = true }) {
         const colorMap = {
             primary: config.colors.primary,
             success: config.colors.success,
@@ -27,8 +29,8 @@ class EmbedHelper {
             .setColor(colorMap[type] || config.colors.primary)
             .setTimestamp();
 
-        if (title) embed.setTitle(title);
-        if (description) embed.setDescription(description);
+        if (title) embed.setTitle(sanitize ? escapeMarkdown(title) : title);
+        if (description) embed.setDescription(sanitize ? sanitizeString(description, { maxLength: 4096, preserveFormatting: true }) : description);
 
         if (user) {
             embed.setAuthor({

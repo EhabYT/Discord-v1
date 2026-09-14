@@ -18,6 +18,7 @@
  */
 
 const logger = require('eb-bot-shared/lib/logger');
+const { getRealIP, isIPBlocked, recordFailedAttempt, recordSuccessfulAuth } = require('./ip-block');
 
 let warnedAnonymous = false;
 let warnedRemoteBlocked = false;
@@ -72,9 +73,21 @@ function sessionUserId(req) {
  * Attaches req.userId when authenticated; req.anonymousLocal for dev bypass.
  */
 function requireAuth(req, res, next) {
+    const ip = getRealIP(req);
+
+    // Check if IP is blocked due to repeated failures
+    if (isIPBlocked(ip)) {
+        logger.warn('Blocked auth attempt from IP', { ip });
+        return res.status(429).json({
+            error: 'Too many failed attempts. Try again later.',
+            code: 'IP_BLOCKED',
+        });
+    }
+
     const userId = sessionUserId(req);
     if (userId) {
         req.userId = userId;
+        recordSuccessfulAuth(ip);
         return next();
     }
     if (allowAnonymous(req)) {
@@ -82,6 +95,10 @@ function requireAuth(req, res, next) {
         req.anonymousLocal = true;
         return next();
     }
+
+    // Record failed attempt
+    recordFailedAttempt(ip);
+
     return res.status(401).json({ error: 'Not authenticated', code: 'AUTH_REQUIRED' });
 }
 
