@@ -49,6 +49,7 @@ const VerifyEmail = lazy(() => import('./pages/VerifyEmail.jsx'));
 const AccountSecurity = lazy(() => import('./pages/AccountSecurity.jsx'));
 const AccountSettings = lazy(() => import('./pages/AccountSettings.jsx'));
 import api from './api.js';
+import { PATH_ROUTES, sanitizeReturn, consumeReturn } from './lib/returnUrl.js';
 import { useAuth } from './auth/AuthContext.jsx';
 import { PAGE_TITLES, PAGE_HINTS, DOCK_PAGES, SEARCHABLE_PAGES } from './nav.js';
 import { rememberRecentPage } from './lib/clipboard.js';
@@ -133,13 +134,12 @@ function isDeveloperAreaPage(page) {
   return page === 'system' || developerInitialTab(page) !== undefined;
 }
 
+// Pages that never require authentication. Everything else (including the
+// public landing `home`) is either public by design or behind the guard below.
+const AUTH_PUBLIC_PAGES = new Set(['login', 'register', 'forgotPassword', 'resetPassword', 'verifyEmail']);
+
 function getHashPage() {
-  const pathRoutes = {
-    '/profile': 'profile', '/login': 'login', '/register': 'register',
-    '/forgot-password': 'forgotPassword', '/reset-password': 'resetPassword',
-    '/verify-email': 'verifyEmail', '/settings': 'accountSettings',
-    '/settings/security': 'accountSecurity',
-  };
+  const pathRoutes = PATH_ROUTES;
   if (pathRoutes[window.location.pathname]) return pathRoutes[window.location.pathname];
   const h = window.location.hash.replace('#', '').trim();
   if (!h || h === 'home') return 'home';
@@ -381,7 +381,7 @@ function MobileDock({ page, onNavigate, onSearch, canSeeMusicDesk }) {
 
 export default function App() {
   const { t } = useI18n();
-  const { auth, account, discord, displayUser: me, loading: authLoading } = useAuth();
+  const { auth, account, discord, displayUser: me, loading: authLoading, refresh: refreshAuth } = useAuth();
   const [page, setPage] = useState(getHashPage);
   const [guilds, setGuilds] = useState([]);
   const [selectedGuild, setSelectedGuild] = useState(null);
@@ -551,13 +551,50 @@ export default function App() {
     return () => { current = false; };
   }, [selectedGuild]);
 
-  const accountProtectedPage = ['profile', 'accountSettings', 'accountSecurity'].includes(page);
+  // Authentication guard: every page except the public landing and the
+  // auth pages themselves requires a valid session. Unauthenticated visitors
+  // are sent to /login with the requested target preserved, so a successful
+  // sign-in returns them where they wanted to go. Runs only after the auth
+  // state finished loading, so there is no login flash. In local open mode
+  // (DASHBOARD_AUTH=false, mirrored by auth.authRequired) the guard stays off,
+  // matching the backend's loopback-only anonymous access.
   useEffect(() => {
-    if (!authLoading && accountProtectedPage && !account) {
-      const returnPath = `${window.location.pathname}${window.location.search}`;
-      window.location.replace(`/login?return=${window.encodeURIComponent(returnPath)}`);
+    if (loading || authLoading) return;
+    if (auth.authRequired === false) return;
+    if (page === 'home' || AUTH_PUBLIC_PAGES.has(page)) return;
+    if (auth.loggedIn) return;
+    const ret = PATH_ROUTES[window.location.pathname]
+      ? `${window.location.pathname}${window.location.search}`
+      : `#${page}`;
+    window.location.replace(`/login?return=${window.encodeURIComponent(ret)}`);
+  }, [loading, authLoading, auth, page]);
+
+  // A Discord OAuth round-trip always lands on /#overview, dropping any
+  // ?return= the sign-in started with. Login/Register preserve it in
+  // sessionStorage; consume it here once the session is valid.
+  useEffect(() => {
+    if (authLoading || !auth.loggedIn) return;
+    const raw = consumeReturn();
+    if (!raw) return;
+    const target = sanitizeReturn(raw);
+    if (!target) return;
+    if (target.kind === 'hash') {
+      const current = window.location.hash.replace('#', '');
+      if (current !== target.target) window.location.replace(`/#${target.target}`);
+    } else if (window.location.pathname !== target.target) {
+      window.location.replace(target.target);
     }
-  }, [accountProtectedPage, account, authLoading]);
+  }, [authLoading, auth.loggedIn]);
+
+  // Session expiry / multi-tab logout: any API 401 refreshes the auth state,
+  // and the guard above redirects protected pages to /login.
+  useEffect(() => {
+    const onUnauthorized = () => { refreshAuth().catch(() => {}); };
+    window.addEventListener('eb:unauthorized', onUnauthorized);
+    return () => window.removeEventListener('eb:unauthorized', onUnauthorized);
+  }, [refreshAuth]);
+
+  const accountProtectedPage = ['profile', 'accountSettings', 'accountSecurity'].includes(page);
 
   const PageComponent = PAGES[page] || Overview;
   const isLive = page === 'livefeed';

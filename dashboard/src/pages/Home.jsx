@@ -62,7 +62,17 @@ function formatUptime(ms) {
 export default function Home({ health, auth, onEnter }) {
   const { t } = useI18n();
   const online = !!health?.botOnline;
-  const go = (id) => onEnter(id || 'overview');
+  // Open Dashboard checks authentication first: signed-in users enter
+  // directly, everyone else goes to /login with the requested page preserved
+  // so a successful sign-in returns them to the dashboard.
+  const go = (id) => {
+    const target = id || 'overview';
+    if (auth?.loggedIn || auth?.authRequired === false) {
+      onEnter(target);
+      return;
+    }
+    window.location.assign(`/login?return=${window.encodeURIComponent(`#${target}`)}`);
+  };
   const inviteUrl = auth?.clientId
     ? `https://discord.com/oauth2/authorize?client_id=${window.encodeURIComponent(auth.clientId)}&permissions=8&scope=bot%20applications.commands`
     : null;

@@ -8,9 +8,13 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 (() => {
     console.log('\nComplete account/authentication contract:\n');
     const app = read('dashboard/src/App.jsx');
+    // Canonical path-route table lives in lib/returnUrl.js (imported by App);
+    // the guard below proves App actually enforces it.
+    const routes = read('dashboard/src/lib/returnUrl.js');
     for (const route of ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email', '/profile', '/settings', '/settings/security']) {
-        assert(app.includes(`'${route}'`), `missing UI route ${route}`);
+        assert(routes.includes(`'${route}'`), `missing UI route ${route}`);
     }
+    assert.match(app, /from '\.\/lib\/returnUrl\.js'/, 'App must use the shared return-URL table');
     assert.match(app, /accountProtectedPage/);
     assert.match(app, /window\.location\.replace\(`\/login\?return=/);
 

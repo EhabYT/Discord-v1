@@ -3,6 +3,7 @@ import AuthLayout from '../auth/AuthLayout.jsx';
 import PasswordField from '../auth/PasswordField.jsx';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { useI18n } from '../i18n.jsx';
+import { readReturnParam, sanitizeReturn, applyReturn, rememberReturn, clearReturn } from '../lib/returnUrl.js';
 
 export default function Login() {
   const { t } = useI18n();
@@ -12,18 +13,24 @@ export default function Login() {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const requestedReturn = new window.URLSearchParams(window.location.search).get('return') || '';
-  const destination = requestedReturn.startsWith('/') && !requestedReturn.startsWith('//') ? requestedReturn : '/profile';
-  useEffect(() => { if (account) window.location.replace(destination); }, [account, destination]);
+  // Validated return target (?return= or ?redirect=). Hash targets land on
+  // /#<page>; anything untrusted falls back to the default destination.
+  const requestedReturn = sanitizeReturn(readReturnParam());
+  const rawReturn = readReturnParam();
+  const goDestination = () => {
+    clearReturn();
+    if (!applyReturn(requestedReturn)) window.location.replace('/profile');
+  };
+  useEffect(() => { if (account || auth.loggedIn) goDestination(); }, [account, auth.loggedIn]);
   const submit = async event => {
     event.preventDefault(); setBusy(true); setError('');
-    try { const result = await login(form); if (result.mfaRequired) setMfaRequired(true); else window.location.replace(destination); }
+    try { const result = await login(form); if (result.mfaRequired) setMfaRequired(true); else goDestination(); }
     catch (err) { setError(err.message); }
     finally { setBusy(false); }
   };
   const submitMfa = async event => {
     event.preventDefault(); setBusy(true); setError('');
-    try { await verifyMfa(code); window.location.replace(destination); }
+    try { await verifyMfa(code); goDestination(); }
     catch (err) { setError(err.message); }
     finally { setBusy(false); }
   };
@@ -47,7 +54,7 @@ export default function Login() {
           {auth.oauthEnabled && (
             <>
               <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.14em] text-zinc-500" aria-hidden="true"><span className="h-px flex-1 bg-white/10" />{t('auth.or', 'or')}<span className="h-px flex-1 bg-white/10" /></div>
-              <a href="/api/auth/discord" className="cyber-button w-full flex justify-center">{t('auth.continueDiscord', 'Continue with Discord')}</a>
+              <a href="/api/auth/discord" onClick={() => rememberReturn(rawReturn)} className="cyber-button w-full flex justify-center">{t('auth.continueDiscord', 'Continue with Discord')}</a>
             </>
           )}
         </form>

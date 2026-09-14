@@ -3,6 +3,7 @@ import AuthLayout from '../auth/AuthLayout.jsx';
 import PasswordField, { PasswordStrength } from '../auth/PasswordField.jsx';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { useI18n } from '../i18n.jsx';
+import { readReturnParam, sanitizeReturn, applyReturn, rememberReturn, clearReturn } from '../lib/returnUrl.js';
 
 export default function Register() {
   const { t } = useI18n();
@@ -10,13 +11,19 @@ export default function Register() {
   const [form, setForm] = useState({ displayName: '', username: '', email: '', password: '', confirmPassword: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  useEffect(() => { if (account) window.location.replace('/profile'); }, [account]);
+  const requestedReturn = sanitizeReturn(readReturnParam());
+  const rawReturn = readReturnParam();
+  const goDestination = () => {
+    clearReturn();
+    if (!applyReturn(requestedReturn)) window.location.replace('/profile');
+  };
+  useEffect(() => { if (account || auth.loggedIn) goDestination(); }, [account, auth.loggedIn]);
   const update = key => event => setForm(current => ({ ...current, [key]: event.target.value }));
   const submit = async event => {
     event.preventDefault(); setError('');
     if (form.password !== form.confirmPassword) return setError(t('auth.passwordsMismatch', 'Passwords do not match'));
     setBusy(true);
-    try { await register(form); window.location.replace('/profile'); }
+    try { await register(form); goDestination(); }
     catch (err) { setError(err.message); }
     finally { setBusy(false); }
   };
@@ -33,7 +40,7 @@ export default function Register() {
         {auth.oauthEnabled && (
           <>
             <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.14em] text-zinc-500" aria-hidden="true"><span className="h-px flex-1 bg-white/10" />{t('auth.or', 'or')}<span className="h-px flex-1 bg-white/10" /></div>
-            <a href="/api/auth/discord" className="cyber-button w-full flex justify-center">{t('auth.signupDiscord', 'Sign up with Discord')}</a>
+            <a href="/api/auth/discord" onClick={() => rememberReturn(rawReturn)} className="cyber-button w-full flex justify-center">{t('auth.signupDiscord', 'Sign up with Discord')}</a>
           </>
         )}
       </form>

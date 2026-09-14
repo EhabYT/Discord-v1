@@ -59,6 +59,11 @@ async function apiFetch(path, options = {}, attempt = 0) {
     const text = await res.text();
 
     if (!res.ok) {
+      // Expired/invalidated sessions surface as 401 on any call. Notify the
+      // app shell so it can refresh auth state (and route-guard to /login).
+      if (res.status === 401) {
+        try { window.dispatchEvent(new CustomEvent('eb:unauthorized')); } catch { /* ignore */ }
+      }
       const retryable = res.status === 502 || res.status === 503 || res.status === 530 || res.status === 1033;
       if (retryable && attempt < 1) {
         await sleep(700);
