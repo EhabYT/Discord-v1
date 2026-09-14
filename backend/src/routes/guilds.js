@@ -587,7 +587,7 @@ module.exports = (botClient) => {
 
     // security/automod setting — routing around the redaction on /confessions.
 
-    router.get('/backup', requirePerm(3), developerOnly, rl.heavyRead(), async (req, res, next) => {
+    router.get('/backup', requirePerm(3), rl.heavyRead(), async (req, res, next) => {
         try {
             const { guildId } = req.params;
             const backup = await performBackup(guildId, db);
@@ -595,7 +595,7 @@ module.exports = (botClient) => {
         } catch (err) { next(err); }
     });
 
-    router.post('/restore', requirePerm(3), developerOnly, rl.restore(), async (req, res, next) => {
+    router.post('/restore', requirePerm(3), rl.restore(), async (req, res, next) => {
         try {
             const backup = req.body;
             if (!backup || typeof backup !== 'object' || Array.isArray(backup)) return res.status(400).json({ error: 'Invalid backup data' });
@@ -635,7 +635,7 @@ module.exports = (botClient) => {
         } catch (err) { next(err); }
     });
 
-    router.get('/backups', requirePerm(3), developerOnly, (req, res, next) => {
+    router.get('/backups', requirePerm(3), (req, res, next) => {
         try {
             const { getBackupDir } = require('eb-bot-shared/services/backup');
             const fs = require('fs');
@@ -662,7 +662,7 @@ module.exports = (botClient) => {
         } catch (err) { next(err); }
     });
 
-    router.delete('/backups/:filename', requirePerm(3), developerOnly, (req, res, next) => {
+    router.delete('/backups/:filename', requirePerm(3), (req, res, next) => {
         try {
             const { getBackupDir } = require('eb-bot-shared/services/backup');
             const fs = require('fs');
@@ -681,7 +681,7 @@ module.exports = (botClient) => {
         } catch (err) { next(err); }
     });
 
-    router.post('/restore-from-backup', requirePerm(3), developerOnly, rl.restore(), async (req, res, next) => {
+    router.post('/restore-from-backup', requirePerm(3), rl.restore(), async (req, res, next) => {
         try {
             const { filename } = req.body;
             if (!filename || typeof filename !== 'string') return res.status(400).json({ error: 'Filename required' });

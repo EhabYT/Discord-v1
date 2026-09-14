@@ -8,6 +8,10 @@
   being a system-level developer. `requirePerm(3)` remains sufficient.
 - Removed `developerOnly` guard from `POST /nickname` — guild admins can now
   rename the bot from the dashboard.
+- Removed `developerOnly` guard from all backup endpoints (`GET /backup`,
+  `POST /restore`, `GET /backups`, `DELETE /backups/:filename`,
+  `POST /restore-from-backup`) — guild admins can now download, restore, list,
+  and delete backups from the dashboard.
 - Added startup warning when `ACCOUNT_ENCRYPTION_KEY` is not set, logging that
   account tokens use a predictable fallback salt.
 
