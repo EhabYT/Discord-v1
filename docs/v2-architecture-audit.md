@@ -39,6 +39,20 @@ Supabase          Discord
 PostgreSQL        Gateway/REST/Voice
 ```
 
+```mermaid
+graph TD
+    Client[Discord Guild / User] -->|Commands / Events| Bot[Discord.js Bot bot/src/index.js]
+    Bot -->|Reads / Writes| PG[(Supabase PostgreSQL bot_kv)]
+    Bot -->|Loads Rules| Config[config/bot.json + shared/config/bot-config.js]
+    Bot -->|Triggers| Sched[Scheduler bot/src/scheduler.js]
+    Sched -->|timed-bans/giveaways/reminders/polls/birthdays| PG
+    Admin[Server Administrator] -->|OAuth| Dash[React Dashboard dashboard/src]
+    Dash -->|same-origin fetch + Socket.IO/SSE| API[Express backend/src/server.js]
+    API -->|guild 0-3 + system roles| Bot
+    API -->|Visual Reports| Status[GET /api/v2/status + /api/health]
+    Admin -->|Manual JSON| Backup[GET/POST /api/guild/:id/backup-restore]
+```
+
 ## Bot configuration
 
 `config/bot.json` is a secret-free, schema-versioned runtime configuration for

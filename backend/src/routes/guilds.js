@@ -7,6 +7,7 @@ const guildAccess = require('../middleware/guild-access');
 const { SYSTEM_ROLES, requireSystemRole } = require('../middleware/devauth');
 const rl = require('../middleware/rate-limit');
 const logger = require('eb-bot-shared/lib/logger');
+const { performBackup } = require('eb-bot-shared/services/backup');
 const registerAnalyticsRoutes = require('./guilds/analytics');
 const registerBoardRoutes = require('./guilds/board');
 const registerVerificationRoutes = require('./guilds/verification');
@@ -14,6 +15,8 @@ const registerGiveawaysRoutes = require('./guilds/giveaways');
 const registerMembersRoutes = require('./guilds/members');
 const registerCommunityRoutes = require('./guilds/community');
 const registerTicketsRoutes = require('./guilds/tickets');
+const registerEngagementRoutes = require('./guilds/engagement');
+const registerProgressionRoutes = require('./guilds/progression');
 
 /** Strict http(s) URL check for Discord embed fields (setURL/setImage/... throw shapeshift 500s otherwise). */
 function isHttpUrl(value) {
@@ -341,162 +344,9 @@ module.exports = (botClient) => {
     // analytics — so Express matching order is byte-identical to before.
     registerVerificationRoutes(router, { requirePerm, rl, hierarchyError });
 
-    const rr = require('eb-bot-shared/services/reaction-roles');
+    // Engagement routes live in ./guilds/engagement.js (seventh extraction).
+    registerEngagementRoutes(router, { requirePerm, rl, botClient });
 
-    router.get('/reactionroles', async (req, res, next) => {
-        try {
-            const mappings = await rr.list(db, req.params.guildId);
-            res.json({ mappings });
-        } catch (err) { next(err); }
-    });
-
-    router.post('/reactionroles', requirePerm(3), async (req, res, next) => {
-        try {
-            const { messageId, channelId, emoji, roleId, mode, style, label, group } = req.body || {};
-            if (!roleId) return res.status(400).json({ error: 'roleId required' });
-            if (!messageId && style !== 'button') return res.status(400).json({ error: 'messageId required for reaction mappings' });
-            try {
-                rr.assertRoleManageable(req.guild, roleId);
-            } catch (err) {
-                const status = err.code === 'NOT_FOUND' ? 400 : 403;
-                return res.status(status).json({ error: err.message, code: err.code || 'HIERARCHY' });
-            }
-            const list = await rr.list(db, req.params.guildId);
-            list.push({
-                id: rr.nid(),
-                messageId: messageId || null,
-                channelId: channelId || null,
-                emoji: emoji || '',
-                roleId,
-                mode: mode || 'toggle',
-                style: style === 'button' ? 'button' : 'reaction',
-                label: label || '',
-                group: group || '',
-                createdAt: Date.now(),
-            });
-            const mappings = await rr.save(db, req.params.guildId, list);
-            if (messageId && emoji && channelId) {
-                const ch = req.guild.channels.cache.get(channelId);
-                const msg = ch ? await ch.messages.fetch(messageId).catch(() => null) : null;
-                if (msg) await msg.react(emoji).catch(() => {});
-            }
-            res.json({ success: true, mappings });
-        } catch (err) { next(err); }
-    });
-
-    router.delete('/reactionroles/:id', requirePerm(3), async (req, res, next) => {
-        try {
-            const list = await rr.list(db, req.params.guildId);
-            const mappings = await rr.save(db, req.params.guildId, list.filter((m) => m.id !== req.params.id));
-            res.json({ success: true, mappings });
-        } catch (err) { next(err); }
-    });
-
-    router.post('/reactionroles/panel', requirePerm(3), rl.botMessaging(), async (req, res, next) => {
-        try {
-            const result = await rr.postPanel(req.guild, db, req.body || {});
-            res.json({ success: true, ...result });
-        } catch (err) {
-            if (err.code === 'HIERARCHY' || err.code === 'MANAGED_ROLE' || err.code === 'EVERYONE' || err.code === 'NO_PERMS') {
-                return res.status(403).json({ error: err.message, code: err.code, problems: err.problems || undefined });
-            }
-            if (err.code === 'NOT_FOUND') {
-                return res.status(400).json({ error: err.message, code: err.code });
-            }
-            next(err);
-        }
-    });
-
-    function daysUntil(month, day) {
-        const now = new Date();
-        const next = new Date(now.getFullYear(), month - 1, day);
-        if (next < now) next.setFullYear(now.getFullYear() + 1);
-        return Math.ceil((next - now) / 86400000);
-    }
-
-    router.get('/birthdays', async (req, res, next) => {
-        try {
-            const { guildId } = req.params;
-            const cfg = await db.get(`birthday_config_${guildId}`) || {};
-            const prefix = `birthday_${guildId}_`;
-            const all = await db.allByPrefix(prefix);
-            const today = new Date();
-            const todayM = today.getMonth() + 1;
-            const todayD = today.getDate();
-            const entries = all
-                .filter((e) => e.value && e.value.month)
-                .map((e) => {
-                    const userId = e.id.replace(prefix, '');
-                    const month = Number(e.value.month);
-                    const day = Number(e.value.day);
-                    const todayB = todayM === month && todayD === day;
-                    return {
-                        userId,
-                        month,
-                        day,
-                        setAt: e.value.setAt || 0,
-                        days: todayB ? 0 : daysUntil(month, day),
-                        today: todayB,
-                    };
-                })
-                .sort((a, b) => a.days - b.days);
-            const enrichedEntries = await Promise.all(entries.map(async (entry) => {
-                const user = await botClient.users.fetch(entry.userId).catch(() => null);
-                return {
-                    ...entry,
-                    username: user?.username || entry.userId,
-                    avatar: user?.displayAvatarURL({ size: 64 }) || null,
-                };
-            }));
-            res.json({
-                config: {
-                    disabled: !!cfg.disabled,
-                    channelId: cfg.channelId || null,
-                    roleId: cfg.roleId || null,
-                    message: cfg.message || "🎉 {user} it's your birthday today! Happy Birthday! 🎂",
-                },
-                entries: enrichedEntries,
-                today: enrichedEntries.filter((entry) => entry.today).length,
-            });
-        } catch (err) { next(err); }
-    });
-
-    router.post('/birthdays/config', requirePerm(3), async (req, res, next) => {
-        try {
-            const cfg = await db.get(`birthday_config_${req.params.guildId}`) || {};
-            const body = req.body || {};
-            if (typeof body.disabled === 'boolean') cfg.disabled = body.disabled;
-            if (typeof body.channelId !== 'undefined') cfg.channelId = body.channelId || null;
-            if (typeof body.roleId !== 'undefined') cfg.roleId = body.roleId || null;
-            if (typeof body.message === 'string') cfg.message = body.message.slice(0, 1000);
-            await db.set(`birthday_config_${req.params.guildId}`, cfg);
-            res.json(cfg);
-        } catch (err) { next(err); }
-    });
-
-    router.delete('/birthdays/:userId', requirePerm(2), async (req, res, next) => {
-        try {
-            const key = `birthday_${req.params.guildId}_${req.params.userId}`;
-            try { await db.delete(key); } catch { await db.set(key, null); }
-            res.json({ success: true });
-        } catch (err) { next(err); }
-    });
-
-    router.post('/birthdays/test', requirePerm(2), rl.botMessaging(), async (req, res, next) => {
-        try {
-            const cfg = await db.get(`birthday_config_${req.params.guildId}`) || {};
-            const channelId = req.body?.channelId || cfg.channelId;
-            const channel = req.guild.channels.cache.get(channelId);
-            if (!channel) return res.status(400).json({ error: 'Set a birthday channel first' });
-            const me = req.guild.members.me;
-            let msg = cfg.message || "🎉 {user} it's your birthday today! Happy Birthday! 🎂";
-            msg = msg.replace(/{user}/g, String(me)).replace(/{name}/g, me.user.username);
-            await channel.send({ content: `**[Test Birthday]** ${msg}` });
-            res.json({ success: true });
-        } catch (err) { next(err); }
-    });
-
-    // Community routes live in ./guilds/community.js (fifth extraction).
     registerCommunityRoutes(router, { requirePerm, botClient });
 
     // Staff-board routes live in ./guilds/board.js (first extraction of the
@@ -585,30 +435,8 @@ module.exports = (botClient) => {
     // Member routes live in ./guilds/members.js (third extraction).
     registerMembersRoutes(router, { requirePerm, rl, hierarchyError, sessionUserId });
 
-    router.get('/rewards', async (req, res, next) => {
-        const rewards = await db.get(`rewards_${req.params.guildId}`) || [];
-        res.json(rewards);
-    });
-
-    router.post('/rewards', requirePerm(3), async (req, res, next) => {
-        try {
-            const { level, roleId } = req.body;
-            const rewards = await db.get(`rewards_${req.params.guildId}`) || [];
-            rewards.push({ level: parseInt(level), roleId });
-            await db.set(`rewards_${req.params.guildId}`, rewards);
-            res.json(rewards);
-        } catch (err) { next(err); }
-    });
-
-    router.post('/rewards/delete', requirePerm(3), async (req, res, next) => {
-        try {
-            const { level, roleId } = req.body;
-            let rewards = await db.get(`rewards_${req.params.guildId}`) || [];
-            rewards = rewards.filter(r => !(r.level === level && r.roleId === roleId));
-            await db.set(`rewards_${req.params.guildId}`, rewards);
-            res.json(rewards);
-        } catch (err) { next(err); }
-    });
+    // Progression routes live in ./guilds/progression.js (eighth extraction).
+    registerProgressionRoutes(router, { requirePerm, rl });
 
     router.post('/nickname', requirePerm(3), developerOnly, async (req, res, next) => {
         try {
@@ -762,16 +590,7 @@ module.exports = (botClient) => {
     router.get('/backup', requirePerm(3), developerOnly, rl.heavyRead(), async (req, res, next) => {
         try {
             const { guildId } = req.params;
-            const keys = [
-                `settings_${guildId}`, `logging_${guildId}`, `welcome_${guildId}`, `verification_${guildId}`,
-                `toggles_${guildId}`, `autoroles_${guildId}`, `ticket_config_${guildId}`, `tickets_${guildId}`,
-                `automod_${guildId}`, `security_${guildId}`, `commands_enabled_${guildId}`, `xp_enabled_${guildId}`,
-                `xp_multiplier_${guildId}`, `rewards_${guildId}`, `custom_filters_${guildId}`, `autoresponder_${guildId}`,
-                `djrole_${guildId}`, `birthday_config_${guildId}`, `suggestion_config_${guildId}`, `suggestions_${guildId}`, `polls_${guildId}`,
-                `tags_${guildId}`, `confession_config_${guildId}`, `confessions_${guildId}`, `announcements_${guildId}`,
-            ];
-            const backup = {};
-            for (const key of keys) backup[key] = await db.get(key);
+            const backup = await performBackup(guildId, db);
             res.json(backup);
         } catch (err) { next(err); }
     });
@@ -790,6 +609,84 @@ module.exports = (botClient) => {
                 if (!FORBIDDEN.has(key) && key.endsWith(`_${gid}`) && typeof value !== 'undefined') { await db.set(key, value); restored += 1; }
             }
             res.json({ success: true, restored });
+        } catch (err) { next(err); }
+    });
+
+    router.get('/backup-status', requirePerm(0), (req, res, next) => {
+        try {
+            const { getBackupDir } = require('eb-bot-shared/services/backup');
+            const fs = require('fs');
+            const path = require('path');
+            const dir = getBackupDir();
+            const guildId = req.params.guildId;
+            let count = 0;
+            let lastBackup = null;
+            try {
+                const files = fs.readdirSync(dir)
+                    .filter(f => f.startsWith(`backup_${guildId}_`) && f.endsWith('.json'))
+                    .sort();
+                count = files.length;
+                if (files.length > 0) {
+                    const stat = fs.statSync(path.join(dir, files[files.length - 1]));
+                    lastBackup = stat.mtime.toISOString();
+                }
+            } catch { /* no backups yet */ }
+            res.json({ count, lastBackup });
+        } catch (err) { next(err); }
+    });
+
+    router.get('/backups', requirePerm(3), developerOnly, (req, res, next) => {
+        try {
+            const { getBackupDir } = require('eb-bot-shared/services/backup');
+            const fs = require('fs');
+            const path = require('path');
+            const dir = getBackupDir();
+            const guildId = req.params.guildId;
+            const backups = [];
+            try {
+                const files = fs.readdirSync(dir)
+                    .filter(f => f.startsWith(`backup_${guildId}_`) && f.endsWith('.json'))
+                    .sort()
+                    .reverse();
+                for (const file of files) {
+                    const filepath = path.join(dir, file);
+                    const stat = fs.statSync(filepath);
+                    backups.push({
+                        filename: file,
+                        size: stat.size,
+                        createdAt: stat.mtime.toISOString(),
+                    });
+                }
+            } catch { /* no backups yet */ }
+            res.json({ backups });
+        } catch (err) { next(err); }
+    });
+
+    router.post('/restore-from-backup', requirePerm(3), developerOnly, rl.restore(), async (req, res, next) => {
+        try {
+            const { filename } = req.body;
+            if (!filename || typeof filename !== 'string') return res.status(400).json({ error: 'Filename required' });
+            const { getBackupDir } = require('eb-bot-shared/services/backup');
+            const fs = require('fs');
+            const path = require('path');
+            const dir = getBackupDir();
+            const guildId = req.params.guildId;
+            // Validate filename to prevent path traversal
+            if (!filename.startsWith(`backup_${guildId}_`) || !filename.endsWith('.json') || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+                return res.status(400).json({ error: 'Invalid backup filename' });
+            }
+            const filepath = path.join(dir, filename);
+            if (!fs.existsSync(filepath)) return res.status(404).json({ error: 'Backup not found' });
+            const content = JSON.parse(fs.readFileSync(filepath, 'utf8'));
+            const FORBIDDEN = new Set(['__proto__', 'constructor', 'prototype']);
+            let restored = 0;
+            for (const [key, value] of Object.entries(content)) {
+                if (!FORBIDDEN.has(key) && key.endsWith(`_${guildId}`) && typeof value !== 'undefined') {
+                    await db.set(key, value);
+                    restored += 1;
+                }
+            }
+            res.json({ success: true, restored, filename });
         } catch (err) { next(err); }
     });
 
@@ -818,76 +715,6 @@ module.exports = (botClient) => {
             responders = responders.filter(r => r.id !== id);
             await db.set(`autoresponder_${guildId}`, responders);
             res.json({ success: true, responders });
-        } catch (err) { next(err); }
-    });
-
-    router.get('/xp/details', async (req, res, next) => {
-        try {
-            const guildId = req.params.guildId;
-            const multiplier = (await db.get(`xp_multiplier_${guildId}`)) || 1.0;
-            const ignoredChannels = (await db.get(`xp_ignored_channels_${guildId}`)) || [];
-            const availableChannels = req.guild.channels.cache.filter(c => c.type === 0).map(c => ({ id: c.id, name: c.name }));
-            res.json({ multiplier, ignoredChannels, availableChannels });
-        } catch (err) { next(err); }
-    });
-
-    router.post('/xp/advanced', requirePerm(3), async (req, res, next) => {
-        try {
-            const { multiplier, ignoredChannels } = req.body;
-            await db.set(`xp_multiplier_${req.params.guildId}`, parseFloat(multiplier) || 1.0);
-            await db.set(`xp_ignored_channels_${req.params.guildId}`, ignoredChannels || []);
-            res.json({ success: true });
-        } catch (err) { next(err); }
-    });
-
-    // ── XP Announce ──────────────────────────────────────────────────────────
-    router.get('/xp/announce', async (req, res, next) => {
-        try {
-            const cfg = await db.get(`levelup_announce_${req.params.guildId}`);
-            res.json({ cfg: cfg === undefined ? null : cfg });
-        } catch (err) { next(err); }
-    });
-
-    router.post('/xp/announce', requirePerm(3), async (req, res, next) => {
-        try {
-            const { channelId, disabled } = req.body;
-            if (disabled) {
-                await db.set(`levelup_announce_${req.params.guildId}`, false);
-            } else if (channelId) {
-                await db.set(`levelup_announce_${req.params.guildId}`, { channelId });
-            } else {
-                await db.set(`levelup_announce_${req.params.guildId}`, null);
-            }
-            res.json({ success: true });
-        } catch (err) { next(err); }
-    });
-
-    // ── XP Role Multipliers ───────────────────────────────────────────────────
-    router.get('/xp/rolemultipliers', async (req, res, next) => {
-        try {
-            const list = await db.get(`xp_role_multipliers_${req.params.guildId}`) || [];
-            res.json(list);
-        } catch (err) { next(err); }
-    });
-
-    router.post('/xp/rolemultipliers', requirePerm(3), async (req, res, next) => {
-        try {
-            const { roleId, value } = req.body;
-            if (!roleId || !value) return res.status(400).json({ error: 'roleId and value required' });
-            let list = await db.get(`xp_role_multipliers_${req.params.guildId}`) || [];
-            list = list.filter(r => r.roleId !== roleId);
-            if (parseFloat(value) !== 1) list.push({ roleId, value: parseFloat(value) });
-            await db.set(`xp_role_multipliers_${req.params.guildId}`, list);
-            res.json(list);
-        } catch (err) { next(err); }
-    });
-
-    router.delete('/xp/rolemultipliers/:roleId', requirePerm(3), async (req, res, next) => {
-        try {
-            let list = await db.get(`xp_role_multipliers_${req.params.guildId}`) || [];
-            list = list.filter(r => r.roleId !== req.params.roleId);
-            await db.set(`xp_role_multipliers_${req.params.guildId}`, list);
-            res.json(list);
         } catch (err) { next(err); }
     });
 
@@ -961,19 +788,6 @@ module.exports = (botClient) => {
                 labels: last7.map(p => new Date(p.date + 'T00:00:00').toLocaleDateString('en', { weekday: 'short' })),
                 data: last7.map(p => p.count)
             });
-        } catch (err) { next(err); }
-    });
-
-    // ── XP Reset ──
-    router.post('/xp/reset', requirePerm(3), rl.bulkModeration(), async (req, res, next) => {
-        try {
-            const { guildId } = req.params;
-            const [xpCount, statsCount] = await Promise.all([
-                db.deletePrefix(`xp_${guildId}_`),
-                db.deletePrefix(`stats_${guildId}_`),
-            ]);
-
-            res.json({ success: true, cleared: xpCount + statsCount });
         } catch (err) { next(err); }
     });
 

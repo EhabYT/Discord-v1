@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Settings, Plus, Trash2, Save, Download, Upload, LogOut, Link2, Search, Power,
-  Music2, RefreshCw,
+  Music2, RefreshCw, Clock, HardDrive,
 } from 'lucide-react';
 import PageHeader from '../components/PageHeader.jsx';
 import CyanToggle from '../components/CyanToggle.jsx';
@@ -35,6 +35,8 @@ export default function ServerSettings({ guild, guildData, setGuildData }) {
   const [cmdQuery, setCmdQuery] = useState('');
   const [saving, setSaving] = useState('');
   const [leaveOpen, setLeaveOpen] = useState(false);
+  const [backupStatus, setBackupStatus] = useState(null);
+  const [backups, setBackups] = useState([]);
   const roles = guildData?.guild?.roles || [];
 
   useEffect(() => {
@@ -48,6 +50,12 @@ export default function ServerSettings({ guild, guildData, setGuildData }) {
     api.get(`/api/guild/${guild.id}/commands`)
       .then((d) => setCommands(d.commands || []))
       .catch(() => setCommands([]));
+    api.get(`/api/guild/${guild.id}/backup-status`)
+      .then((d) => setBackupStatus(d))
+      .catch(() => setBackupStatus(null));
+    api.get(`/api/guild/${guild.id}/backups`)
+      .then((d) => setBackups(d.backups || []))
+      .catch(() => setBackups([]));
   }, [guild?.id]);
 
   const addFilter = async () => {
@@ -122,6 +130,13 @@ export default function ServerSettings({ guild, guildData, setGuildData }) {
       await api.post(`/api/guild/${guild.id}/restore`, json);
       toast.success('Backup restored. Refresh the page.');
     } catch { toast.error('Restore failed — check the file.'); }
+  };
+
+  const restoreFromServerBackup = async (filename) => {
+    try {
+      await api.post(`/api/guild/${guild.id}/restore-from-backup`, { filename });
+      toast.success(`Restored from ${filename}. Refresh the page.`);
+    } catch { toast.error('Restore failed.'); }
   };
 
   const leaveServer = async () => {
@@ -242,7 +257,19 @@ export default function ServerSettings({ guild, guildData, setGuildData }) {
         </div>
       </Section>
 
-      <Section icon={Download} title="Backup & restore" desc="Download this server’s config or restore from a JSON file.">
+      <Section icon={Download} title="Backup & restore" desc="Download this server's config or restore from a JSON file.">
+        {backupStatus && (
+          <div className="flex items-center gap-4 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-xs">
+            <span className="flex items-center gap-1.5 text-zinc-400">
+              <HardDrive size={12} aria-hidden="true" /> {backupStatus.count || 0} backups
+            </span>
+            {backupStatus.lastBackup && (
+              <span className="flex items-center gap-1.5 text-zinc-400">
+                <Clock size={12} aria-hidden="true" /> Last: {new Date(backupStatus.lastBackup).toLocaleString()}
+              </span>
+            )}
+          </div>
+        )}
         <div className="flex flex-wrap gap-2">
           <button onClick={downloadBackup} className="cyber-button flex items-center gap-1.5 text-xs">
             <Download size={12} aria-hidden="true" /> Download backup
@@ -257,6 +284,23 @@ export default function ServerSettings({ guild, guildData, setGuildData }) {
             <input type="file" accept="application/json" className="hidden" tabIndex={-1} aria-hidden="true" onChange={(e) => restoreBackup(e.target.files?.[0])} />
           </label>
         </div>
+        {backups.length > 0 && (
+          <div className="space-y-1.5 max-h-48 overflow-y-auto">
+            {backups.map((b) => (
+              <div key={b.filename} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.06]">
+                <code className="text-xs text-cyan-300 font-mono flex-1 truncate">{b.filename}</code>
+                <span className="text-[10px] text-zinc-500">{(b.size / 1024).toFixed(1)} KB</span>
+                <span className="text-[10px] text-zinc-500">{new Date(b.createdAt).toLocaleDateString()}</span>
+                <button
+                  onClick={() => restoreFromServerBackup(b.filename)}
+                  className="text-[10px] text-cyan-400 hover:text-cyan-300 transition-colors"
+                >
+                  Restore
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </Section>
 
       <Section icon={LogOut} title="Danger zone" desc="The bot will leave this server. You can re-invite it later.">

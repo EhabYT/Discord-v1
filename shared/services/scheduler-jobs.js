@@ -1,6 +1,7 @@
 const logger = require('../lib/logger');
 const { finalizeGiveaway } = require('./giveaways');
 const { withKeyLock } = require('../../database/lock');
+const { scheduledBackup } = require('./backup');
 
 function registerJobs(client, scheduler) {
     const db = client.db;
@@ -264,6 +265,21 @@ function registerJobs(client, scheduler) {
             logger.error('public-url job', { error: err.message });
         }
     });
+
+    // Scheduled Backup Job — every 6 hours, writes to backups/ and optionally
+    // uploads a notification embed to the configured Discord webhook.
+    scheduler.addJob('backup', 6 * 60 * 60 * 1000, skipWhenDbDown('backup', async () => {
+        for (const [guildId, guild] of client.guilds.cache) {
+            try {
+                await withKeyLock(`backup_${guildId}`, async (lockedDb) => {
+                    const result = await scheduledBackup(guildId, client, lockedDb);
+                    logger.info(`[Backup] Completed for ${guild.name}: ${result.filepath} (webhook: ${result.uploaded})`);
+                }, db);
+            } catch (err) {
+                logger.error(`[Backup] Failed for ${guild.name}`, { error: err.message });
+            }
+        }
+    }));
 }
 
 module.exports = { registerJobs };
