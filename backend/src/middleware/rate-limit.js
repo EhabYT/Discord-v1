@@ -68,8 +68,8 @@ function limit(name, max, windowMs) {
 function getStats() {
     let totalEntries = 0;
     let perIP = 0;
-    for (const [key, timestamps] of buckets) {
-        totalEntries += timestamps.length;
+    for (const [key, b] of buckets) {
+        totalEntries += b.count;
         if (key.startsWith('ip:')) perIP++;
     }
     return { totalEntries, perIP, buckets: buckets.size };

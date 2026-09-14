@@ -308,7 +308,7 @@ module.exports = (botClient) => {
             } else {
                 if (!automod[setting]) automod[setting] = { enabled: false, threshold: 5 };
                 if (typeof value !== 'undefined') automod[setting].enabled = !!value;
-                if (typeof threshold !== 'undefined') automod[setting].threshold = parseInt(threshold);
+                if (threshold != null) { const thresholdNum = Number(threshold); if (Number.isFinite(thresholdNum)) automod[setting].threshold = thresholdNum; }
             }
             await db.set(`automod_${guildId}`, automod);
             res.json({ automod });

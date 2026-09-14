@@ -138,9 +138,8 @@ async function loadServicesOnce() {
     if (typeof Log?.setLevel === 'function' && Log?.Level) Log.setLevel(Log.Level.ERROR);
   } catch { /* older youtubei.js without the hooks — noise stays, playback works */ }
   try {
-    const { DefaultExtractors } = require('@discord-player/extractor');
-    await player.extractors.loadMulti(DefaultExtractors);
-    logger.info(`Music extractors loaded (${DefaultExtractors.length})`);
+    await player.extractors.loadDefault();
+    logger.info('Default music extractors loaded');
   } catch (err) {
     logger.error('Extractor error', { error: err.message });
   }

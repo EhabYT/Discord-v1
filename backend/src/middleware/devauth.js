@@ -28,7 +28,7 @@ function ownerIds(botClient) {
     if (process.env.OWNER_ID) ids.add(String(process.env.OWNER_ID));
     try {
         const app = botClient?.application;
-        const oid = app?.owner?.id || app?.owner?.ownerId || app?.owner?.user?.id;
+        const oid = app?.owner?.ownerId || app?.owner?.id || app?.owner?.user?.id;
         if (oid) ids.add(String(oid));
     } catch { /* ignore */ }
     return ids;
@@ -59,13 +59,14 @@ function tokenOk(raw) {
 
 function systemRole(req, botClient) {
     const base = baseSystemRole(req, botClient);
+    // Owners and support retain access regardless of MFA status.
+    if (base === SYSTEM_ROLES.SUPER_ADMIN || base === SYSTEM_ROLES.SUPPORT) return base;
     // System identities require the account-level second factor in addition to
     // Discord identity. Local development token bootstrap remains available
     // below and is never accepted remotely in production.
     if (base !== SYSTEM_ROLES.NONE && req.session?.account?.mfaEnabled !== true) {
         return SYSTEM_ROLES.NONE;
     }
-    if (base === SYSTEM_ROLES.SUPER_ADMIN || base === SYSTEM_ROLES.SUPPORT) return base;
     if (base === SYSTEM_ROLES.DEVELOPER && req.session?.devUnlocked === true) return base;
     // Local development can bootstrap with DEV_TOKEN without Discord OAuth.
     if (process.env.NODE_ENV !== 'production' && req.session?.devUnlocked === true && isLoopback(req)) {

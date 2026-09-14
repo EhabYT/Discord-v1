@@ -15,6 +15,7 @@
  * system SUPPORT never implies guild access.
  */
 const { db } = require('eb-bot-database');
+const { PermissionFlagsBits } = require('discord.js');
 
 const LEVELS = { VIEWER: 0, DJ: 1, MODERATOR: 2, ADMIN: 3 };
 const LEVEL_NAMES = ['Viewer', 'DJ', 'Moderator', 'Admin'];
@@ -37,14 +38,14 @@ async function getUserPermLevel(botClient, guildId, userId) {
     try {
         const app = botClient.application;
         if (app && !app.owner) await app.fetch().catch(() => {});
-        const ownerId = app?.owner?.id || app?.owner?.ownerId;
+        const ownerId = app?.owner?.ownerId || app?.owner?.id;
         if (ownerId && userId === ownerId) return LEVELS.ADMIN;
     } catch (_) {}
 
     const member = await guild.members.fetch(userId).catch(() => null);
     if (!member) return LEVELS.VIEWER;
 
-    if (member.permissions.has('Administrator')) return LEVELS.ADMIN;
+    if (member.permissions.has(PermissionFlagsBits.Administrator)) return LEVELS.ADMIN;
 
     const rolePerms = await db.get(`dashboard_perms_${guildId}`) || [];
     let maxLevel = LEVELS.VIEWER;

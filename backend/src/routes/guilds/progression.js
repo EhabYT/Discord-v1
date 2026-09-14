@@ -14,7 +14,9 @@ function registerProgressionRoutes(router, { requirePerm, rl }) {
         try {
             const { level, roleId } = req.body;
             const rewards = await db.get(`rewards_${req.params.guildId}`) || [];
-            rewards.push({ level: parseInt(level), roleId });
+            const levelNum = Number(level);
+            if (!Number.isInteger(levelNum) || levelNum < 1 || levelNum > 100) return res.status(400).json({ error: 'Invalid level' });
+            rewards.push({ level: levelNum, roleId });
             await db.set(`rewards_${req.params.guildId}`, rewards);
             res.json(rewards);
         } catch (err) { next(err); }
