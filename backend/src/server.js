@@ -1,3 +1,14 @@
+// Local .env for standalone runs (`node backend/src/server.js`, npm run
+// dashboard/start:backend). Gated on require.main so requiring this module
+// (tests, bot process which loads dotenv itself) never picks up .env — tests
+// set their own env and must stay hermetic. Render/production inject env.
+if (require.main === module) {
+    try {
+        require('dotenv').config();
+    } catch {
+        /* dotenv optional */
+    }
+}
 const express = require('express');
 const http = require('http');
 const session = require('express-session');
