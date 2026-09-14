@@ -68,6 +68,9 @@ async function runDiagnostics(db) {
     } catch (err) {
         logger.error('Database connection failed', { error: err.message });
     }
+    if (!process.env.ACCOUNT_ENCRYPTION_KEY) {
+        logger.warn('ACCOUNT_ENCRYPTION_KEY not set — account tokens use a predictable fallback salt (set a random 32-byte key)');
+    }
     const checks = {
         'Environment Variables': !!(process.env.DISCORD_TOKEN && process.env.CLIENT_ID),
         'Commands Directory': fs.existsSync(path.join(__dirname, '../../bot/src/commands')),

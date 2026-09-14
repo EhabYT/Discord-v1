@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Fixed
+- Removed `developerOnly` guard from `POST /config` — guild admins can now
+  save XP toggle, autoresponder rules, and DJ role from the dashboard without
+  being a system-level developer. `requirePerm(3)` remains sufficient.
+- Removed `developerOnly` guard from `POST /nickname` — guild admins can now
+  rename the bot from the dashboard.
+- Added startup warning when `ACCOUNT_ENCRYPTION_KEY` is not set, logging that
+  account tokens use a predictable fallback salt.
+
 ### Added
 - ProBot-style welcome variables: `[user]`, `[userName]`, `[server]`,
   `[memberCount]`, `[inviter]`, `[inviterName]` now resolve everywhere the
