@@ -378,7 +378,7 @@ module.exports = (botClient) => {
         } catch (err) { next(err); }
     });
 
-    router.post('/config', requirePerm(3), developerOnly, async (req, res, next) => {
+    router.post('/config', requirePerm(3), async (req, res, next) => {
         try {
             const { xpEnabled, autoresponder, djRoleId } = req.body;
             if (typeof xpEnabled !== 'undefined') {
@@ -438,7 +438,7 @@ module.exports = (botClient) => {
     // Progression routes live in ./guilds/progression.js (eighth extraction).
     registerProgressionRoutes(router, { requirePerm, rl });
 
-    router.post('/nickname', requirePerm(3), developerOnly, async (req, res, next) => {
+    router.post('/nickname', requirePerm(3), async (req, res, next) => {
         try {
             const me = req.guild.members.me;
             if (!me) return res.status(503).json({ error: 'Bot member not available' });
