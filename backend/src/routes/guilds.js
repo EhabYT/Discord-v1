@@ -378,7 +378,7 @@ module.exports = (botClient) => {
         } catch (err) { next(err); }
     });
 
-    router.post('/config', requirePerm(3), async (req, res, next) => {
+    router.post('/config', requirePerm(3), developerOnly, async (req, res, next) => {
         try {
             const { xpEnabled, autoresponder, djRoleId } = req.body;
             if (typeof xpEnabled !== 'undefined') {
@@ -438,7 +438,7 @@ module.exports = (botClient) => {
     // Progression routes live in ./guilds/progression.js (eighth extraction).
     registerProgressionRoutes(router, { requirePerm, rl });
 
-    router.post('/nickname', requirePerm(3), async (req, res, next) => {
+    router.post('/nickname', requirePerm(3), developerOnly, async (req, res, next) => {
         try {
             const me = req.guild.members.me;
             if (!me) return res.status(503).json({ error: 'Bot member not available' });
@@ -587,7 +587,7 @@ module.exports = (botClient) => {
 
     // security/automod setting — routing around the redaction on /confessions.
 
-    router.get('/backup', requirePerm(3), rl.heavyRead(), async (req, res, next) => {
+    router.get('/backup', requirePerm(3), developerOnly, rl.heavyRead(), async (req, res, next) => {
         try {
             const { guildId } = req.params;
             const backup = await performBackup(guildId, db);
@@ -595,18 +595,23 @@ module.exports = (botClient) => {
         } catch (err) { next(err); }
     });
 
-    router.post('/restore', requirePerm(3), rl.restore(), async (req, res, next) => {
+    router.post('/restore', requirePerm(3), developerOnly, rl.restore(), async (req, res, next) => {
         try {
             const backup = req.body;
-            if (!backup || typeof backup !== 'object' || Array.isArray(backup)) return res.status(400).json({ error: 'Invalid backup data' });
-            // key.includes(guildId) was a substring test: a key belonging to another
-            // guild whose id merely contains this one would be overwritten. Require an
-            // exact `<prefix>_<thisGuildId>` shape and skip prototype-polluting keys.
-            const gid = String(req.params.guildId);
-            const FORBIDDEN = new Set(['__proto__', 'constructor', 'prototype']);
+            const { validateBackupStructure, sanitizeBackup } = require('eb-bot-shared/services/backup');
+
+            // Validate backup structure
+            const validation = validateBackupStructure(backup, req.params.guildId);
+            if (!validation.valid) {
+                return res.status(400).json({ error: 'Invalid backup data', details: validation.errors });
+            }
+
+            // Sanitize and restore
+            const sanitized = sanitizeBackup(backup, req.params.guildId);
             let restored = 0;
-            for (const [key, value] of Object.entries(backup)) {
-                if (!FORBIDDEN.has(key) && key.endsWith(`_${gid}`) && typeof value !== 'undefined') { await db.set(key, value); restored += 1; }
+            for (const [key, value] of Object.entries(sanitized)) {
+                await db.set(key, value);
+                restored += 1;
             }
             res.json({ success: true, restored });
         } catch (err) { next(err); }
@@ -707,26 +712,49 @@ module.exports = (botClient) => {
         try {
             const { filename } = req.body;
             if (!filename || typeof filename !== 'string') return res.status(400).json({ error: 'Filename required' });
-            const { getBackupDir } = require('eb-bot-shared/services/backup');
+            const { getBackupDir, validateBackupStructure, sanitizeBackup, verifyChecksum } = require('eb-bot-shared/services/backup');
             const fs = require('fs');
             const path = require('path');
             const dir = getBackupDir();
             const guildId = req.params.guildId;
+
             // Validate filename to prevent path traversal
             if (!filename.startsWith(`backup_${guildId}_`) || !filename.endsWith('.json') || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
                 return res.status(400).json({ error: 'Invalid backup filename' });
             }
+
             const filepath = path.join(dir, filename);
             if (!fs.existsSync(filepath)) return res.status(404).json({ error: 'Backup not found' });
+
+            // Read and parse backup file
             const content = JSON.parse(fs.readFileSync(filepath, 'utf8'));
-            const FORBIDDEN = new Set(['__proto__', 'constructor', 'prototype']);
-            let restored = 0;
-            for (const [key, value] of Object.entries(content)) {
-                if (!FORBIDDEN.has(key) && key.endsWith(`_${guildId}`) && typeof value !== 'undefined') {
-                    await db.set(key, value);
-                    restored += 1;
+
+            // Validate backup structure
+            const validation = validateBackupStructure(content, guildId);
+            if (!validation.valid) {
+                return res.status(400).json({ error: 'Backup file is invalid', details: validation.errors });
+            }
+
+            // Verify integrity if checksum is present
+            if (content._meta?.checksum) {
+                const integrity = verifyChecksum(
+                    { ...content, _meta: { ...content._meta, checksum: undefined } },
+                    content._meta.checksum,
+                    guildId
+                );
+                if (!integrity.valid) {
+                    return res.status(400).json({ error: integrity.error });
                 }
             }
+
+            // Sanitize and restore
+            const sanitized = sanitizeBackup(content, guildId);
+            let restored = 0;
+            for (const [key, value] of Object.entries(sanitized)) {
+                await db.set(key, value);
+                restored += 1;
+            }
+
             res.json({ success: true, restored, filename });
         } catch (err) { next(err); }
     });

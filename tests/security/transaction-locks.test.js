@@ -49,7 +49,7 @@ const root = path.join(__dirname, '..', '..');
         'bot/src/commands/economy/slots.js',
         'bot/src/commands/economy/work.js',
         'bot/src/commands/community/giveaway.js',
-        'backend/src/routes/guilds.js',
+        'backend/src/routes/guilds/giveaways.js',
         'shared/services/scheduler-jobs.js',
     ];
     for (const relative of protectedSources) {

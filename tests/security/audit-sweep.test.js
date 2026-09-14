@@ -147,9 +147,13 @@ function discoverRoutes() {
     // Mounted routers: map the mount prefix to the file that implements it.
     const routerFiles = {
         statsRouter: ['stats.js'], authRouter: ['auth.js'], accountAuthRouter: ['account-auth.js'], accountRouter: ['account.js'], devRouter: ['dev.js'],
-        guildsRouter: ['guilds.js', 'guilds/analytics.js'], musicRouter: ['music.js'],
+        guildsRouter: ['guilds.js', 'guilds/analytics.js', 'guilds/board.js', 'guilds/community.js', 'guilds/engagement.js', 'guilds/giveaways.js', 'guilds/members.js', 'guilds/progression.js', 'guilds/tickets.js', 'guilds/verification.js'], musicRouter: ['music.js'],
         permissionsRouter: ['permissions.js'],
+        v2Router: ['v2.js'],
+        securityRouter: ['security.js'],
     };
+
+    // Handle variable-based mounts: app.use('/prefix', routerVar)
     for (const m of srv.matchAll(/app\.use\('(\/api[^']*)',\s*(\w+)\)/g)) {
         const [, prefix, varName] = m;
         const files = routerFiles[varName];
@@ -162,6 +166,18 @@ function discoverRoutes() {
             }
         }
     }
+
+    // Handle require-based mounts: app.use('/prefix', require('./routes/file'))
+    for (const m of srv.matchAll(/app\.use\('(\/api[^']*)',\s*require\(['"]([^'"]+)['"]\)\)/g)) {
+        const [, prefix, routeFile] = m;
+        const fileName = routeFile.replace('./routes/', '') + '.js';
+        const src = fs.readFileSync(path.join(root, 'backend', 'src', 'routes', fileName), 'utf8');
+        for (const r of src.matchAll(/router\.(get|post|put|patch|delete)\('([^']*)'/g)) {
+            const sub = r[2] === '/' ? '' : r[2];
+            found.push({ method: r[1].toUpperCase(), path: prefix + sub });
+        }
+    }
+
     return found;
 }
 
@@ -189,7 +205,7 @@ const check = (label, ok, detail = '') => {
 
     // Pin the authoritative API inventory so a refactor cannot silently drop
     // (or accidentally duplicate) an endpoint while moving files.
-    check('route discovery found the full API surface', routes.length === 187, `${routes.length} routes`);
+    check('route discovery found the full API surface', routes.length === 197, `${routes.length} routes`);
 
     const leaks = [];
     for (const r of routes) {
