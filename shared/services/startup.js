@@ -71,18 +71,24 @@ async function runDiagnostics(db) {
     if (!process.env.ACCOUNT_ENCRYPTION_KEY) {
         logger.warn('ACCOUNT_ENCRYPTION_KEY not set — account tokens use a predictable fallback salt (set a random 32-byte key)');
     }
-    const checks = {
+    const critical = {
         'Environment Variables': !!(process.env.DISCORD_TOKEN && process.env.CLIENT_ID),
         'Commands Directory': fs.existsSync(path.join(__dirname, '../../bot/src/commands')),
-        'Supabase PostgreSQL': databaseReady
+    };
+    const advisory = {
+        'Supabase PostgreSQL': databaseReady,
     };
 
-    for (const [name, passed] of Object.entries(checks)) {
+    for (const [name, passed] of Object.entries({ ...critical, ...advisory })) {
         if (passed) logger.debug(`[PASS] ${name}`);
         else logger.error(`[FAIL] ${name}`);
     }
 
-    return Object.values(checks).every(v => v);
+    if (!databaseReady) {
+        logger.warn('Database is unavailable — bot will connect to Discord but dashboard features may be degraded.');
+    }
+
+    return Object.values(critical).every(v => v);
 }
 
 module.exports = { deployCommands, runDiagnostics };
