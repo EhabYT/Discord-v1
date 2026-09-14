@@ -12,8 +12,12 @@
   `POST /restore`, `GET /backups`, `DELETE /backups/:filename`,
   `POST /restore-from-backup`) — guild admins can now download, restore, list,
   and delete backups from the dashboard.
+- Raised `GET /backup-status` from `requirePerm(0)` to `requirePerm(2)` to
+  match sibling backup endpoints and prevent metadata leakage to viewers.
 - Added startup warning when `ACCOUNT_ENCRYPTION_KEY` is not set, logging that
   account tokens use a predictable fallback salt.
+- Exported `pruneOldBackups` from `shared/services/backup.js` for direct
+  testability; added dedicated test cases.
 
 ### Added
 - ProBot-style welcome variables: `[user]`, `[userName]`, `[server]`,

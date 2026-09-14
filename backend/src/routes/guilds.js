@@ -612,7 +612,7 @@ module.exports = (botClient) => {
         } catch (err) { next(err); }
     });
 
-    router.get('/backup-status', requirePerm(0), (req, res, next) => {
+    router.get('/backup-status', requirePerm(2), (req, res, next) => {
         try {
             const { getBackupDir } = require('eb-bot-shared/services/backup');
             const fs = require('fs');

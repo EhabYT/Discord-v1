@@ -113,4 +113,4 @@ async function scheduledBackup(guildId, client, db) {
     }
 }
 
-module.exports = { performBackup, writeBackup, uploadBackupToWebhook, scheduledBackup, getBackupDir, getWebhookUrl };
+module.exports = { performBackup, writeBackup, uploadBackupToWebhook, scheduledBackup, getBackupDir, getWebhookUrl, pruneOldBackups };

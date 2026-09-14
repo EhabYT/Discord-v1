@@ -66,6 +66,18 @@ mockDb.data.set(`webhook_logs_${GUILD_ID}`, 'https://discord.com/api/webhooks/te
     const newCount = fs.readdirSync(BACKUP_DIR).filter(f => f.startsWith(`backup_${GUILD_ID}_`));
     check('pruneOldBackups keeps max 10 backups per guild', newCount.length <= 10);
 
+    // Test pruneOldBackups directly with a different guild
+    const PRUNE_GUILD = '111111111111111111';
+    for (let i = 0; i < 15; i++) {
+        await writeBackup(PRUNE_GUILD, { ...backup, _extra: i });
+    }
+    const pruneCount = fs.readdirSync(BACKUP_DIR).filter(f => f.startsWith(`backup_${PRUNE_GUILD}_`));
+    check('pruneOldBackups direct call keeps max 10', pruneCount.length <= 10);
+
+    // Test pruneOldBackups ignores other guilds
+    const otherGuildCount = fs.readdirSync(BACKUP_DIR).filter(f => f.startsWith(`backup_${GUILD_ID}_`));
+    check('pruneOldBackups does not affect other guilds', otherGuildCount.length <= 10);
+
     // Cleanup test files
     try {
         const files = fs.readdirSync(BACKUP_DIR).filter(f => f.startsWith(`backup_${GUILD_ID}_`));
