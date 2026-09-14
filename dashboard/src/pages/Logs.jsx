@@ -106,7 +106,7 @@ export default function Logs({ guild, guildData }) {
 
   useEffect(() => {
     if (!guild?.id) return;
-    api.get(`/api/guild/${guild.id}/logging`)
+    api.get(`/api/guild/${guild.id}/logs`)
       .then((cfg) => { if (cfg && typeof cfg === 'object') setLogConfig(cfg); })
       .catch(() => {});
   }, [guild?.id]);
@@ -155,7 +155,7 @@ export default function Logs({ guild, guildData }) {
     setSaving(true);
     try {
       for (const [type, channelId] of Object.entries(logConfig)) {
-        await api.post(`/api/guild/${guild.id}/logging`, { type, channelId: channelId || null });
+        await api.post(`/api/guild/${guild.id}/logs`, { type, channelId: channelId || null });
       }
       toast.success('Log channels saved!');
       setConfigOpen(false);

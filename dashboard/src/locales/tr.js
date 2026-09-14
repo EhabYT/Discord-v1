@@ -112,7 +112,7 @@ export default {
   'auth.verifying': 'Doğrulanıyor…', 'auth.startOver': 'Baştan başla',
   'auth.identifier': 'E-posta veya kullanıcı adı', 'auth.password': 'Şifre',
   'auth.forgot': 'Şifreni mi unuttun?', 'auth.signingIn': 'Giriş yapılıyor…',
-  'auth.signIn': 'Giriş yap', 'auth.continueDiscord': 'Discord ile devam et',
+  'auth.signIn': 'Giriş yap', 'auth.continueDiscord': 'Discord ile devam et', 'auth.signupDiscord': 'Discord ile kaydol', 'auth.or': 'veya',
   'auth.passwordsMismatch': 'Şifreler eşleşmiyor',
   'auth.regEyebrow': 'Hesap oluştur', 'auth.regTitle': 'EB Panosuna katıl',
   'auth.regDesc': 'Hemen doğrulanmamış bir EB hesabı oluştur. Hassas kurtarma öncesi e-posta doğrulaması gerekir.',

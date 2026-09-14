@@ -44,7 +44,12 @@ export default function Login() {
           <PasswordField label={t('auth.password', 'Password')} autoComplete="current-password" required value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
           <div className="flex justify-end"><a href="/forgot-password" className="text-xs text-cyan-300 hover:text-cyan-200">{t('auth.forgot', 'Forgot password?')}</a></div>
           <button disabled={busy} className="cyber-button-solid w-full">{busy ? t('auth.signingIn', 'Signing in…') : t('auth.signIn', 'Sign in')}</button>
-          {auth.oauthEnabled && <a href="/api/auth/discord" className="cyber-button w-full flex justify-center">{t('auth.continueDiscord', 'Continue with Discord')}</a>}
+          {auth.oauthEnabled && (
+            <>
+              <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.14em] text-zinc-500" aria-hidden="true"><span className="h-px flex-1 bg-white/10" />{t('auth.or', 'or')}<span className="h-px flex-1 bg-white/10" /></div>
+              <a href="/api/auth/discord" className="cyber-button w-full flex justify-center">{t('auth.continueDiscord', 'Continue with Discord')}</a>
+            </>
+          )}
         </form>
       )}
     </AuthLayout>

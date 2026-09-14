@@ -6,7 +6,7 @@ import { useI18n } from '../i18n.jsx';
 
 export default function Register() {
   const { t } = useI18n();
-  const { account, register } = useAuth();
+  const { auth, account, register } = useAuth();
   const [form, setForm] = useState({ displayName: '', username: '', email: '', password: '', confirmPassword: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -30,6 +30,12 @@ export default function Register() {
         <div><PasswordField label={t('auth.password', 'Password')} required minLength={15} maxLength={128} autoComplete="new-password" value={form.password} onChange={update('password')} /><PasswordStrength password={form.password} /></div>
         <PasswordField label={t('auth.confirmPassword', 'Confirm password')} required minLength={15} maxLength={128} autoComplete="new-password" value={form.confirmPassword} onChange={update('confirmPassword')} />
         <button disabled={busy} className="cyber-button-solid w-full">{busy ? t('auth.creating', 'Creating account…') : t('auth.createAccount', 'Create account')}</button>
+        {auth.oauthEnabled && (
+          <>
+            <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.14em] text-zinc-500" aria-hidden="true"><span className="h-px flex-1 bg-white/10" />{t('auth.or', 'or')}<span className="h-px flex-1 bg-white/10" /></div>
+            <a href="/api/auth/discord" className="cyber-button w-full flex justify-center">{t('auth.signupDiscord', 'Sign up with Discord')}</a>
+          </>
+        )}
       </form>
     </AuthLayout>
   );

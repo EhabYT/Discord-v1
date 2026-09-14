@@ -112,7 +112,7 @@ export default {
   'auth.verifying': 'Vérification…', 'auth.startOver': 'Recommencer',
   'auth.identifier': 'E-mail ou pseudo', 'auth.password': 'Mot de passe',
   'auth.forgot': 'Mot de passe oublié ?', 'auth.signingIn': 'Connexion…',
-  'auth.signIn': 'Se connecter', 'auth.continueDiscord': 'Continuer avec Discord',
+  'auth.signIn': 'Se connecter', 'auth.continueDiscord': 'Continuer avec Discord', 'auth.signupDiscord': 'Inscription avec Discord', 'auth.or': 'ou',
   'auth.passwordsMismatch': 'Les mots de passe ne correspondent pas',
   'auth.regEyebrow': 'Créer un compte', 'auth.regTitle': 'Rejoignez le tableau EB',
   'auth.regDesc': 'Créez un compte EB non vérifié. La vérification e-mail sera requise avant toute récupération sensible.',

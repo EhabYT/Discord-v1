@@ -112,7 +112,7 @@ export default {
   'auth.verifying': 'Verifiziere…', 'auth.startOver': 'Von vorn beginnen',
   'auth.identifier': 'E-Mail oder Benutzername', 'auth.password': 'Passwort',
   'auth.forgot': 'Passwort vergessen?', 'auth.signingIn': 'Melde an…',
-  'auth.signIn': 'Anmelden', 'auth.continueDiscord': 'Mit Discord fortfahren',
+  'auth.signIn': 'Anmelden', 'auth.continueDiscord': 'Mit Discord fortfahren', 'auth.signupDiscord': 'Mit Discord registrieren', 'auth.or': 'oder',
   'auth.passwordsMismatch': 'Passwörter stimmen nicht überein',
   'auth.regEyebrow': 'Konto erstellen', 'auth.regTitle': 'Tritt dem EB Dashboard bei',
   'auth.regDesc': 'Erstelle jetzt ein unbestätigtes EB-Konto. E-Mail-Verifizierung ist vor sensibler Kontowiederherstellung erforderlich.',

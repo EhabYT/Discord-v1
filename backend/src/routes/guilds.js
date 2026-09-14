@@ -357,14 +357,14 @@ module.exports = (botClient) => {
     // Ticket routes live in ./guilds/tickets.js (sixth extraction).
     registerTicketsRoutes(router, { requirePerm, rl });
 
-    router.get('/logging', async (req, res, next) => {
+    router.get('/logs', async (req, res, next) => {
         try {
             const logging = await db.get(`logging_${req.params.guildId}`) || {};
             res.json(logging);
         } catch (err) { next(err); }
     });
 
-    router.post('/logging', requirePerm(2), async (req, res, next) => {
+    router.post('/logs', requirePerm(2), async (req, res, next) => {
         try {
             const { guildId } = req.params;
             const { type, channelId } = req.body;

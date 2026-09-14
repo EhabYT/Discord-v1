@@ -112,7 +112,7 @@ export default {
   'auth.verifying': 'جارٍ التحقق…', 'auth.startOver': 'البدء من جديد',
   'auth.identifier': 'البريد أو اسم المستخدم', 'auth.password': 'كلمة المرور',
   'auth.forgot': 'نسيت كلمة المرور؟', 'auth.signingIn': 'جارٍ تسجيل الدخول…',
-  'auth.signIn': 'تسجيل الدخول', 'auth.continueDiscord': 'المتابعة عبر Discord',
+  'auth.signIn': 'تسجيل الدخول', 'auth.continueDiscord': 'المتابعة عبر Discord', 'auth.signupDiscord': 'التسجيل عبر Discord', 'auth.or': 'أو',
   'auth.passwordsMismatch': 'كلمتا المرور غير متطابقتين',
   'auth.regEyebrow': 'إنشاء حساب', 'auth.regTitle': 'انضم إلى لوحة EB',
   'auth.regDesc': 'أنشئ حساب EB غير موثق الآن. سيُطلب توثيق البريد قبل استرداد الحساب.',

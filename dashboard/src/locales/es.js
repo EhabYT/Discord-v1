@@ -112,7 +112,7 @@ export default {
   'auth.verifying': 'Verificando…', 'auth.startOver': 'Empezar de nuevo',
   'auth.identifier': 'Correo o usuario', 'auth.password': 'Contraseña',
   'auth.forgot': '¿Olvidaste la contraseña?', 'auth.signingIn': 'Iniciando sesión…',
-  'auth.signIn': 'Iniciar sesión', 'auth.continueDiscord': 'Continuar con Discord',
+  'auth.signIn': 'Iniciar sesión', 'auth.continueDiscord': 'Continuar con Discord', 'auth.signupDiscord': 'Registrarse con Discord', 'auth.or': 'o',
   'auth.passwordsMismatch': 'Las contraseñas no coinciden',
   'auth.regEyebrow': 'Crear cuenta', 'auth.regTitle': 'Únete al panel EB',
   'auth.regDesc': 'Crea ahora una cuenta EB sin verificar. Verificar el correo será necesario antes de recuperar la cuenta.',
