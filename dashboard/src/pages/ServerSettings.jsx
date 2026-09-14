@@ -37,6 +37,7 @@ export default function ServerSettings({ guild, guildData, setGuildData }) {
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [backupStatus, setBackupStatus] = useState(null);
   const [backups, setBackups] = useState([]);
+  const [backupConfig, setBackupConfig] = useState(null);
   const roles = guildData?.guild?.roles || [];
 
   useEffect(() => {
@@ -56,6 +57,9 @@ export default function ServerSettings({ guild, guildData, setGuildData }) {
     api.get(`/api/guild/${guild.id}/backups`)
       .then((d) => setBackups(d.backups || []))
       .catch(() => setBackups([]));
+    api.get(`/api/guild/${guild.id}/backup-config`)
+      .then((d) => setBackupConfig(d))
+      .catch(() => setBackupConfig(null));
   }, [guild?.id]);
 
   const addFilter = async () => {
@@ -99,6 +103,14 @@ export default function ServerSettings({ guild, guildData, setGuildData }) {
       setWebhook('');
     } catch (e) { toast.error(e.message || 'Invalid webhook.'); }
     setSaving('');
+  };
+
+  const saveBackupConfig = async (update) => {
+    try {
+      const config = await api.post(`/api/guild/${guild.id}/backup-config`, update);
+      setBackupConfig(config);
+      toast.success('Backup settings saved.');
+    } catch { toast.error('Failed to save backup settings.'); }
   };
 
   const toggleCommand = async (name, enabled) => {
@@ -266,6 +278,43 @@ export default function ServerSettings({ guild, guildData, setGuildData }) {
       </Section>
 
       <Section icon={Download} title="Backup & restore" desc="Download this server's config or restore from a JSON file.">
+        {backupConfig && (
+          <div className="flex flex-wrap items-center gap-3 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-xs">
+            <label className="flex items-center gap-1.5 text-zinc-400">
+              <input
+                type="checkbox"
+                checked={backupConfig.enabled}
+                onChange={(e) => saveBackupConfig({ enabled: e.target.checked })}
+                className="accent-cyan-500"
+              />
+              Enabled
+            </label>
+            <label className="flex items-center gap-1.5 text-zinc-400">
+              Every
+              <input
+                type="number"
+                min={1}
+                max={72}
+                value={backupConfig.intervalHours}
+                onChange={(e) => saveBackupConfig({ intervalHours: Number(e.target.value) })}
+                className="w-12 bg-white/[0.06] border border-white/[0.1] rounded px-1.5 py-0.5 text-xs text-white text-center"
+              />
+              h
+            </label>
+            <label className="flex items-center gap-1.5 text-zinc-400">
+              Max
+              <input
+                type="number"
+                min={1}
+                max={50}
+                value={backupConfig.maxBackups}
+                onChange={(e) => saveBackupConfig({ maxBackups: Number(e.target.value) })}
+                className="w-12 bg-white/[0.06] border border-white/[0.1] rounded px-1.5 py-0.5 text-xs text-white text-center"
+              />
+              files
+            </label>
+          </div>
+        )}
         {backupStatus && (
           <div className="flex items-center gap-4 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-xs">
             <span className="flex items-center gap-1.5 text-zinc-400">

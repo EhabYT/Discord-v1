@@ -612,6 +612,28 @@ module.exports = (botClient) => {
         } catch (err) { next(err); }
     });
 
+    router.get('/backup-config', requirePerm(3), async (req, res, next) => {
+        try {
+            const { getBackupConfig } = require('eb-bot-shared/services/backup');
+            const config = await getBackupConfig(req.params.guildId, db);
+            res.json(config);
+        } catch (err) { next(err); }
+    });
+
+    router.post('/backup-config', requirePerm(3), async (req, res, next) => {
+        try {
+            const { saveBackupConfig } = require('eb-bot-shared/services/backup');
+            const { enabled, intervalHours, maxBackups, keys } = req.body;
+            const update = {};
+            if (typeof enabled !== 'undefined') update.enabled = !!enabled;
+            if (typeof intervalHours !== 'undefined') update.intervalHours = Number(intervalHours);
+            if (typeof maxBackups !== 'undefined') update.maxBackups = Number(maxBackups);
+            if (Array.isArray(keys)) update.keys = keys;
+            const config = await saveBackupConfig(req.params.guildId, db, update);
+            res.json(config);
+        } catch (err) { next(err); }
+    });
+
     router.get('/backup-status', requirePerm(2), (req, res, next) => {
         try {
             const { getBackupDir } = require('eb-bot-shared/services/backup');

@@ -4,8 +4,17 @@ const { WebhookClient, EmbedBuilder, AttachmentBuilder } = require('discord.js')
 const logger = require('../lib/logger');
 
 const BACKUP_DIR = path.join(__dirname, '..', '..', 'backups');
-const MAX_BACKUPS = 10;
 const MAX_WEBHOOK_FILE_SIZE = 8 * 1024 * 1024; // 8MB Discord webhook limit
+
+const DEFAULT_KEYS = [
+    'settings', 'logging', 'welcome', 'verification',
+    'toggles', 'autoroles', 'ticket_config', 'tickets',
+    'automod', 'security', 'commands_enabled', 'xp_enabled',
+    'xp_multiplier', 'rewards', 'custom_filters', 'autoresponder',
+    'djrole', 'birthday_config', 'suggestion_config', 'suggestions', 'polls',
+    'tags', 'confession_config', 'confessions', 'announcements',
+];
+const DEFAULT_MAX_BACKUPS = 10;
 
 function getBackupDir() {
     if (!fs.existsSync(BACKUP_DIR)) {
@@ -18,15 +27,27 @@ function getWebhookUrl(guildId, db) {
     return db.get(`webhook_logs_${guildId}`);
 }
 
+async function getBackupConfig(guildId, db) {
+    const raw = await db.get(`backup_config_${guildId}`);
+    return {
+        enabled: raw?.enabled !== false,
+        intervalHours: Math.max(1, Math.min(72, Number(raw?.intervalHours) || 6)),
+        maxBackups: Math.max(1, Math.min(50, Number(raw?.maxBackups) || DEFAULT_MAX_BACKUPS)),
+        keys: Array.isArray(raw?.keys) ? raw.keys : DEFAULT_KEYS,
+    };
+}
+
+async function saveBackupConfig(guildId, db, config) {
+    const existing = await getBackupConfig(guildId, db);
+    const merged = { ...existing, ...config };
+    if (merged.keys && !Array.isArray(merged.keys)) merged.keys = DEFAULT_KEYS;
+    await db.set(`backup_config_${guildId}`, merged);
+    return merged;
+}
+
 async function performBackup(guildId, db) {
-    const keys = [
-        `settings_${guildId}`, `logging_${guildId}`, `welcome_${guildId}`, `verification_${guildId}`,
-        `toggles_${guildId}`, `autoroles_${guildId}`, `ticket_config_${guildId}`, `tickets_${guildId}`,
-        `automod_${guildId}`, `security_${guildId}`, `commands_enabled_${guildId}`, `xp_enabled_${guildId}`,
-        `xp_multiplier_${guildId}`, `rewards_${guildId}`, `custom_filters_${guildId}`, `autoresponder_${guildId}`,
-        `djrole_${guildId}`, `birthday_config_${guildId}`, `suggestion_config_${guildId}`, `suggestions_${guildId}`, `polls_${guildId}`,
-        `tags_${guildId}`, `confession_config_${guildId}`, `confessions_${guildId}`, `announcements_${guildId}`,
-    ];
+    const config = await getBackupConfig(guildId, db);
+    const keys = (config.keys || DEFAULT_KEYS).map(k => `${k}_${guildId}`);
     const backup = {};
     for (const key of keys) {
         backup[key] = await db.get(key);
@@ -39,23 +60,23 @@ async function performBackup(guildId, db) {
     return backup;
 }
 
-function writeBackup(guildId, backup) {
+function writeBackup(guildId, backup, maxBackups = DEFAULT_MAX_BACKUPS) {
     const dir = getBackupDir();
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const filename = `backup_${guildId}_${timestamp}.json`;
     const filepath = path.join(dir, filename);
     fs.writeFileSync(filepath, JSON.stringify(backup, null, 2), 'utf8');
-    pruneOldBackups(dir, guildId);
+    pruneOldBackups(dir, guildId, maxBackups);
     logger.info(`Backup written for guild ${guildId}: ${filename}`);
     return filepath;
 }
 
-function pruneOldBackups(dir, guildId) {
+function pruneOldBackups(dir, guildId, max = DEFAULT_MAX_BACKUPS) {
     try {
         const files = fs.readdirSync(dir)
             .filter(f => f.startsWith(`backup_${guildId}_`) && f.endsWith('.json'))
             .sort();
-        while (files.length > MAX_BACKUPS) {
+        while (files.length > max) {
             const oldest = files.shift();
             fs.unlinkSync(path.join(dir, oldest));
             logger.debug(`Pruned old backup: ${oldest}`);
@@ -103,8 +124,10 @@ async function uploadBackupToWebhook(guildId, db, filepath) {
 
 async function scheduledBackup(guildId, client, db) {
     try {
+        const config = await getBackupConfig(guildId, db);
+        if (!config.enabled) return null;
         const backup = await performBackup(guildId, db);
-        const filepath = writeBackup(guildId, backup);
+        const filepath = writeBackup(guildId, backup, config.maxBackups);
         const uploaded = await uploadBackupToWebhook(guildId, db, filepath);
         return { filepath, uploaded };
     } catch (err) {
@@ -113,4 +136,4 @@ async function scheduledBackup(guildId, client, db) {
     }
 }
 
-module.exports = { performBackup, writeBackup, uploadBackupToWebhook, scheduledBackup, getBackupDir, getWebhookUrl, pruneOldBackups };
+module.exports = { performBackup, writeBackup, uploadBackupToWebhook, scheduledBackup, getBackupDir, getWebhookUrl, pruneOldBackups, getBackupConfig, saveBackupConfig, DEFAULT_KEYS };

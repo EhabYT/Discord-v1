@@ -36,14 +36,17 @@
   reaction-role panels and other configs. Sessions still reset on restart;
   Supabase PostgreSQL remains the production store.
 - Automated backup scheduler (`shared/services/backup.js`): runs every 6
-  hours per guild, exports 26 config keys to `backups/backup_{guildId}_{timestamp}.json`,
-  prunes beyond 10 backups per guild, and optionally uploads the JSON file
-  as a Discord webhook attachment (under 8MB) with an embed notification.
+  hours per guild (configurable 1–72h), exports 26 config keys (customizable)
+  to `backups/backup_{guildId}_{timestamp}.json`, prunes beyond 10 backups
+  per guild (configurable 1–50), and optionally uploads the JSON file as a
+  Discord webhook attachment (under 8MB) with an embed notification.
   Configured via the existing `webhook_logs_{guildId}` webhook URL.
   On-demand backup available via `POST /api/developer/jobs/backup/run`.
   Dashboard shows backup count and last backup time in Settings page.
   Backup list with server-side restore via `GET /api/guild/:id/backups`
-  and `POST /api/guild/:id/restore-from-backup`. Covered by
+  and `POST /api/guild/:id/restore-from-backup`. Configurable backup
+  settings (enable/disable, interval, max backups) via
+  `GET/POST /api/guild/:id/backup-config`. Covered by
   `tests/unit/backup.test.js`.
 
 ### Changed
