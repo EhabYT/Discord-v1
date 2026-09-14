@@ -662,6 +662,25 @@ module.exports = (botClient) => {
         } catch (err) { next(err); }
     });
 
+    router.delete('/backups/:filename', requirePerm(3), developerOnly, (req, res, next) => {
+        try {
+            const { getBackupDir } = require('eb-bot-shared/services/backup');
+            const fs = require('fs');
+            const path = require('path');
+            const dir = getBackupDir();
+            const guildId = req.params.guildId;
+            const { filename } = req.params;
+            // Validate filename to prevent path traversal
+            if (!filename.startsWith(`backup_${guildId}_`) || !filename.endsWith('.json') || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+                return res.status(400).json({ error: 'Invalid backup filename' });
+            }
+            const filepath = path.join(dir, filename);
+            if (!fs.existsSync(filepath)) return res.status(404).json({ error: 'Backup not found' });
+            fs.unlinkSync(filepath);
+            res.json({ success: true, filename });
+        } catch (err) { next(err); }
+    });
+
     router.post('/restore-from-backup', requirePerm(3), developerOnly, rl.restore(), async (req, res, next) => {
         try {
             const { filename } = req.body;

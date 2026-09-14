@@ -139,6 +139,14 @@ export default function ServerSettings({ guild, guildData, setGuildData }) {
     } catch { toast.error('Restore failed.'); }
   };
 
+  const deleteBackup = async (filename) => {
+    try {
+      await api.delete(`/api/guild/${guild.id}/backups/${filename}`);
+      setBackups((prev) => prev.filter((b) => b.filename !== filename));
+      toast.success(`Deleted ${filename}`);
+    } catch { toast.error('Delete failed.'); }
+  };
+
   const leaveServer = async () => {
     try {
       await api.post(`/api/guild/${guild.id}/leave`);
@@ -296,6 +304,12 @@ export default function ServerSettings({ guild, guildData, setGuildData }) {
                   className="text-[10px] text-cyan-400 hover:text-cyan-300 transition-colors"
                 >
                   Restore
+                </button>
+                <button
+                  onClick={() => deleteBackup(b.filename)}
+                  className="text-[10px] text-red-400 hover:text-red-300 transition-colors"
+                >
+                  Delete
                 </button>
               </div>
             ))}
