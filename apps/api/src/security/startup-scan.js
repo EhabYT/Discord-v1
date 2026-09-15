@@ -50,6 +50,13 @@ function checkEnvironment() {
 function checkFilePermissions() {
     info('Checking file permissions...');
 
+    // Windows (NTFS) has no Unix permission bits — Node always reports
+    // mode 666 there, so this check would warn unconditionally. Skip it.
+    if (process.platform === 'win32') {
+        info('Skipping file permission check on Windows.');
+        return;
+    }
+
     const sensitiveFiles = [
         '.env',
         'backups/',
