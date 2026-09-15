@@ -42,6 +42,23 @@ function redirectUriFor(req) {
     return 'http://localhost:3000/api/auth/discord/callback';
 }
 
+function googleRedirectUriFor(req) {
+    const configured = String(process.env.GOOGLE_REDIRECT_URI || '').trim();
+    if (configured) {
+        try {
+            const uri = new URL(configured);
+            if (uri.protocol === 'https:' || uri.protocol === 'http:') {
+                return uri.toString().replace(/\/$/, '');
+            }
+        } catch {
+            logger.warn('GOOGLE_REDIRECT_URI is not a valid HTTP(S) URL');
+        }
+    }
+    const origin = publicOrigin(req);
+    if (origin) return `${origin}/api/auth/google/callback`;
+    return 'http://localhost:3000/api/auth/google/callback';
+}
+
 function dashboardHomeFor(req) {
     const configured = String(process.env.DASHBOARD_URL || '').trim();
     if (configured) {
@@ -77,6 +94,15 @@ function oauthConfigurationIssue() {
     return null;
 }
 
+
+function googleOAuthConfigurationIssue() {
+    const clientId = String(process.env.GOOGLE_CLIENT_ID || '').trim();
+    const clientSecret = String(process.env.GOOGLE_CLIENT_SECRET || '').trim();
+    if (!clientId) return 'GOOGLE_CLIENT_ID is missing.';
+    if (!clientId || clientId.length < 10) return 'GOOGLE_CLIENT_ID must be a valid Google OAuth client ID.';
+    if (!clientSecret) return 'GOOGLE_CLIENT_SECRET is missing.';
+    return null;
+}
 async function oauthRuntimeIssue() {
     const configIssue = oauthConfigurationIssue();
     if (configIssue) return configIssue;
@@ -283,6 +309,115 @@ module.exports = (botClient) => {
     router.get('/callback', oauthCallback);
     router.get('/discord/callback', oauthCallback);
 
+    router.get('/google', (req, res) => {
+        const configIssue = googleOAuthConfigurationIssue();
+        if (configIssue) {
+            return oauthErrorPage(res, 'Google OAuth not configured', configIssue, googleRedirectUriFor(req));
+        }
+        const redirectUri = googleRedirectUriFor(req);
+        req.session.oauthRedirect = redirectUri;
+        if (req.session.account?.id && !req.session.user?.id) {
+            req.session.oauthLinkAccountId = req.session.account.id;
+        } else {
+            delete req.session.oauthLinkAccountId;
+        }
+        const state = crypto.randomBytes(32).toString('hex');
+        req.session.oauthState = state;
+        req.session.save((err) => {
+            if (err) return res.redirect(303, loginResultUrl(req, 'session'));
+            const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${process.env.GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=email%20profile&state=${state}`;
+            res.redirect(url);
+        });
+    });
+
+    async function googleOAuthCallback(req, res) {
+        if (req.query.error) {
+            return oauthErrorPage(
+                res,
+                'Google login cancelled',
+                req.query.error_description || req.query.error,
+                req.session.oauthRedirect || googleRedirectUriFor(req)
+            );
+        }
+        const { code } = req.query;
+        if (!code) return res.redirect(303, loginResultUrl(req, 'missing_code'));
+        const expectedState = req.session.oauthState;
+        const gotState = typeof req.query.state === 'string' ? req.query.state : '';
+        delete req.session.oauthState;
+        const a = Buffer.from(String(expectedState || ''));
+        const b = Buffer.from(gotState);
+        const stateOk = !!expectedState && a.length === b.length && crypto.timingSafeEqual(a, b);
+        if (!stateOk) {
+            return oauthErrorPage(res, 'Login verification failed',
+                'The login request could not be verified (state mismatch). Start the login again from the dashboard.',
+                '');
+        }
+        const redirectUri = req.session.oauthRedirect || googleRedirectUriFor(req);
+        try {
+            const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', new URLSearchParams({
+                client_id: process.env.GOOGLE_CLIENT_ID,
+                client_secret: process.env.GOOGLE_CLIENT_SECRET,
+                grant_type: 'authorization_code',
+                code,
+                redirect_uri: redirectUri,
+            }), {
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+            });
+            const accessToken = tokenResponse.data.access_token;
+            const userResponse = await axios.get('https://www.googleapis.com/oauth2/v2/userinfo', {
+                headers: { Authorization: `Bearer ${accessToken}` }
+            });
+            const user = {
+                id: userResponse.data.id,
+                username: userResponse.data.email.split('@')[0],
+                tag: userResponse.data.email,
+                avatar: userResponse.data.picture || null
+            };
+            const linkAccountId = req.session.oauthLinkAccountId || null;
+            const account = getPool()
+                ? (linkAccountId
+                    ? await getAccountStore().linkDiscordIdentity(linkAccountId, user, req.requestId)
+                    : await getAccountStore().ensureDiscordAccount(user, req.requestId))
+                : null;
+            await new Promise((resolve, reject) => {
+                req.session.regenerate((sessionErr) => sessionErr ? reject(sessionErr) : resolve());
+            });
+            if (account?.mfaEnabled) {
+                attachMfaChallenge(req.session, account.id, { user, userGuilds: [] });
+            } else {
+                attachAuthenticatedSession(req.session, user, [], account);
+                if (account) attachSessionSecurity(req.session, req);
+            }
+            await new Promise((resolve, reject) => {
+                req.session.save((sessionErr) => sessionErr ? reject(sessionErr) : resolve());
+            });
+            if (account && !account.mfaEnabled) {
+                await getAccountStore().recordSecurityEvent(account.id, 'login_success', req.requestId, { method: 'google' });
+            }
+            res.redirect(303, account?.mfaEnabled
+                ? `${dashboardHomeFor(req)}/login?mfa=1`
+                : loginResultUrl(req, 'success'));
+        } catch (err) {
+            const data = err.response?.data;
+            const desc = data?.error || '';
+            logger.error('Google OAuth request failed', {
+                requestId: req.requestId,
+                status: err.response?.status || null,
+                googleError: String(desc).slice(0, 80),
+            });
+            const detail = desc === 'invalid_client'
+                ? 'Google rejected the OAuth client credentials. Verify that GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET come from the same project.'
+                : desc === 'invalid_grant' || String(desc).toLowerCase().includes('redirect')
+                    ? 'Redirect URI mismatch. Add the URI below in the Google Cloud Console, then try again.'
+                    : data
+                        ? String(desc || 'Google rejected the login request.')
+                        : 'The login session could not be completed. Please start the login again.';
+            oauthErrorPage(res, 'Google login failed', detail, redirectUri);
+        }
+    }
+
+    router.get('/google/callback', googleOAuthCallback);
+
     router.get('/status', async (req, res) => {
         const redirectUri = redirectUriFor(req);
         let databaseOnline = false;
@@ -295,6 +430,8 @@ module.exports = (botClient) => {
             loggedIn: !!(req.session.account || req.session.user),
             accountAuthenticated: !!req.session.account,
             discordLinked: !!req.session.user,
+            googleOAuthEnabled: !googleOAuthConfigurationIssue(),
+            googleOAuthError: googleOAuthConfigurationIssue(),
             oauthEnabled: !oauthError,
             oauthError,
             databaseOnline,
