@@ -43,6 +43,12 @@ export default function Register() {
             <a href="/api/auth/discord" onClick={() => rememberReturn(rawReturn)} className="cyber-button w-full flex justify-center">{t('auth.signupDiscord', 'Sign up with Discord')}</a>
           </>
         )}
+        {auth.googleOAuthEnabled && (
+          <>
+            <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.14em] text-zinc-500" aria-hidden="true"><span className="h-px flex-1 bg-white/10" />{t('auth.or', 'or')}<span className="h-px flex-1 bg-white/10" /></div>
+            <a href="/api/auth/google" onClick={() => rememberReturn(rawReturn)} className="cyber-button w-full flex justify-center">{t('auth.signupGoogle', 'Sign up with Google')}</a>
+          </>
+        )}
       </form>
     </AuthLayout>
   );
