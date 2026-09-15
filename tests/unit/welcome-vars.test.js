@@ -1,4 +1,4 @@
-const { formatWelcomeVars } = require('../../shared/utils/welcome-vars');
+const { formatWelcomeVars } = require('eb-bot-shared/utils/welcome-vars');
 
 let fails = 0;
 const check = (label, ok) => {

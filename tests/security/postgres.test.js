@@ -1,4 +1,4 @@
-const { PostgresDatabase, normalizeDatabaseUrl, databaseConfigIssue } = require('../../database/index');
+const { PostgresDatabase, normalizeDatabaseUrl, databaseConfigIssue } = require('eb-bot-database/index');
 
 class FakePool {
     constructor() {

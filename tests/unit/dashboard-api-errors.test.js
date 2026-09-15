@@ -19,7 +19,7 @@ const routes = {
 };
 
 (async () => {
-    const { default: api } = await import('../../dashboard/src/api.js');
+    const { default: api } = await import('../../apps/web/src/api.js');
 
     const server = http.createServer((req, res) => {
         const route = routes[req.url];

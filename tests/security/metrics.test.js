@@ -1,6 +1,6 @@
 const {
     observe, metricsSnapshot, normalizedPath, resetForTests, closeMetrics,
-} = require('../../backend/src/metrics');
+} = require('../../apps/api/src/metrics');
 
 let fails = 0;
 const check = (label, ok) => {

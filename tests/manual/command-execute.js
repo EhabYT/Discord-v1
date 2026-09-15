@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const root = path.join(__dirname, '..', '..');
-const { config: botConfig } = require('../../shared/config/bot-config');
+const { config: botConfig } = require('eb-bot-shared/config/bot-config');
 
 function mockUser(id, extras = {}) {
     return {
@@ -249,7 +249,7 @@ const db = {
     },
 };
 
-const helpers = require(path.join(root, 'shared/utils/discord'));
+const helpers = require(path.join(root, 'packages', 'shared', 'utils', 'discord'));
 
 const client = {
     user: mockUser('bot', { username: 'EB', tag: 'EB#0000', bot: true }),
@@ -277,7 +277,7 @@ const commandFiles = [];
         if (entry.isDirectory()) collect(path.join(dir, entry.name), `${prefix}${entry.name}/`);
         else if (entry.name.endsWith('.js')) commandFiles.push(`${prefix}${entry.name}`);
     }
-})(path.join(root, 'bot', 'src', 'commands'));
+})(path.join(root, 'apps', 'bot', 'src', 'commands'));
 function resolveCommand(file) {
     if (file.includes('/')) return file;
     const hit = commandFiles.find((f) => f.endsWith(`/${file}`) || f === file);
@@ -286,7 +286,7 @@ function resolveCommand(file) {
 }
 
 async function run(file, extra = {}) {
-    const cmd = require(path.join(root, 'bot', 'src', 'commands', resolveCommand(file)));
+    const cmd = require(path.join(root, 'apps', 'bot', 'src', 'commands', resolveCommand(file)));
     const { interaction, replies } = mockInteraction({ ...extra, name: cmd.data.name });
     interaction.client = client;
     await cmd.execute(interaction, client, db);
@@ -528,7 +528,7 @@ function dump(r) {
         if (dump(r).includes('servericon')) throw new Error('stale servericon in help');
     });
     await t('help-select', async () => {
-        const { handleHelpSelect } = require(path.join(root, 'shared/utils/help-interactions'));
+        const { handleHelpSelect } = require(path.join(root, 'packages', 'shared', 'utils', 'help-interactions'));
         const { interaction, replies } = mockInteraction({ values: ['fun'] });
         interaction.update = async (p) => { replies.push(p); };
         interaction.client = client;

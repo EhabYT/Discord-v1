@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { performBackup, writeBackup, getBackupDir, getWebhookUrl } = require('../../shared/services/backup');
+const { performBackup, writeBackup, getBackupDir, getWebhookUrl } = require('eb-bot-shared/services/backup');
 
 let fails = 0;
 const check = (label, ok) => {

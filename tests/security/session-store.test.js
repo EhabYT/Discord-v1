@@ -1,6 +1,6 @@
 const {
     PostgresSessionStore, BoundedMemorySessionStore,
-} = require('../../backend/src/session-store');
+} = require('../../apps/api/src/session-store');
 
 class FakePool {
     constructor() { this.rows = new Map(); this.metadata = new Map(); }

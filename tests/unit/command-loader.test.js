@@ -9,7 +9,7 @@ function load(rel) {
     return require(path.join(root, rel));
 }
 
-const commandsPath = path.join(root, 'bot', 'src', 'commands');
+const commandsPath = path.join(root, 'apps', 'bot', 'src', 'commands');
 // Commands live in categorized subdirectories (moderation/, economy/, ...).
 const files = [];
 (function collect(dir, prefix = '') {
@@ -23,7 +23,7 @@ const cmds = [];
 
 for (const file of files) {
     try {
-        const cmd = load(path.join('bot', 'src', 'commands', file));
+        const cmd = load(path.join('apps', 'bot', 'src', 'commands', file));
         if (!cmd.data || !cmd.execute) {
             errors.push([file, 'missing data or execute']);
             continue;
@@ -52,10 +52,10 @@ function walkOpts(file, opts, prefix = '') {
 }
 for (const c of cmds) walkOpts(c.file, c.json.options);
 
-const evDir = path.join(root, 'bot', 'src', 'events');
+const evDir = path.join(root, 'apps', 'bot', 'src', 'events');
 for (const file of fs.readdirSync(evDir).filter(f => f.endsWith('.js') && f !== 'index.js')) {
     try {
-        const ev = load(path.join('bot', 'src', 'events', file));
+        const ev = load(path.join('apps', 'bot', 'src', 'events', file));
         const list = Array.isArray(ev) ? ev : [ev];
         for (const e of list) {
             if (!e.name) errors.push([file, 'event missing name']);
@@ -67,29 +67,29 @@ for (const file of fs.readdirSync(evDir).filter(f => f.endsWith('.js') && f !== 
 }
 for (const file of fs.readdirSync(path.join(evDir, 'player')).filter(f => f.endsWith('.js'))) {
     try {
-        const ev = load(path.join('bot', 'src', 'events', 'player', file));
+        const ev = load(path.join('apps', 'bot', 'src', 'events', 'player', file));
         if (!ev.name || typeof ev.execute !== 'function') errors.push(['player/' + file, 'invalid']);
     } catch (e) {
         errors.push(['player/' + file, e.message]);
     }
 }
 
-for (const file of fs.readdirSync(path.join(root, 'shared', 'services')).filter(f => f.endsWith('.js'))) {
-    try { load(path.join('shared', 'services', file)); }
-    catch (e) { errors.push(['shared/services/' + file, e.message]); }
+for (const file of fs.readdirSync(path.join(root, 'packages', 'shared', 'services')).filter(f => f.endsWith('.js'))) {
+    try { load(path.join('packages', 'shared', 'services', file)); }
+    catch (e) { errors.push(['packages/shared/services/' + file, e.message]); }
 }
 
 const dashFiles = [
-    'backend/src/server.js',
-    'backend/src/websocket/socket.js',
-    'backend/src/routes/auth.js',
-    'backend/src/routes/guilds.js',
-    'backend/src/routes/music.js',
-    'backend/src/routes/stats.js',
-    'backend/src/routes/permissions.js',
-    'backend/src/middleware/permissions.js',
-    'bot/src/scheduler.js',
-    'shared/lib/logger.js',
+    'apps/api/src/server.js',
+    'apps/api/src/websocket/socket.js',
+    'apps/api/src/routes/auth.js',
+    'apps/api/src/routes/guilds.js',
+    'apps/api/src/routes/music.js',
+    'apps/api/src/routes/stats.js',
+    'apps/api/src/routes/permissions.js',
+    'apps/api/src/middleware/permissions.js',
+    'apps/bot/src/scheduler.js',
+    'packages/shared/lib/logger.js',
 ];
 for (const f of dashFiles) {
     try { load(f); }
@@ -101,7 +101,7 @@ if (!PermissionFlagsBits.ManageGuildExpressions) {
     warnings.push('ManageGuildExpressions missing — steal.js may fail');
 }
 
-const helpers = load('shared/utils/discord.js');
+const helpers = load(path.join('packages', 'shared', 'utils', 'discord.js'));
 for (const fn of ['safeReply', 'hasModPerms', 'checkDJPerms', 'parseTimeString', 'formatDuration', 'getGuildQueue']) {
     if (typeof helpers[fn] !== 'function') errors.push(['helpers', `missing ${fn}`]);
 }
@@ -110,7 +110,7 @@ for (const fn of ['safeReply', 'hasModPerms', 'checkDJPerms', 'parseTimeString',
 if (helpers.parseTimeString('10m') !== 600000) errors.push(['helpers', 'parseTimeString 10m']);
 if (helpers.parseTimeString('bad') !== null) errors.push(['helpers', 'parseTimeString bad']);
 
-const snipe = load('shared/services/snipe.js');
+const snipe = load(path.join('packages', 'shared', 'services', 'snipe.js'));
 snipe.setDelete('c1', { content: 'hi', tag: 'a#0' });
 if (!snipe.getDelete('c1')) errors.push(['snipe', 'delete cache miss']);
 snipe.setEdit('c1', { before: 'a', after: 'b', tag: 'a#0' });

@@ -1,0 +1,629 @@
+// Local .env for standalone runs (`node apps/api/src/server.js`, npm run
+// start:api). Gated on require.main so requiring this module
+// (tests, bot process which loads dotenv itself) never picks up .env — tests
+// set their own env and must stay hermetic. Render/production inject env.
+if (require.main === module) {
+    try {
+        require('dotenv').config();
+    } catch {
+        /* dotenv optional */
+    }
+}
+const express = require('express');
+const http = require('http');
+const session = require('express-session');
+const helmet = require('helmet');
+const { createSessionStore } = require('./session-store');
+const path = require('path');
+const compression = require('compression');
+const logger = require('eb-bot-shared/lib/logger');
+const { setupSocket, closeSocket, emitLog } = require('./websocket/socket');
+const { addClient, broadcast, clientCount, send, closeAll: closeSseClients } = require('./utils/sse');
+const { requireAuth, logAuthMode } = require('./middleware/auth');
+const { SYSTEM_ROLES, requireSystemRole } = require('./middleware/devauth');
+const { csrfGuard } = require('./middleware/csrf');
+const rl = require('./middleware/rate-limit');
+const { errorHandler } = require('./middleware/errors');
+const { maintenanceGuard } = require('./middleware/maintenance');
+const { requestTimeout } = require('./middleware/timeout');
+const { attachSessionSecurity, touchSessionSecurity } = require('eb-bot-shared/services/account-sessions');
+const { metricsMiddleware, closeMetrics } = require('./metrics');
+
+const app = express();
+const httpServer = http.createServer(app);
+// Render and similar hosts inject PORT and route public traffic to that exact
+// listener. Prefer it over the local DASHBOARD_PORT override; ignoring PORT can
+// leave the platform proxy pointing at a different service and returning a
+// plain "Not Found" after OAuth redirects.
+let PORT = process.env.PORT || process.env.DASHBOARD_PORT || 3000;
+
+const rateLimits = new Map();
+const RATE_LIMIT_WINDOW = 60 * 1000;
+const RATE_LIMIT_MAX = 400;
+
+function rateLimiter(req, res, next) {
+    if (req.path === '/api/health' || req.path === '/api/auth/status') return next();
+    const forwarded = req.headers['x-forwarded-for'];
+    const ip = (typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : req.socket.remoteAddress);
+    const now = Date.now();
+    const limit = rateLimits.get(ip) || { count: 0, resetAt: now + RATE_LIMIT_WINDOW };
+    if (now > limit.resetAt) { limit.count = 1; limit.resetAt = now + RATE_LIMIT_WINDOW; }
+    else { limit.count++; }
+    rateLimits.set(ip, limit);
+    if (limit.count > RATE_LIMIT_MAX) return res.status(429).json({ error: 'Slow down' });
+    next();
+}
+
+const rateLimitSweeper = setInterval(() => {
+    const now = Date.now();
+    for (const [ip, limit] of rateLimits.entries()) {
+        if (now > limit.resetAt + (30 * 60 * 1000)) rateLimits.delete(ip);
+    }
+}, 15 * 60 * 1000);
+// Never hold the process (or a test runner) open for the sweeper alone.
+if (typeof rateLimitSweeper.unref === 'function') rateLimitSweeper.unref();
+
+app.disable('x-powered-by');
+app.set('trust proxy', 1);
+
+const crypto = require('crypto');
+const IS_PROD = process.env.NODE_ENV === 'production';
+
+app.use((req, res, next) => {
+    const incoming = String(req.headers['x-request-id'] || '');
+    req.requestId = /^[a-zA-Z0-9_-]{8,64}$/.test(incoming)
+        ? incoming
+        : crypto.randomBytes(6).toString('hex');
+    res.setHeader('X-Request-ID', req.requestId);
+    next();
+});
+app.use(metricsMiddleware);
+
+// Fail closed on authentication, but do not take Render's entire HTTP service
+// offline just because SESSION_SECRET was omitted. When Supabase is configured,
+// derive a stable, domain-separated signing key from its high-entropy connection
+// URI. An explicit independent SESSION_SECRET remains strongly recommended.
+if (IS_PROD && String(process.env.DASHBOARD_AUTH).toLowerCase() === 'false') {
+    logger.error('DASHBOARD_AUTH=false is not permitted when NODE_ENV=production — refusing to start');
+    throw new Error('DASHBOARD_AUTH=false is not permitted in production');
+}
+
+const explicitSessionSecret = String(process.env.SESSION_SECRET || '').trim();
+const databaseSecretSource = String(process.env.DATABASE_URL || '').trim();
+const derivedSessionSecret = databaseSecretSource
+    ? crypto.createHash('sha256').update(`eb-dashboard-session-v1\0${databaseSecretSource}`).digest('hex')
+    : null;
+const sessionSecret = explicitSessionSecret
+    || derivedSessionSecret
+    || crypto.randomBytes(32).toString('hex');
+
+if (!explicitSessionSecret && derivedSessionSecret) {
+    logger.warn('SESSION_SECRET is missing — using a stable key derived from DATABASE_URL. Add an independent SESSION_SECRET in Render.');
+} else if (!explicitSessionSecret) {
+    logger.warn('SESSION_SECRET and DATABASE_URL are missing — using an ephemeral key; sessions reset on restart.');
+}
+
+const sessionMiddleware = session({
+    name: 'eb.sid',
+    secret: sessionSecret,
+    store: createSessionStore(),
+    resave: false,
+    saveUninitialized: false,
+    rolling: true,
+    cookie: {
+        // 'auto' only marks the cookie Secure when Express believes the request
+        // was HTTPS; behind a tunnel that depends on X-Forwarded-Proto. Force it
+        // on in production so the session cookie can never traverse plain HTTP.
+        secure: (process.env.DASHBOARD_SECURE === 'true' || IS_PROD) ? true : 'auto',
+        httpOnly: true,
+        sameSite: 'lax',
+        maxAge: 30 * 60 * 1000,
+        // Restrict cookie path to API and auth routes only
+        path: '/',
+    },
+    // Genid function using crypto for secure session IDs
+    genid: () => crypto.randomBytes(32).toString('hex'),
+    // Trust proxy setting for secure cookies behind reverse proxy
+    proxy: IS_PROD,
+});
+app.use(sessionMiddleware);
+app.use((req, res, next) => {
+    if (!req.session?.account) return next();
+    if (!req.session.security) attachSessionSecurity(req.session, req, { reauthenticated: false });
+    if (Number(req.session.security.absoluteExpiresAt) <= Date.now()) {
+        return req.session.destroy(() => {
+            res.clearCookie('eb.sid');
+            if (req.path.startsWith('/api/')) {
+                return res.status(401).json({ error: 'Session expired', code: 'SESSION_EXPIRED' });
+            }
+            return res.redirect(303, '/login?reason=expired');
+        });
+    }
+    touchSessionSecurity(req.session);
+    return next();
+});
+
+// Security headers via Helmet — replaces manual header setting.
+// Helmet provides production-ready defaults for CSP, HSTS, and more.
+// Must precede express.static. Express ends a successful static-file response
+// immediately, so middleware registered after it never runs for Dashboard HTML,
+// JavaScript, CSS, images, or fonts.
+
+// CSP nonce middleware — generates unique nonce per request for inline scripts
+app.use((req, res, next) => {
+    res.locals.cspNonce = crypto.randomBytes(16).toString('base64');
+    next();
+});
+
+app.use(helmet({
+    // Content Security Policy — allow inline styles for Tailwind, connect for WebSocket
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            baseUri: ["'self'"],
+            objectSrc: ["'none'"],
+            frameAncestors: ["'self'"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            fontSrc: ["'self'", "data:"],
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'", "ws:", "wss:"],
+        },
+    },
+    // HSTS in production only
+    hsts: IS_PROD ? { maxAge: 31536000, includeSubDomains: true } : false,
+    // Prevent MIME sniffing
+    noSniff: true,
+    // Prevent clickjacking
+    frameguard: { action: 'sameorigin' },
+    // Referrer policy
+    referrerPolicy: { policy: 'no-referrer' },
+}));
+// Permissions policy — Helmet doesn't set this by default
+app.use((req, res, next) => {
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    next();
+});
+
+app.use(compression());
+app.use(express.static(path.join(__dirname, '..', '..', 'web', 'public'), {
+    // Hashed Vite assets under /assets/* are content-addressed and safe to
+    // cache immutably for a year; HTML and root icons must revalidate so
+    // deploys pick up the new hashed filenames immediately. Previously every
+    // JS/CSS response was `no-store` with `etag: false`, forcing repeat
+    // visitors to re-download the ~430 kB bundle on every navigation.
+    maxAge: '1y',
+    etag: true,
+    lastModified: true,
+    setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+        } else if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        } else {
+            // Root icons, fonts, and other unhashed static files: allow a day
+            // of caching with revalidation instead of no-store.
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+        }
+    }
+}));
+// Cap request bodies. Unbounded JSON let any authenticated client exhaust
+// memory; nothing this API accepts legitimately approaches 100 kB.
+app.use(express.json({ limit: '100kb' }));
+app.use((err, req, res, next) => {
+    if (err && (err.type === 'entity.too.large')) {
+        return res.status(413).json({ error: 'Request body too large' });
+    }
+    if (err && err.type === 'entity.parse.failed') {
+        return res.status(400).json({ error: 'Malformed JSON body' });
+    }
+    return next(err);
+});
+app.use(rateLimiter);
+// Origin check on unsafe methods; see middleware/csrf.js for why SameSite alone
+// is not treated as sufficient.
+app.use(csrfGuard);
+// Request timeout — prevent requests from hanging indefinitely
+app.use(requestTimeout(30_000, { excludePaths: ['/api/health'] }));
+
+let dashboardStarted = false;
+function startDashboard(botClient) {
+    if (dashboardStarted) {
+        logger.warn('Dashboard start requested more than once — reusing the existing server');
+        return httpServer;
+    }
+    dashboardStarted = true;
+    setupSocket(httpServer, sessionMiddleware, botClient);
+
+    const authRouter = require('./routes/auth')(botClient);
+    const accountAuthRouter = require('./routes/account-auth')();
+    const accountRouter = require('./routes/account')();
+    const statsRouter = require('./routes/stats')(botClient);
+    const guildsRouter = require('./routes/guilds')(botClient);
+    const musicRouter = require('./routes/music')(botClient);
+    const permissionsRouter = require('./routes/permissions')(botClient);
+    const devRouter = require('./routes/dev')(botClient);
+    const setupRouter = require('./routes/setup')();
+    const v2Router = require('./routes/v2')(botClient);
+
+    // Bot Controls (global presence) are developer-only, like the music desk:
+    // they drive the bot's public identity across every guild. requireAuth
+    // runs first so anonymous callers still receive 401 (not 403), keeping
+    // the fail-closed contract stable.
+    const developerOnly = requireSystemRole(botClient, SYSTEM_ROLES.DEVELOPER);
+
+    // Maintenance is enforced server-side for every normal API. Health, OAuth,
+    // V2 diagnostics and role-authorized developer APIs remain reachable.
+    app.use('/api', maintenanceGuard(botClient));
+
+    // The OAuth entry point mints session state on every hit; throttle it.
+    app.use('/api/auth/discord', rl.limit('oauth-start', 20, 5 * 60 * 1000));
+    app.use('/api/stats', statsRouter);
+    app.use('/api/auth', authRouter);
+    app.use('/api/auth', accountAuthRouter);
+    app.use('/api/account', accountRouter);
+    // Backend route tree mirrors the product diagram:
+    //   Public Dashboard → /api/guild/:guildId/* (guild levels 0-3 via
+    //     guild-access.js) + /api/guilds + /api/bot/presence (guild presence).
+    //   Developer Area → /api/developer/* (system roles via devauth.js) with a
+    //     308 compat redirect from legacy /api/dev/*, plus /api/music/:guildId
+    //     (DEVELOPER/SUPER_ADMIN only) and /api/v2 diagnostics.
+    //   Both halves converge on the Permission System → Discord Bot / DB.
+    // /api/developer is the canonical system-control namespace. The legacy
+    // prefix redirects with 308 so methods/bodies are preserved without
+    // mounting a duplicate privileged route tree.
+    app.use('/api/developer', devRouter);
+    app.use('/api/dev', (req, res) => res.redirect(308, `/api/developer${req.url}`));
+    app.use('/api/v2', v2Router);
+    app.use('/setup', setupRouter);
+    app.use('/api/guild/:guildId/permissions', permissionsRouter);
+    app.use('/api/guild/:guildId', guildsRouter);
+    app.use('/api/music/:guildId', musicRouter);
+    app.use('/api', require('./routes/security'));
+
+    app.get('/api/guilds', requireAuth, (req, res) => {
+        if (!botClient || !botClient.user) return res.status(503).json({ error: 'Bot is initializing' });
+        let cache = [...botClient.guilds.cache.values()];
+        if (req.session?.userGuilds?.length) {
+            const allowed = new Set(req.session.userGuilds.map(g => g.id));
+            cache = cache.filter(g => allowed.has(g.id));
+        }
+        res.json(cache.map(g => ({
+            id: g.id,
+            name: g.name,
+            icon: g.iconURL({ size: 128 }),
+            memberCount: g.memberCount
+        })));
+    });
+
+    app.get('/api/me', requireAuth, (req, res) => {
+        if (req.session.user) return res.json(req.session.user);
+        if (!botClient || !botClient.user) return res.json({ username: 'Not Connected', avatar: null });
+        const app_ = botClient.application;
+        const owner = app_?.owner?.user || botClient.user;
+        res.json({
+            username: owner.username,
+            tag: owner.tag || owner.username || 'Bot Admin',
+            avatar: owner.displayAvatarURL ? owner.displayAvatarURL({ size: 128 }) : null,
+            loggedIn: false
+        });
+    });
+
+    app.get('/api/bot/presence', requireAuth, developerOnly, (req, res) => {
+        if (!botClient || !botClient.user) return res.status(503).json({ error: 'Bot is initializing' });
+        const presence = botClient.user.presence;
+        const act = presence?.activities?.[0];
+        res.json({
+            status: presence?.status || 'online',
+            activityType: act?.type ?? 0,
+            activityText: act?.name || '',
+            activities: presence?.activities?.map(a => ({ type: a.type, name: a.name })) || [],
+            ping: botClient.ws?.ping ?? 0,
+            guildCount: botClient.guilds?.cache?.size ?? 0,
+            username: botClient.user.username,
+            tag: botClient.user.tag
+        });
+    });
+
+    app.post('/api/bot/presence', requireAuth, developerOnly, async (req, res, next) => {
+        if (!botClient || !botClient.user) return res.status(503).json({ error: 'Bot is initializing' });
+        const status = typeof req.body.status === 'string' ? req.body.status : 'online';
+        const activityText = typeof req.body.activityText === 'string' ? req.body.activityText.trim() : '';
+        const activityType = Number(req.body.activityType ?? 0);
+        if (!['online', 'idle', 'dnd', 'invisible'].includes(status)) {
+            return res.status(400).json({ error: 'Invalid presence status' });
+        }
+        if (!Number.isInteger(activityType) || activityType < 0 || activityType > 5) {
+            return res.status(400).json({ error: 'Invalid activity type' });
+        }
+        if (activityText.length > 128) return res.status(400).json({ error: 'Activity text is too long' });
+        try {
+            botClient.user.setPresence({
+                status,
+                activities: activityText ? [{ name: activityText, type: activityType }] : []
+            });
+            try {
+                const { db } = require('eb-bot-database');
+                await db.set('bot_presence', {
+                    status,
+                    activityType,
+                    activityText,
+                });
+            } catch { /* ignore persist errors */ }
+            res.json({ success: true });
+        } catch (err) { next(err); }
+    });
+
+    app.get('/api/events/stream', requireAuth, async (req, res, next) => {
+        try {
+            const guildId = typeof req.query.guildId === 'string' ? req.query.guildId : '';
+            if (!/^\d{17,20}$/.test(guildId)) {
+                return res.status(400).json({ error: 'A valid guildId is required' });
+            }
+            const guild = botClient?.guilds?.cache?.get(guildId);
+            if (!guild) return res.status(404).json({ error: 'Server not found' });
+
+            const userId = req.session?.user?.id;
+            const listed = Array.isArray(req.session?.userGuilds)
+                && req.session.userGuilds.some((g) => String(g.id) === guildId);
+            const member = listed ? true : await guild.members.fetch(userId).catch(() => null);
+            if (!member) return res.status(403).json({ error: 'You are not a member of this server' });
+
+            const remove = addClient(res, guildId);
+            const a = (() => { try { return require('eb-bot-shared/services/analytics'); } catch(e) { return null; } })();
+            send(res, 'connected', { totalCommands: a ? a.getGlobalTotal() : 0, guildId });
+            const hb = setInterval(() => {
+                try { res.write(': heartbeat\n\n'); } catch(e) { clearInterval(hb); remove(); }
+            }, 20000);
+            req.on('close', () => { clearInterval(hb); remove(); });
+            return undefined;
+        } catch (err) {
+            return next(err);
+        }
+    });
+
+    app.get('/api/health', async (req, res) => {
+        let publicUrl = null;
+        try { publicUrl = require('eb-bot-shared/services/public-url').readPublicUrl(); } catch { /* ignore */ }
+        let maintenance = false;
+        try {
+            const { db } = require('eb-bot-database');
+            const flags = await db.get('dev_flags');
+            maintenance = !!flags?.maintenance;
+        } catch { /* ignore */ }
+        // Must stay public: scripts/keep-tunnel.sh probes it for '"ok":true'.
+        // Anonymous callers therefore get a minimal payload only — guild counts,
+        // SSE client counts and the public URL are operational intel.
+        const authed = !!req.session?.user?.id;
+        const body = { ok: true, botOnline: !!botClient?.user, maintenance, ts: Date.now() };
+        if (authed) {
+            Object.assign(body, {
+                uptime: botClient?.uptime ? botClient.uptime / 1000 : process.uptime(),
+                guilds: botClient?.guilds?.cache?.size ?? 0,
+                sseClients: clientCount(),
+                publicUrl,
+            });
+        }
+        res.json(body);
+    });
+
+    if (botClient) {
+        const a = (() => { try { return require('eb-bot-shared/services/analytics'); } catch(e) { return null; } })();
+
+        botClient.on('messageCreate', (msg) => {
+            if (msg.author?.bot || !msg.guild) return;
+            broadcast('message', {
+                guildId: msg.guild.id,
+                guildName: msg.guild.name,
+                user: msg.author.username,
+                avatar: msg.author.displayAvatarURL({ size: 32 }),
+                channel: msg.channel?.name,
+                description: msg.content?.slice(0, 100) || '[attachment]',
+            });
+        });
+
+        botClient.on('guildMemberAdd', (member) => {
+            broadcast('member_join', {
+                guildId: member.guild.id,
+                guildName: member.guild.name,
+                user: member.user.username,
+                avatar: member.user.displayAvatarURL({ size: 32 }),
+                description: `Joined the server`,
+            });
+        });
+
+        botClient.on('guildMemberRemove', (member) => {
+            broadcast('member_leave', {
+                guildId: member.guild.id,
+                guildName: member.guild.name,
+                user: member.user?.username || 'Unknown',
+                avatar: member.user?.displayAvatarURL({ size: 32 }) || null,
+                description: `Left the server`,
+            });
+        });
+
+        botClient.on('interactionCreate', (interaction) => {
+            if (!interaction.isChatInputCommand() || !interaction.guild) return;
+            const total = a ? a.getGlobalTotal() : 0;
+            broadcast('command', {
+                guildId: interaction.guild.id,
+                guildName: interaction.guild.name,
+                user: interaction.user.username,
+                avatar: interaction.user.displayAvatarURL({ size: 32 }),
+                description: `/${interaction.commandName}`,
+            });
+            broadcast('stats_update', { guildId: interaction.guild.id, totalCommands: total });
+        });
+
+        botClient.on('guildBanAdd', (ban) => {
+            broadcast('ban', {
+                guildId: ban.guild.id,
+                guildName: ban.guild.name,
+                user: ban.user.username,
+                avatar: ban.user.displayAvatarURL({ size: 32 }),
+                description: ban.reason || 'No reason provided',
+            });
+        });
+
+        botClient.on('guildBanRemove', (ban) => {
+            broadcast('unban', {
+                guildId: ban.guild.id,
+                guildName: ban.guild.name,
+                user: ban.user.username,
+                avatar: ban.user.displayAvatarURL({ size: 32 }),
+                description: 'Unbanned',
+            });
+        });
+
+        botClient.on('messageDelete', (msg) => {
+            if (msg.author?.bot || !msg.guild) return;
+            broadcast('message_delete', {
+                guildId: msg.guild.id,
+                guildName: msg.guild.name,
+                user: msg.author?.username || 'Unknown',
+                avatar: msg.author?.displayAvatarURL({ size: 32 }) || null,
+                description: msg.content?.slice(0, 100) || '[attachment]',
+                channel: msg.channel?.name,
+            });
+        });
+
+        botClient.on('voiceStateUpdate', (oldState, newState) => {
+            const user = newState.member?.user || oldState.member?.user;
+            if (!user || user.bot) return;
+            const guild = newState.guild || oldState.guild;
+            if (oldState.channelId === null && newState.channelId !== null) {
+                broadcast('voice_join', {
+                    guildId: guild.id,
+                    guildName: guild.name,
+                    user: user.username,
+                    avatar: user.displayAvatarURL({ size: 32 }),
+                    description: newState.channel?.name || 'Voice channel',
+                });
+            } else if (newState.channelId === null && oldState.channelId !== null) {
+                broadcast('voice_leave', {
+                    guildId: guild.id,
+                    guildName: guild.name,
+                    user: user.username,
+                    avatar: user.displayAvatarURL({ size: 32 }),
+                    description: oldState.channel?.name || 'Voice channel',
+                });
+            }
+        });
+    }
+
+    app.get('/api/analytics/global', requireAuth, (req, res, next) => {
+        try {
+            const a = (() => { try { return require('eb-bot-shared/services/analytics'); } catch(e) { return null; } })();
+            res.json({ totalCommands: a ? a.getGlobalTotal() : 0 });
+        } catch(err) { next(err); }
+    });
+
+    app.get('/api/performance', requireAuth, (req, res) => {
+        const os = require('os');
+        const cpus = os.cpus();
+        const load = os.loadavg()[0];
+        const mem = process.memoryUsage();
+        const totalMem = os.totalmem();
+        res.json({
+            ping: botClient?.ws?.ping || 0,
+            uptime: botClient?.uptime || 0,
+            cpu: Math.min(100, Math.round((load / cpus.length) * 100)),
+            memory: {
+                used: mem.heapUsed,
+                total: mem.heapTotal,
+                rss: mem.rss,
+                percent: Math.round((mem.heapUsed / mem.heapTotal) * 100)
+            },
+            system: {
+                freeMem: os.freemem(),
+                totalMem,
+                memPercent: Math.round(((totalMem - os.freemem()) / totalMem) * 100),
+                platform: os.platform(),
+                cpuCount: cpus.length
+            }
+        });
+    });
+
+    app.use('/api', (req, res) => {
+        // Keep unknown API responses deterministic and non-reflective. Echoing
+        // attacker-controlled paths complicates clients and can leak probes into
+        // logs/UI; the request ID is sufficient for correlation.
+        res.status(404).type('json').json({
+            error: 'API route not found',
+            code: 'API_NOT_FOUND',
+            requestId: req.requestId,
+        });
+    });
+
+    const dashboardIndex = path.join(__dirname, '..', '..', 'web', 'public', 'index.html');
+    const sendDashboard = (req, res, next) => {
+        // No fs.existsSync here: it is a blocking syscall on every SPA
+        // fallback request. sendFile already reports ENOENT via its callback,
+        // so a missing build returns 503 without stalling the event loop.
+        return res.sendFile(dashboardIndex, (err) => {
+            if (!err) return undefined;
+            if (err.code === 'ENOENT') {
+                return res.status(503).type('html').send(`<!doctype html><html><head><meta charset="utf-8"><title>Dashboard build missing</title></head><body style="font-family:system-ui;background:#070a0f;color:#e5e7eb;padding:2rem"><h1>Dashboard build missing</h1><p>The API is online, but the React bundle was not built.</p><code>npm --prefix apps/web ci && npm run build:web</code></body></html>`);
+            }
+            return next(err);
+        });
+    };
+
+    app.get('/', sendDashboard);
+
+    app.get('/{*path}', (req, res, next) => {
+        if (path.extname(req.path)) return next();
+        if (req.path.startsWith('/api')) return res.status(404).json({ error: 'Not found' });
+        return sendDashboard(req, res, next);
+    });
+
+    // Terminal error middleware — must be registered after every route.
+    // Classifies the failure, logs it with a correlation id, and returns a
+    // client-safe message instead of a raw err.message (which leaked absolute
+    // filesystem paths from fs errors). See middleware/errors.js.
+    app.use(errorHandler);
+
+    httpServer.on('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+            PORT++;
+            logger.warn(`Dashboard port ${PORT - 1} is already in use — trying port ${PORT}`);
+            httpServer.listen(PORT, '0.0.0.0', () => {
+                logger.info(`✨ Dashboard active at http://0.0.0.0:${PORT}`);
+            });
+            return;
+        }
+        logger.error('Dashboard server error', { error: err.message });
+    });
+
+    logAuthMode();
+
+    // Run startup security scan
+    try {
+        const { runSecurityScan } = require('./security/startup-scan');
+        runSecurityScan();
+    } catch { /* security scan must never block startup */ }
+
+    httpServer.listen(PORT, '0.0.0.0', () => {
+        logger.info(`✨ Dashboard active at http://0.0.0.0:${PORT}`);
+    });
+    return httpServer;
+}
+
+async function stopDashboard() {
+    closeMetrics();
+    closeSseClients();
+    await closeSocket();
+    try {
+        // Persist the trailing async developer-audit batch before log streams
+        // close; otherwise the last ~250 ms of audit context is lost on SIGTERM.
+        require('eb-bot-shared/services/developer-audit').flushDeveloperAudit();
+    } catch { /* auditing must never fail shutdown */ }
+    if (!httpServer.listening) return;
+    await new Promise((resolve) => httpServer.close(() => resolve()));
+}
+
+if (require.main === module) startDashboard(null);
+
+module.exports = { startDashboard, stopDashboard, app, httpServer, sessionMiddleware, emitLog };

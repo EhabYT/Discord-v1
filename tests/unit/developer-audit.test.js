@@ -1,4 +1,4 @@
-const { recordDeveloperAction, readDeveloperAudit, flushDeveloperAudit } = require('../../shared/services/developer-audit');
+const { recordDeveloperAction, readDeveloperAudit, flushDeveloperAudit } = require('eb-bot-shared/services/developer-audit');
 
 let fails = 0;
 const check = (label, ok) => {

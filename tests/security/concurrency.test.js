@@ -14,8 +14,8 @@
  *   node tests/security/concurrency.test.js
  */
 
-const { withKeyLock, withKeyLocks, _chains } = require('../../database/lock');
-const { db } = require('../../database/index');
+const { withKeyLock, withKeyLocks, _chains } = require('eb-bot-database/lock');
+const { db } = require('eb-bot-database/index');
 
 const GUILD = '111111111111111111';
 const SENDER = 'sender';

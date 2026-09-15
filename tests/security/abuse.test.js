@@ -98,11 +98,11 @@ function req(path, { method = 'GET', body, cookie } = {}) {
 }
 
 (async () => {
-    const { db } = require('../../database/index');
+    const { db } = require('eb-bot-database/index');
     await db.set(`verification_${GUILD}`, { enabled: true, kickUnverifiedMinutes: 10 });
     await db.set(`verification_pending_${GUILD}`, PENDING);
 
-    const srv = require('../../backend/src/server.js');
+    const srv = require('../../apps/api/src/server.js');
     srv.app.get('/__login/:id', (r, s) => {
         r.session.user = { id: r.params.id };
         r.session.account = { id: `account-${r.params.id}`, mfaEnabled: true };

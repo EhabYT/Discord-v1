@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { AccountStore, ACCOUNT_SCHEMA_SQL } = require('../../database/accounts');
+const { AccountStore, ACCOUNT_SCHEMA_SQL } = require('eb-bot-database/accounts');
 
 class MfaPool {
     constructor() { this.lastStep = null; this.recovery = new Map([['hash-one', false]]); }

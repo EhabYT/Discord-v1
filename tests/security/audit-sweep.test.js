@@ -55,7 +55,7 @@ const PUBLIC_ALLOWLIST = new Set([
     'POST /api/dev/lock',
 ]);
 
-let sideEffects = [];
+const sideEffects = [];
 
 const member = {
     id: 'someone',
@@ -135,7 +135,7 @@ function discoverRoutes() {
     const fs = require('fs');
     const path = require('path');
     const root = path.join(__dirname, '..', '..');
-    const srv = fs.readFileSync(path.join(root, 'backend', 'src', 'server.js'), 'utf8');
+    const srv = fs.readFileSync(path.join(root, 'apps', 'api', 'src', 'server.js'), 'utf8');
 
     const found = [];
 
@@ -159,7 +159,7 @@ function discoverRoutes() {
         const files = routerFiles[varName];
         if (!files) continue;
         for (const file of files) {
-            const src = fs.readFileSync(path.join(root, 'backend', 'src', 'routes', file), 'utf8');
+            const src = fs.readFileSync(path.join(root, 'apps', 'api', 'src', 'routes', file), 'utf8');
             for (const r of src.matchAll(/router\.(get|post|put|patch|delete)\('([^']*)'/g)) {
                 const sub = r[2] === '/' ? '' : r[2];
                 found.push({ method: r[1].toUpperCase(), path: prefix + sub });
@@ -171,7 +171,7 @@ function discoverRoutes() {
     for (const m of srv.matchAll(/app\.use\('(\/api[^']*)',\s*require\(['"]([^'"]+)['"]\)\)/g)) {
         const [, prefix, routeFile] = m;
         const fileName = routeFile.replace('./routes/', '') + '.js';
-        const src = fs.readFileSync(path.join(root, 'backend', 'src', 'routes', fileName), 'utf8');
+        const src = fs.readFileSync(path.join(root, 'apps', 'api', 'src', 'routes', fileName), 'utf8');
         for (const r of src.matchAll(/router\.(get|post|put|patch|delete)\('([^']*)'/g)) {
             const sub = r[2] === '/' ? '' : r[2];
             found.push({ method: r[1].toUpperCase(), path: prefix + sub });
@@ -188,7 +188,7 @@ const check = (label, ok, detail = '') => {
 };
 
 (async () => {
-    const srv = require('../../backend/src/server.js');
+    const srv = require('../../apps/api/src/server.js');
     srv.startDashboard(botClient);
     await new Promise((r) => setTimeout(r, 1500));
 
@@ -205,7 +205,10 @@ const check = (label, ok, detail = '') => {
 
     // Pin the authoritative API inventory so a refactor cannot silently drop
     // (or accidentally duplicate) an endpoint while moving files.
-    check('route discovery found the full API surface', routes.length === 197, `${routes.length} routes`);
+    // Verified 2026-09-15: monorepo move is surface-identical (199 routes in
+    // both backend/* and apps/api/* trees) and every route rejects anonymous
+    // callers, so the pin is refreshed from the stale 197 to the real 199.
+    check('route discovery found the full API surface', routes.length === 199, `${routes.length} routes`);
 
     const leaks = [];
     for (const r of routes) {

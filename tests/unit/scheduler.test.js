@@ -1,4 +1,4 @@
-const { Scheduler } = require('../../bot/src/scheduler');
+const { Scheduler } = require('../../apps/bot/src/scheduler');
 
 let fails = 0;
 const check = (label, ok) => {

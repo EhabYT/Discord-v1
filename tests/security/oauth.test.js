@@ -57,7 +57,7 @@ function req(path, { method = 'GET', cookie, headers = {} } = {}) {
 const cookieOf = (res) => (res.headers['set-cookie'] || []).map((c) => c.split(';')[0]).join('; ');
 
 (async () => {
-    const srv = require('../../backend/src/server.js');
+    const srv = require('../../apps/api/src/server.js');
     srv.startDashboard(botClient);
     await new Promise((r) => setTimeout(r, 1500));
 

@@ -123,12 +123,12 @@ async function loginAs(id) {
 
 (async () => {
     // Seed anonymous content and a Moderator-level role mapping.
-    const { db } = require('../../database/index');
+    const { db } = require('eb-bot-database/index');
     await db.set('confessions_999999999999999999', [{ id: 'c1', text: 'secret', authorId: 'U-123', authorTag: 'u#1' }]);
     await db.set('suggestions_999999999999999999', [{ id: 's1', text: 'idea', anonymous: true, authorId: 'U-9', authorTag: 'a#9', status: 'pending' }]);
     await db.set('dashboard_perms_999999999999999999', [{ roleId: 'r_mod', level: 2 }]);
 
-    const srv = require('../../backend/src/server.js');
+    const srv = require('../../apps/api/src/server.js');
     srv.app.get('/__login/:id', (r, s) => {
         r.session.user = { id: r.params.id, username: r.params.id };
         r.session.userGuilds = [{ id: '999999999999999999' }];

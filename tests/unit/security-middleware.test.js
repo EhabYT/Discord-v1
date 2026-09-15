@@ -9,7 +9,7 @@ const assert = require('assert');
 // ─── validate.js ─────────────────────────────────────────────
 console.log('\nSchema validation middleware:');
 
-const { validateBody, validators, SNOWFLAKE } = require('../../backend/src/middleware/validate');
+const { validateBody, validators, SNOWFLAKE } = require('../../apps/api/src/middleware/validate');
 
 // Test SNOWFLAKE regex
 assert.ok(SNOWFLAKE.test('123456789012345678'), 'SNOWFLAKE accepts valid ID');
@@ -87,7 +87,7 @@ console.log('All schema validation checks passed.');
 // ─── timeout.js ──────────────────────────────────────────────
 console.log('\nRequest timeout middleware:');
 
-const { requestTimeout, DEFAULT_TIMEOUT_MS, HEALTH_TIMEOUT_MS } = require('../../backend/src/middleware/timeout');
+const { requestTimeout, DEFAULT_TIMEOUT_MS, HEALTH_TIMEOUT_MS } = require('../../apps/api/src/middleware/timeout');
 
 assert.strictEqual(DEFAULT_TIMEOUT_MS, 30000, 'Default timeout is 30s');
 assert.strictEqual(HEALTH_TIMEOUT_MS, 5000, 'Health timeout is 5s');
@@ -112,7 +112,7 @@ console.log('All timeout checks passed.');
 // ─── ip-allowlist.js ─────────────────────────────────────────
 console.log('\nIP allowlist middleware:');
 
-const { isLoopback, normalizeIp, isIpAllowed } = require('../../backend/src/middleware/ip-allowlist');
+const { isLoopback, normalizeIp, isIpAllowed } = require('../../apps/api/src/middleware/ip-allowlist');
 
 assert.ok(isLoopback('127.0.0.1'), 'Loopback detects 127.0.0.1');
 assert.ok(isLoopback('::1'), 'Loopback detects ::1');
@@ -136,7 +136,7 @@ console.log('All IP allowlist checks passed.');
 // ─── webhook-verify.js ───────────────────────────────────────
 console.log('\nWebhook verification middleware:');
 
-const { safeCompare } = require('../../backend/src/middleware/webhook-verify');
+const { safeCompare } = require('../../apps/api/src/middleware/webhook-verify');
 const crypto = require('crypto');
 
 assert.ok(safeCompare('hello', 'hello'), 'safeCompare matches equal strings');
@@ -157,7 +157,7 @@ console.log('All webhook verification checks passed.');
 // ─── request-size.js ─────────────────────────────────────────
 console.log('\nRequest size middleware:');
 
-const { requestSizeLimit } = require('../../backend/src/middleware/request-size');
+const { requestSizeLimit } = require('../../apps/api/src/middleware/request-size');
 
 // Test size limit middleware
 let blocked = false;
@@ -188,7 +188,7 @@ console.log('All request size checks passed.');
 // ─── security-pipeline.js ────────────────────────────────────
 console.log('\nSecurity pipeline middleware:');
 
-const { guildSecurityPipeline, systemSecurityPipeline } = require('../../backend/src/middleware/security-pipeline');
+const { guildSecurityPipeline, systemSecurityPipeline } = require('../../apps/api/src/middleware/security-pipeline');
 
 // Test that pipeline returns array of middleware
 const guildPipeline = guildSecurityPipeline({}, 0);
@@ -207,7 +207,7 @@ console.log('All security pipeline checks passed.');
 // ─── developer-audit.js (security alerts) ────────────────────
 console.log('\nDeveloper audit security alerts:');
 
-const { SECURITY_ACTIONS, SEVERITY } = require('../../shared/services/developer-audit');
+const { SECURITY_ACTIONS, SEVERITY } = require('eb-bot-shared/services/developer-audit');
 
 assert.ok(SECURITY_ACTIONS.has('authorization.denied'), 'SECURITY_ACTIONS includes authorization.denied');
 assert.ok(SECURITY_ACTIONS.has('restore'), 'SECURITY_ACTIONS includes restore');
@@ -225,7 +225,7 @@ console.log('All developer audit security alert checks passed.');
 // ─── command-guard.js ────────────────────────────────────────
 console.log('\nBot command guard:');
 
-const { validateStringInput, validateSnowflake, validateDuration } = require('../../bot/src/guards/command-guard');
+const { validateStringInput, validateSnowflake, validateDuration } = require('../../apps/bot/src/guards/command-guard');
 
 // Test validateStringInput
 const validStr = validateStringInput('hello world', { max: 100 });

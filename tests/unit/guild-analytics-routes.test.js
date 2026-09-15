@@ -1,5 +1,5 @@
 const assert = require('assert');
-const registerAnalyticsRoutes = require('../../backend/src/routes/guilds/analytics');
+const registerAnalyticsRoutes = require('../../apps/api/src/routes/guilds/analytics');
 
 function captureRoutes(analytics) {
     const routes = [];

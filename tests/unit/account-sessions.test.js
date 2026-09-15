@@ -2,7 +2,7 @@ const assert = require('assert');
 const {
     DAY_MS, deviceLabel, attachSessionSecurity, touchSessionSecurity,
     hasRecentReauthentication, markReauthenticated,
-} = require('../../shared/services/account-sessions');
+} = require('eb-bot-shared/services/account-sessions');
 
 (() => {
     const req = { headers: { 'user-agent': 'Example\nBrowser  1.0' } };

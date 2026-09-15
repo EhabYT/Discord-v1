@@ -23,7 +23,7 @@ process.env.DASHBOARD_AUTH = 'true';
 const http = require('http');
 const { EventEmitter } = require('events');
 const { Collection } = require('discord.js');
-const { classify, ApiError, badRequest } = require('../../backend/src/middleware/errors');
+const { classify, ApiError, badRequest } = require('../../apps/api/src/middleware/errors');
 
 const PORT = process.env.DASHBOARD_PORT;
 const GUILD = '111111111111111111';
@@ -131,7 +131,7 @@ function req(path, { method = 'GET', body, cookie } = {}) {
 
     console.log('\nLive server behaviour:\n');
 
-    const srv = require('../../backend/src/server.js');
+    const srv = require('../../apps/api/src/server.js');
     srv.app.get('/__login/:id', (r, s) => {
         r.session.user = { id: r.params.id };
         r.session.userGuilds = [{ id: GUILD }];
@@ -182,7 +182,7 @@ function req(path, { method = 'GET', body, cookie } = {}) {
     console.log('\nSource-level guarantee:\n');
     const fs = require('fs');
     const path = require('path');
-    const backend = path.join(__dirname, '..', '..', 'backend', 'src');
+    const backend = path.join(__dirname, '..', '..', 'apps', 'api', 'src');
     const routeFiles = fs.readdirSync(path.join(backend, 'routes'))
         .filter((name) => name.endsWith('.js'))
         .map((name) => path.join(backend, 'routes', name));

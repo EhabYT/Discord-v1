@@ -2,7 +2,7 @@ const assert = require('assert');
 const {
     base32Encode, base32Decode, encryptSecret, decryptSecret, totpAt, verifyTotp,
     recoveryHash, generateRecoveryCodes, enrollmentPayload,
-} = require('../../shared/services/account-mfa');
+} = require('eb-bot-shared/services/account-mfa');
 
 function restoreKey(value) {
     if (value === undefined) delete process.env.ACCOUNT_ENCRYPTION_KEY;

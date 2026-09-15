@@ -1,6 +1,6 @@
 const assert = require('assert');
-const { dashboardOrigin, escapeHtml, sendAccountEmail } = require('../../shared/services/account-mail');
-const { hashAccountToken, ACCOUNT_SCHEMA_SQL } = require('../../database/accounts');
+const { dashboardOrigin, escapeHtml, sendAccountEmail } = require('eb-bot-shared/services/account-mail');
+const { hashAccountToken, ACCOUNT_SCHEMA_SQL } = require('eb-bot-database/accounts');
 
 (async () => {
     const previous = { ...process.env };

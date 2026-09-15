@@ -29,7 +29,7 @@ const check = (label, ok, detail = '') => {
 };
 
 // Capture logger output so we can assert the failure was *recorded*, not just swallowed.
-const logger = require('../../shared/lib/logger');
+const logger = require('eb-bot-shared/lib/logger');
 const logged = [];
 for (const level of ['error', 'warn', 'info', 'debug']) {
     const original = logger[level].bind(logger);
@@ -37,7 +37,7 @@ for (const level of ['error', 'warn', 'info', 'debug']) {
     logger[`__orig_${level}`] = original;
 }
 
-const { loadEvents } = require('../../bot/src/events/index.js');
+const { loadEvents } = require('../../apps/bot/src/events/index.js');
 
 /** A client stub that records listeners the loader registers. */
 function makeClient() {
@@ -81,7 +81,7 @@ function makeClient() {
     escaped = null;
     logged.length = 0;
     const c2 = makeClient();
-    const evIndex = require('../../bot/src/events/index.js');
+    const evIndex = require('../../apps/bot/src/events/index.js');
     // Re-register via loadEvents on a fresh client, then emit an event whose
     // handler is async and will reject on a null argument.
     evIndex.loadEvents(c2);
@@ -160,7 +160,7 @@ function makeClient() {
         process.env.DASHBOARD_AUTH = 'true';
         delete process.env.SESSION_SECRET;
         delete process.env.DATABASE_URL;
-        require('./backend/src/server');
+        require('./apps/api/src/server');
         console.log('SERVER-MODULE-OK');
         process.exit(0);
     `], { cwd: path.join(__dirname, '..', '..'), encoding: 'utf8', timeout: 8000 });
@@ -171,12 +171,12 @@ function makeClient() {
     console.log('\nSource-level guarantees:\n');
 
     const fs = require('fs');
-    const src = fs.readFileSync(path.join(__dirname, '..', '..', 'bot', 'src', 'events', 'index.js'), 'utf8');
+    const src = fs.readFileSync(path.join(__dirname, '..', '..', 'apps', 'bot', 'src', 'events', 'index.js'), 'utf8');
     check('client events are wrapped by the boundary', /client\.(on|once)\(event\.name, handler\)/.test(src));
     check('player events are wrapped by the boundary', /safeDispatch\('Player'/.test(src));
     check('handlers missing execute() are rejected at load', /typeof event\.execute !== 'function'/.test(src));
 
-    const idx = fs.readFileSync(path.join(__dirname, '..', '..', 'bot', 'src', 'index.js'), 'utf8');
+    const idx = fs.readFileSync(path.join(__dirname, '..', '..', 'apps', 'bot', 'src', 'index.js'), 'utf8');
     check('index.js no longer reads .message off a raw rejection',
         !/reason\.message/.test(idx));
     check('index.js exits on uncaughtException', /process\.exit\(1\)/.test(idx));

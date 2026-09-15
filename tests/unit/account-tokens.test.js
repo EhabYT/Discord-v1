@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { AccountStore, ACCOUNT_SCHEMA_SQL, hashAccountToken } = require('../../database/accounts');
+const { AccountStore, ACCOUNT_SCHEMA_SQL, hashAccountToken } = require('eb-bot-database/accounts');
 
 class TokenPool {
     constructor() {

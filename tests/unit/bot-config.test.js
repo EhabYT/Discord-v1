@@ -1,6 +1,6 @@
 const {
     config, validateBotConfig, containsProfanity, normalizedWords,
-} = require('../../shared/config/bot-config');
+} = require('eb-bot-shared/config/bot-config');
 
 let fails = 0;
 const check = (label, ok) => {

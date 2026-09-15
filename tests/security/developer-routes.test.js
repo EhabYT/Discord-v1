@@ -38,7 +38,7 @@ const cookieOf = (res) => (res.headers['set-cookie'] || []).map((c) => c.split('
 async function login(id) { return cookieOf(await req(`/__dev_login/${id}`)); }
 
 (async () => {
-    const srv = require('../../backend/src/server');
+    const srv = require('../../apps/api/src/server');
     srv.app.get('/__dev_login/:id', (r, s) => {
         r.session.user = { id: r.params.id };
         r.session.account = { id: `account-${r.params.id}`, mfaEnabled: true };

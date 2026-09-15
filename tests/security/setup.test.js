@@ -1,7 +1,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const setup = require('../../backend/src/routes/setup');
+const setup = require('../../apps/api/src/routes/setup');
 
 let fails = 0;
 const check = (label, ok, detail = '') => {
@@ -39,7 +39,7 @@ check('status returns booleans, never secret values',
     typeof status.configured.DISCORD_TOKEN === 'boolean'
     && !JSON.stringify(status).includes('test-only-session-secret'));
 
-const source = fs.readFileSync(path.join(__dirname, '..', '..', 'backend', 'src', 'routes', 'setup.js'), 'utf8');
+const source = fs.readFileSync(path.join(__dirname, '..', '..', 'apps', 'api', 'src', 'routes', 'setup.js'), 'utf8');
 check('editor is disabled in production', /NODE_ENV === 'production'/.test(source));
 check('editor requires a direct loopback request', /!isLoopback\(req\)/.test(source));
 

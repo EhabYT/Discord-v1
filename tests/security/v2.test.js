@@ -1,4 +1,4 @@
-const { systemSnapshot, RELEASE } = require('../../backend/src/routes/v2');
+const { systemSnapshot, RELEASE } = require('../../apps/api/src/routes/v2');
 
 let fails = 0;
 const check = (label, ok) => {

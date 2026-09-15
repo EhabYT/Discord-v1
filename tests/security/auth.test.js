@@ -96,7 +96,7 @@ const MUST_401 = [
 ];
 
 (async () => {
-    require('../../backend/src/server.js').startDashboard(botClient);
+    require('../../apps/api/src/server.js').startDashboard(botClient);
     await new Promise((r) => setTimeout(r, 1500));
 
     let failures = 0;

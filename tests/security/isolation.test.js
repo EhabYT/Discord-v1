@@ -115,7 +115,7 @@ async function loginAs(id) {
 }
 
 (async () => {
-    const { db } = require('../../database/index');
+    const { db } = require('eb-bot-database/index');
     await db.set(`confessions_${GUILD_A}`, [{ id: 'c1', text: 'secret', authorId: 'U-PRIV', authorTag: 'p#1' }]);
     await db.set(`dashboard_perms_${GUILD_B}`, [{ roleId: ROLE_A, level: 3 }]);
     await db.set(`automod_${GUILD_B}`, { untouched: true });
@@ -123,7 +123,7 @@ async function loginAs(id) {
     // assertions below reflect this run only.
     await Promise.all([db.delete(`automod_${GUILD_A}`), db.delete(`automod_${GUILD_A}9`)]).catch(() => {});
 
-    const srv = require('../../backend/src/server.js');
+    const srv = require('../../apps/api/src/server.js');
     srv.app.get('/__login/:id', (r, s) => {
         r.session.user = { id: r.params.id };
         r.session.account = { id: `account-${r.params.id}`, mfaEnabled: true };

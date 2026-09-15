@@ -28,15 +28,10 @@ jobs:
         with:
           node-version-file: .node-version
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            dashboard/package-lock.json
+          cache-dependency-path: package-lock.json
 
-      - name: Install root dependencies
+      - name: Install workspace dependencies
         run: npm ci --ignore-scripts
-
-      - name: Install Dashboard dependencies
-        run: npm --prefix dashboard ci --ignore-scripts
 
       - name: Run authoritative release gate
         run: npm run verify

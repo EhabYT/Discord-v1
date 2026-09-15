@@ -61,7 +61,7 @@ function check(label, ok, detail = '') {
 (async () => {
     console.log('Security Headers:\n');
 
-    const srv = require('../../backend/src/server');
+    const srv = require('../../apps/api/src/server');
     srv.startDashboard(botClient);
     await new Promise((r) => setTimeout(r, 1500));
 

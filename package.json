@@ -1,75 +1,64 @@
 {
-  "name": "eb-bot",
+  "name": "eb-bot-monorepo",
   "version": "3.1.0",
-  "description": "Discord.js bot with a React dashboard and Express API.",
-  "author": "EB-Bot Team",
-  "license": "MIT",
   "private": true,
-  "main": "bot/src/index.js",
-  "engines": {
-    "node": "22.12.x"
-  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "start": "node bot/src/index.js",
-    "start:fullstack": "node bot/src/index.js",
-    "start:backend": "node backend/src/server.js",
-    "dev": "nodemon bot/src/index.js",
-    "dev:bot": "nodemon bot/src/index.js",
-    "dev:backend": "nodemon backend/src/server.js",
-    "dev:frontend": "npm --prefix dashboard run dev",
-    "dev:fullstack": "concurrently -n bot,web -c blue,green \"nodemon bot/src/index.js\" \"npm --prefix dashboard run dev\"",
-    "build": "npm run build:dashboard",
-    "dashboard": "node backend/src/server.js",
-    "deploy": "node -e \"require('dotenv').config(); require('./shared/services/startup').deployCommands(process.env.DISCORD_TOKEN, process.env.CLIENT_ID, process.env.GUILD_ID || null)\"",
-    "smoke:live": "node scripts/live-smoke.js",
-    "build:dashboard": "npm --prefix dashboard run build",
+    "start": "node apps/bot/src/index.js",
+    "start:bot": "node apps/bot/src/index.js",
+    "start:api": "node apps/api/src/server.js",
+    "start:web": "npm --prefix apps/web run dev",
+    "start_bot": "npm run start:bot",
+    "start_api": "npm run start:api",
+    "start_web": "npm run start:web",
+    "dev": "concurrently -n bot,api,web -c blue,green,yellow \"nodemon apps/bot/src/index.js\" \"nodemon apps/api/src/server.js\" \"npm --prefix apps/web run dev\"",
+    "dev:bot": "nodemon apps/bot/src/index.js",
+    "dev:api": "nodemon apps/api/src/server.js",
+    "dev:web": "npm --prefix apps/web run dev",
+    "dev_bot": "npm run dev:bot",
+    "dev_api": "npm run dev:api",
+    "dev_frontend": "npm run dev:web",
+    "build": "npm run build:web",
+    "build:web": "npm --prefix apps/web run build",
+    "build:api": "echo 'API has no build step'",
+    "build_web": "npm run build:web",
+    "build_api": "npm run build:api",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "lint:gate": "node scripts/lint-gate.js",
-    "validate:release": "node scripts/validate-release-config.js",
+    "lint_fix": "npm run lint:fix",
+    "test": "npm run test:unit && npm run test:security",
     "test:unit": "node tests/unit/command-loader.test.js && node tests/unit/bot-config.test.js && node tests/unit/welcome-vars.test.js && node tests/unit/scheduler.test.js && node tests/unit/backup.test.js && node tests/unit/guild-analytics-routes.test.js && node tests/unit/accounts.test.js && node tests/unit/passwords.test.js && node tests/unit/account-mail.test.js && node tests/unit/account-tokens.test.js && node tests/unit/account-avatars.test.js && node tests/unit/account-mfa.test.js && node tests/unit/account-mfa-store.test.js && node tests/unit/account-sessions.test.js && node tests/unit/developer-audit.test.js && node tests/unit/suggestions.test.js && node tests/unit/community-errors.test.js && node tests/unit/dashboard-api-errors.test.js && node tests/unit/security-middleware.test.js",
     "test:security": "node tests/security/auth.test.js && node tests/security/hierarchy.test.js && node tests/security/isolation.test.js && node tests/security/oauth.test.js && node tests/security/abuse.test.js && node tests/security/concurrency.test.js && node tests/security/resilience.test.js && node tests/security/errors.test.js && node tests/security/audit-sweep.test.js && node tests/security/dependency-patches.test.js && node tests/security/session-store.test.js && node tests/security/postgres.test.js && node tests/security/migration.test.js && node tests/security/sse.test.js && node tests/security/setup.test.js && node tests/security/v2.test.js && node tests/security/developer-access.test.js && node tests/security/developer-routes.test.js && node tests/security/metrics.test.js && node tests/security/maintenance.test.js && node tests/security/transaction-locks.test.js && node tests/security/live-smoke.test.js && node tests/security/account-contract.test.js && node tests/security/headers.test.js",
-    "test": "npm run test:unit && npm run test:security",
-    "verify": "npm run validate:release && npm run lint:gate && npm test && npm run audit:prod && npm run build:dashboard",
-    "audit:prod": "npm audit --omit=dev --audit-level=high && npm --prefix dashboard audit --omit=dev --audit-level=high",
-    "migrate:sqlite": "node scripts/migrate-sqlite-to-postgres.js",
-    "postinstall": "npm --prefix dashboard ci --ignore-scripts && npm run build:dashboard"
+    "test_unit": "npm run test:unit",
+    "test_security": "npm run test:security",
+    "deploy": "node -e \"require('dotenv').config(); require('./packages/shared/services/startup').deployCommands(process.env.DISCORD_TOKEN, process.env.CLIENT_ID, process.env.GUILD_ID || null)\"",
+    "smoke:live": "node packages/scripts/live-smoke.js",
+    "smoke_live": "npm run smoke:live",
+    "migrate:sqlite": "node packages/scripts/migrate-sqlite-to-postgres.js",
+    "migrate_sqlite": "npm run migrate:sqlite",
+    "lint:gate": "node packages/scripts/lint-gate.js",
+    "lint_gate": "npm run lint:gate",
+    "validate:release": "node packages/scripts/validate-release-config.js",
+    "validate_release": "npm run validate:release",
+    "audit:prod": "npm audit --omit=dev --audit-level=high",
+    "verify": "npm run validate:release && npm run lint:gate && npm test && npm run audit:prod && npm run build:web",
+    "postinstall": "npm run build:web",
+    "clean": "node -e \"for (const p of ['node_modules','apps/web/node_modules','apps/api/node_modules','apps/bot/node_modules','packages/database/node_modules','packages/shared/node_modules','packages/scripts/node_modules','packages/config/node_modules','.turbo']) { try { require('fs').rmSync(p, { recursive: true, force: true }); console.log('removed', p); } catch (e) { console.log('skip', p, e.message); } }\""
   },
   "dependencies": {
-    "@discord-player/extractor": "^3.0.3",
-    "@discord-player/opus": "^7.2.0",
-    "@napi-rs/canvas": "^1.0.8",
-    "@snazzah/davey": "^0.1.12",
-    "argon2": "0.44.0",
-    "axios": "^1.20.0",
-    "compression": "^1.8.1",
-    "discord-player": "^6.2.1",
-    "discord-player-youtubei": "^2.0.0",
-    "discord.js": "^14.27.0",
     "dotenv": "^17.4.2",
-    "eb-bot": "file:bot",
-    "eb-bot-backend": "file:backend",
-    "eb-bot-database": "file:database",
-    "eb-bot-shared": "file:shared",
-    "express": "^5.2.1",
-    "express-session": "^1.19.0",
-    "ffmpeg-static": "^5.3.0",
-    "file-type": "^22.0.2",
-    "genius-lyrics": "^4.4.7",
-    "helmet": "^8.3.0",
-    "mediaplex": "^1.0.0",
-    "multer": "^2.3.0",
-    "pg": "^8.16.3",
-    "qrcode": "^1.5.4",
-    "simple-ytdl-core": "^1.1.1",
-    "socket.io": "^4.8.3",
-    "soundcloud-scraper": "^5.0.3",
-    "youtube-dl-exec": "^3.1.15"
+    "file-type": "^22.0.2"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
+    "discord.js": "^14.27.0",
     "eslint": "^9.39.5",
-    "nodemon": "^3.1.14"
+    "nodemon": "^3.1.14",
+    "turbo": "^2.0.0",
+    "prettier": "^3.0.0"
   },
   "overrides": {
     "esbuild": "^0.28.1",
@@ -77,21 +66,64 @@
   },
   "nodemonConfig": {
     "watch": [
-      "bot/src",
-      "backend/src",
-      "shared",
-      "database/*.js",
-      "config"
+      "apps/bot/src",
+      "apps/api/src",
+      "packages/shared",
+      "packages/database/*.js",
+      "packages/config"
     ],
     "ignore": [
       "logs/*",
       "*.log",
-      "database/ephemeral-fallback.json",
-      "dashboard/*",
+      "packages/database/ephemeral-fallback.json",
+      "apps/web/*",
       "node_modules",
       ".git"
     ],
     "ext": "js,json",
     "delay": 1500
+  },
+  "turbo": {
+    "$schema": "https://turbo.build/schema.json",
+    "globalDependencies": [
+      "**/.env.*local"
+    ],
+    "pipeline": {
+      "build": {
+        "dependsOn": [
+          "^build"
+        ],
+        "outputs": [
+          "dist/**",
+          ".next/**",
+          "!.next/cache/**"
+        ]
+      },
+      "test": {
+        "dependsOn": [
+          "build"
+        ],
+        "outputs": [
+          "coverage/**"
+        ]
+      },
+      "lint": {
+        "outputs": []
+      },
+      "dev": {
+        "cache": false,
+        "persistent": true
+      },
+      "type-check": {
+        "dependsOn": [
+          "^build"
+        ],
+        "outputs": []
+      }
+    }
+  },
+  "packageManager": "npm@10.8.0",
+  "engines": {
+    "node": "22.12.x"
   }
 }

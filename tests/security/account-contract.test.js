@@ -7,10 +7,10 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 
 (() => {
     console.log('\nComplete account/authentication contract:\n');
-    const app = read('dashboard/src/App.jsx');
+    const app = read('apps/web/src/App.jsx');
     // Canonical path-route table lives in lib/returnUrl.js (imported by App);
     // the guard below proves App actually enforces it.
-    const routes = read('dashboard/src/lib/returnUrl.js');
+    const routes = read('apps/web/src/lib/returnUrl.js');
     for (const route of ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email', '/profile', '/settings', '/settings/security']) {
         assert(routes.includes(`'${route}'`), `missing UI route ${route}`);
     }
@@ -18,29 +18,29 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
     assert.match(app, /accountProtectedPage/);
     assert.match(app, /window\.location\.replace\(`\/login\?return=/);
 
-    const authRoutes = read('backend/src/routes/account-auth.js');
+    const authRoutes = read('apps/api/src/routes/account-auth.js');
     for (const endpoint of ['/register', '/login', '/mfa/verify', '/forgot-password', '/reset-password', '/verify-email']) {
         assert(authRoutes.includes(`'${endpoint}'`), `missing auth endpoint ${endpoint}`);
     }
     assert.match(authRoutes, /dummyHashPromise/, 'unknown accounts must still perform password verification work');
     assert.match(authRoutes, /attachMfaChallenge/, 'MFA accounts must not become authenticated after password only');
 
-    const accountRoutes = read('backend/src/routes/account.js');
+    const accountRoutes = read('apps/api/src/routes/account.js');
     for (const endpoint of ['/profile', '/preferences', '/email/change', '/password/change', '/mfa/enroll', '/mfa/confirm', '/mfa/disable', '/recovery-codes/regenerate', '/sessions', '/sessions/revoke-others', '/sessions/revoke-all', '/activity', '/reauthenticate', '/deactivate', '/avatar']) {
         assert(accountRoutes.includes(`'${endpoint}'`) || accountRoutes.includes(`'${endpoint}/:id'`), `missing account endpoint ${endpoint}`);
     }
     assert.match(accountRoutes, /hasRecentReauthentication/, 'deactivation must require recent reauthentication');
     assert.match(accountRoutes, /confirmation[^\n]*DELETE/, 'deactivation must require typed confirmation');
 
-    const schema = read('supabase/schema.sql');
+    const schema = read('packages/database/supabase/schema.sql');
     for (const table of ['accounts', 'account_credentials', 'account_email_tokens', 'account_mfa_totp', 'account_recovery_codes', 'account_session_metadata', 'account_security_events']) {
         assert(schema.includes(`public.${table}`), `missing schema table ${table}`);
     }
-    assert(!/password_hash[^\n]*SELECT/i.test(read('backend/src/routes/account.js')));
+    assert(!/password_hash[^\n]*SELECT/i.test(read('apps/api/src/routes/account.js')));
 
-    const profile = read('dashboard/src/pages/Profile.jsx');
-    const security = read('dashboard/src/pages/AccountSecurity.jsx');
-    const hub = read('dashboard/src/pages/AccountSettings.jsx');
+    const profile = read('apps/web/src/pages/Profile.jsx');
+    const security = read('apps/web/src/pages/AccountSecurity.jsx');
+    const hub = read('apps/web/src/pages/AccountSettings.jsx');
     for (const source of [profile, security]) {
         assert.match(source, /cyber-card/);
         assert.match(source, /sm:/, 'account pages must retain mobile-first responsive classes');
@@ -54,7 +54,7 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
     // t('profile.*') / t('aset.*') key used must exist in all five
     // non-English dictionaries so no locale ever shows a raw key or falls
     // back to English silently. Dictionaries live in code-split
-    // dashboard/src/locales/*.js (loaded on demand); i18n.jsx only holds the
+    // apps/web/src/locales/*.js (loaded on demand); i18n.jsx only holds the
     // registry and loader.
     const used = new Set();
     for (const source of [profile, hub]) {
@@ -62,8 +62,8 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
     }
     assert(used.size > 120, `profile i18n key coverage looks thin (${used.size} keys)`);
     const dicts = {};
-    for (const name of ['ar', 'de', 'fr', 'es', 'tr']) dicts[name] = read(`dashboard/src/locales/${name}.js`);
-    const i18n = read('dashboard/src/i18n.jsx');
+    for (const name of ['ar', 'de', 'fr', 'es', 'tr']) dicts[name] = read(`apps/web/src/locales/${name}.js`);
+    const i18n = read('apps/web/src/i18n.jsx');
     for (const name of Object.keys(dicts)) {
         assert(i18n.includes(`./locales/${name}.js`), `i18n loader must reference locale ${name}`);
     }
@@ -75,8 +75,8 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
     }
     assert.deepStrictEqual(missing, [], `missing locale entries: ${missing.join(', ')}`);
 
-    const authMiddleware = read('backend/src/middleware/auth.js');
-    const guildMiddleware = read('backend/src/middleware/guild-access.js');
+    const authMiddleware = read('apps/api/src/middleware/auth.js');
+    const guildMiddleware = read('apps/api/src/middleware/guild-access.js');
     assert.match(authMiddleware, /session\?\.user\?\.id/, 'Discord session ID remains explicit');
     assert.match(guildMiddleware, /sessionUserId/, 'guild access must continue using Discord identity');
 

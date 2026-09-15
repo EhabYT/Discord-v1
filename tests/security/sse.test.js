@@ -1,4 +1,4 @@
-const { addClient, broadcast, clientCount, closeAll } = require('../../backend/src/utils/sse');
+const { addClient, broadcast, clientCount, closeAll } = require('../../apps/api/src/utils/sse');
 
 function fakeResponse() {
     return {

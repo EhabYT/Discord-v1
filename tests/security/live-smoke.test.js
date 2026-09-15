@@ -1,6 +1,6 @@
 const assert = require('assert');
 const http = require('http');
-const { runAcceptance, parseArgs } = require('../../scripts/live-smoke');
+const { runAcceptance, parseArgs } = require('../../packages/scripts/live-smoke');
 
 const securityHeaders = {
     'X-Content-Type-Options': 'nosniff',

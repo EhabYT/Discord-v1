@@ -38,7 +38,7 @@ const check = (label, ok, detail = '') => {
 console.log('\nLegacy SQLite → Supabase migration tool:\n');
 check('legacy fixture was created', create.status === 0, create.stderr);
 const migrate = spawnSync(process.execPath, [
-    path.join(__dirname, '..', '..', 'scripts', 'migrate-sqlite-to-postgres.js'),
+    path.join(__dirname, '..', '..', 'packages', 'scripts', 'migrate-sqlite-to-postgres.js'),
     '--source', source, '--dry-run',
 ], { encoding: 'utf8', timeout: 10_000 });
 check('dry run validates legacy records', migrate.status === 0 && /Validated 2 legacy records/.test(migrate.stdout),

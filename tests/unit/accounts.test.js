@@ -1,6 +1,6 @@
 const assert = require('assert');
-const { AccountStore, normalizeUsername, sanitizePreferences, ACCOUNT_SCHEMA_SQL } = require('../../database/accounts');
-const { BIO_MAX_LENGTH, normalizeBio, normalizePreferences } = require('../../shared/services/account-validation');
+const { AccountStore, normalizeUsername, sanitizePreferences, ACCOUNT_SCHEMA_SQL } = require('eb-bot-database/accounts');
+const { BIO_MAX_LENGTH, normalizeBio, normalizePreferences } = require('eb-bot-shared/services/account-validation');
 
 class FakePool {
     constructor() {

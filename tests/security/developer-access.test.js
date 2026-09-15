@@ -1,7 +1,7 @@
 const {
     SYSTEM_ROLES, baseSystemRole, systemRole, requireSystemRole, redactEnv,
-} = require('../../backend/src/middleware/devauth');
-const { safeObject } = require('../../shared/services/developer-audit');
+} = require('../../apps/api/src/middleware/devauth');
+const { safeObject } = require('eb-bot-shared/services/developer-audit');
 
 const original = {
     OWNER_ID: process.env.OWNER_ID,

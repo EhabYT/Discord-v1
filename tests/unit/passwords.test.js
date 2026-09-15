@@ -1,6 +1,6 @@
 const assert = require('assert');
-const { OPTIONS, validatePassword, hashPassword, verifyPassword } = require('../../shared/services/passwords');
-const { validateRegistration } = require('../../backend/src/routes/account-auth');
+const { OPTIONS, validatePassword, hashPassword, verifyPassword } = require('eb-bot-shared/services/passwords');
+const { validateRegistration } = require('../../apps/api/src/routes/account-auth');
 
 (async () => {
     assert.strictEqual(OPTIONS.memoryCost, 19 * 1024);

@@ -1,5 +1,5 @@
-const suggestions = require('../../shared/services/suggestions');
-const { classify } = require('../../backend/src/middleware/errors');
+const suggestions = require('eb-bot-shared/services/suggestions');
+const { classify } = require('../../apps/api/src/middleware/errors');
 
 let fails = 0;
 const check = (label, ok) => {

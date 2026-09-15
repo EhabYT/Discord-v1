@@ -1,7 +1,7 @@
-const polls = require('../../shared/services/polls');
-const tags = require('../../shared/services/tags');
-const confessions = require('../../shared/services/confessions');
-const { classify } = require('../../backend/src/middleware/errors');
+const polls = require('eb-bot-shared/services/polls');
+const tags = require('eb-bot-shared/services/tags');
+const confessions = require('eb-bot-shared/services/confessions');
+const { classify } = require('../../apps/api/src/middleware/errors');
 
 let fails = 0;
 const check = (label, ok) => {

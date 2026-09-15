@@ -1,5 +1,5 @@
-const { db } = require('../../database/index');
-const { maintenanceGuard, invalidateMaintenanceCache } = require('../../backend/src/middleware/maintenance');
+const { db } = require('eb-bot-database/index');
+const { maintenanceGuard, invalidateMaintenanceCache } = require('../../apps/api/src/middleware/maintenance');
 
 const originalSupport = process.env.SUPPORT_IDS;
 process.env.SUPPORT_IDS = '333333333333333333';

@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { withKeyLock, withKeyLocks, _chains } = require('../../database/lock');
+const { withKeyLock, withKeyLocks, _chains } = require('eb-bot-database/lock');
 
 const root = path.join(__dirname, '..', '..');
 
@@ -44,13 +44,13 @@ const root = path.join(__dirname, '..', '..');
     assert.strictEqual(_chains.size, 0, 'all process-local lock queues must drain');
 
     const protectedSources = [
-        'bot/src/commands/economy/pay.js',
-        'bot/src/commands/economy/points.js',
-        'bot/src/commands/economy/slots.js',
-        'bot/src/commands/economy/work.js',
-        'bot/src/commands/community/giveaway.js',
-        'backend/src/routes/guilds/giveaways.js',
-        'shared/services/scheduler-jobs.js',
+        'apps/bot/src/commands/economy/pay.js',
+        'apps/bot/src/commands/economy/points.js',
+        'apps/bot/src/commands/economy/slots.js',
+        'apps/bot/src/commands/economy/work.js',
+        'apps/bot/src/commands/community/giveaway.js',
+        'apps/api/src/routes/guilds/giveaways.js',
+        'packages/shared/services/scheduler-jobs.js',
     ];
     for (const relative of protectedSources) {
         const source = fs.readFileSync(path.join(root, relative), 'utf8');
@@ -58,9 +58,9 @@ const root = path.join(__dirname, '..', '..');
         assert.match(source, /lockedDb/, `${relative} must use the transaction-bound database adapter`);
     }
 
-    const giveawayCommand = fs.readFileSync(path.join(root, 'bot/src/commands/community/giveaway.js'), 'utf8');
-    const guildRoutes = fs.readFileSync(path.join(root, 'backend/src/routes/guilds.js'), 'utf8');
-    const scheduler = fs.readFileSync(path.join(root, 'shared/services/scheduler-jobs.js'), 'utf8');
+    const giveawayCommand = fs.readFileSync(path.join(root, 'apps/bot/src/commands/community/giveaway.js'), 'utf8');
+    const guildRoutes = fs.readFileSync(path.join(root, 'apps/api/src/routes/guilds.js'), 'utf8');
+    const scheduler = fs.readFileSync(path.join(root, 'packages/shared/services/scheduler-jobs.js'), 'utf8');
     assert.doesNotMatch(giveawayCommand, /await db\.set\(giveawaysKey/,
         'Discord giveaway mutations must not bypass the transaction adapter');
     assert.doesNotMatch(guildRoutes, /await db\.set\(`giveaways_/,

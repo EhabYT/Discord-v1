@@ -30,16 +30,16 @@
 
 ```mermaid
 graph TD
-    Client[Discord Guild / User] -->|Commands / Events| Bot[Discord.js Bot bot/src/index.js]
+    Client[Discord Guild / User] -->|Commands / Events| Bot[Discord.js Bot apps/bot/src/index.js]
     Bot -->|Reads / Writes| PG[(Supabase PostgreSQL bot_kv)]
-    Bot -->|Loads Rules| Config[config/bot.json + shared/config/bot-config.js]
-    Bot -->|Triggers| Sched[Scheduler bot/src/scheduler.js]
+    Bot -->|Loads Rules| Config[packages/config/bot.json + packages/shared/config/bot-config.js]
+    Bot -->|Triggers| Sched[Scheduler apps/bot/src/scheduler.js]
     Sched -->|timed-bans/giveaways/reminders/polls/birthdays| PG
-    Sched -->|backup job every 6h| BackupMod[shared/services/backup.js]
+    Sched -->|backup job every 6h| BackupMod[packages/shared/services/backup.js]
     BackupMod -->|writes JSON| Disk[(backups/ directory)]
     BackupMod -->|optional embed| Webhook[Discord Channel via Webhook]
-    Admin[Server Administrator] -->|OAuth| Dash[React Dashboard dashboard/src]
-    Dash -->|same-origin fetch + Socket.IO/SSE| API[Express backend/src/server.js]
+    Admin[Server Administrator] -->|OAuth| Dash[React Dashboard apps/web/src]
+    Dash -->|same-origin fetch + Socket.IO/SSE| API[Express apps/api/src/server.js]
     API -->|guild 0-3 + system roles| Bot
     API -->|Visual Reports| Status[GET /api/v2/status + /api/health]
     Admin -->|Download/Restore JSON| BackupAPI[GET/POST /api/guild/:id/backup]
@@ -76,11 +76,11 @@ PostgreSQL        Gateway/REST/Voice
 ## المميزات الرئيسية والإنتاجية (Production Features)
 
 
-- **⚙️ توحيد إعدادات البوت والتحكم المركزي ([config/bot.json](config/bot.json)):** حصر جميع متغيرات البوت، الألوان، مهدئات السبام، وخيارات الألعاب في ملف تهيئة رئيسي موحد موثق بـ JSON Schema مع محمل مركزي ([shared/config/bot-config.js](shared/config/bot-config.js)) يتحقق من الصحة ويعمل تجميد عميق للإعدادات.
+- **⚙️ توحيد إعدادات البوت والتحكم المركزي ([packages/config/bot.json](packages/config/bot.json)):** حصر جميع متغيرات البوت، الألوان، مهدئات السبام، وخيارات الألعاب في ملف تهيئة رئيسي موحد موثق بـ JSON Schema مع محمل مركزي ([shared/config/bot-config.js](shared/config/bot-config.js)) يتحقق من الصحة ويعمل تجميد عميق للإعدادات.
 - **🛡️ حماية الأوامر من السبام (Slash Commands Rate-Limiter):** تحديد سرعة تنفيذ الأوامر للأعضاء لمنع تعليق البوت أو حظره من قبل Discord API (مع استثناء المشرفين تلقائياً).
 - **💾 النسخ الاحتياطي التلقائي وسحابة ديسكورد (Automated Backups):** نظام مدمج لجدولة نسخ الاحتياطية كل 6 ساعات محلياً في مجلد `backups/` مع إرسال إشعار تلقائي لقناتك الخاصة عبر Webhook.
 - **📊 لوحة صحة البوت والخادم (Live Status Page):** واجهة ويب متطورة تفاعلية باللوحة لعرض استهلاك الرام، المعالج، الـ Uptime وحالة اتصال PostgreSQL ومخدمات الصوت.
-- **🔍 فحص صارم لبيئة العمل قبل الإقلاع ([envValidator.js](shared/services/startup.js)):** إيقاف فوري للتشغيل وحظر الإقلاع في حال وجود أي نقص بمتغيرات ملف الـ `.env` لتجنب الأخطاء التشغيلية.
+- **🔍 فحص صارم لبيئة العمل قبل الإقلاع ([startup.js](packages/shared/services/startup.js)):** إيقاف فوري للتشغيل وحظر الإقلاع في حال وجود أي نقص بمتغيرات ملف الـ `.env` لتجنب الأخطاء التشغيلية.
 - **🌍 لوحة تحكم متعددة اللغات (Multilingual Dashboard):** واجهة ويب React 19 مع دعم 6 لغات (الإنجليزية، العربية، الألمانية، الفرنسية، الإسبانية، التركية) مع تبديل LTR/RTL.
 - **🔐 نظام حماية متعدد الطبقات (Multi-Layer Security):** CSRF، rate limits، headers أمان، جلسات PostgreSQL دائمة، فحص صلاحيات Discord، وسجل تدقيق مطورين.
 - **👥 نظام أدوار مزدوج (Dual Role System):** أدوار السيرفر (Member/Moderator/Admin) وأدوار النظام (SUPPORT/DEVELOPER/SUPER_ADMIN) منفصلة ومحصورة.
@@ -130,7 +130,7 @@ npm start
 ```
 
 
-`npm ci` يعمل `postinstall`، يتثبيت تبعيات لوحة التحكم، ويبني `dashboard/public` تلقائياً.
+`npm ci` يثبت كل الـ workspaces دفعة واحدة، ويعمل `postinstall` الذي يبني `apps/web/public` تلقائياً.
 
 
 2. **أوامر التشغيل:**
@@ -138,10 +138,11 @@ npm start
 
 ```bash
 npm start              # إنتاج: بوت + API + لوحة تحكم مبنية على :3000
-npm run dev:fullstack  # تطوير: بوت (nodemon) + Vite HMR على :5173
-npm run dev:backend    # API + لوحة تحكم مبنية فقط (بدون بوت)
-npm run dev:frontend   # Vite HMR فقط
-npm run build          # إعادة بناء dashboard/public
+npm run dev            # تطوير: بوت (nodemon) + API (nodemon) + Vite HMR على :5173
+npm run dev:bot        # بوت فقط (nodemon)
+npm run dev:api        # API فقط (nodemon)
+npm run dev:web        # Vite HMR فقط
+npm run build:web      # إعادة بناء apps/web/public
 ```
 
 
@@ -326,7 +327,7 @@ React 19 + Vite، تعمل على نفس مصدر الـ Express API.
 ## تكوين البوت (Bot Configuration)
 
 
-`config/bot.json` خالٍ من الأسرار ومستخدم الإصدار 2:
+`packages/config/bot.json` خالٍ من الأسرار ومستخدم الإصدار 2:
 
 
 ```text
@@ -338,7 +339,7 @@ automod   - كلمات الحماية التلقائية مع تطبيع Unicode
 ```
 
 
-المحمل المركزي في `shared/config/bot-config.js` يتحقق من الصحة ويعمل تجميد عميق. جميع وحدات البوت تستهلك هذا المحمل بدلاً من استيراد JSON الخام.
+المحمل المركزي في `packages/shared/config/bot-config.js` يتحقق من الصحة ويعمل تجميد عميق. جميع وحدات البوت تستهلك هذا المحمل بدلاً من استيراد JSON الخام.
 
 
 ---
@@ -411,8 +412,8 @@ npm run test:unit           # اختبارات الوحدة فقط
 npm run test:security       # اختبارات الأمان فقط
 npm run lint                # فحص التنسيق
 npm run lint:gate           # فحص التنسيق مع الميزانية
-npm run verify              # تحقق كامل
-npm run build:dashboard     # بناء لوحة التحكم
+npm run verify              # تحقق كامل (release + lint + tests + audit + build)
+npm run build:web           # بناء لوحة التحكم
 ```
 
 
@@ -421,8 +422,8 @@ npm run build:dashboard     # بناء لوحة التحكم
 
 - 100 أمر Discord
 - Bot Config schema و AutoMod normalization
-- 23 مجموعة اختبار أمان
-- 185 route API
+- 24 مجموعة اختبار أمان
+- 199 route API
 - OAuth و sessions و CSRF و guild isolation
 - Discord hierarchy و privacy redaction
 - Abuse و rate limits
@@ -535,20 +536,20 @@ npm run smoke:live -- --url https://your-service.onrender.com --expect-release 2
 
 
 ```text
-bot/src/                    أوامر Discord وأحداث Gateway والجدولة
-backend/src/routes/         APIs HTTP
-backend/src/middleware/     المصادقة والتفويض وCSRF والصيانة
-backend/src/websocket/      Socket.IO مصادق عليه
-backend/src/utils/          SSE
-backend/src/metrics.js      مقاييس تشغيل محلية
-dashboard/src/              عميل React V2
-shared/config/              محمل Bot Config الموثق
-shared/services/            خدمات النطاق المشتركة والتدقيق
-database/                   محمل PostgreSQL والأقفال
-scripts/                    نقل الأنفاق والتحويل
-tests/                      اختبارات الوحدة والأمان واليدوية
-config/                     تكوين البوت الخالٍ من الأسرار و JSON schema
-docs/                       تدقيقات ودروس وتقارير الاختبار
+apps/bot/src/                أوامر Discord وأحداث Gateway والجدولة
+apps/api/src/routes/         APIs HTTP
+apps/api/src/middleware/     المصادقة والتفويض وCSRF والصيانة
+apps/api/src/websocket/      Socket.IO مصادق عليه
+apps/api/src/utils/          SSE
+apps/api/src/metrics.js      مقاييس تشغيل محلية
+apps/web/src/                عميل React V2
+packages/config/             تكوين البوت الخالٍ من الأسرار و JSON schema
+packages/shared/config/      محمل Bot Config الموثق
+packages/shared/services/    خدمات النطاق المشتركة والتدقيق
+packages/database/           محمل PostgreSQL والأقفال + مخطط Supabase
+packages/scripts/            نقل الأنفاق والتحويل وبوابات التحقق
+tests/                       اختبارات الوحدة والأمان واليدوية
+docs/                        تدقيقات ودروس وتقارير الاختبار
 ```
 
 
@@ -563,7 +564,7 @@ docs/                       تدقيقات ودروس وتقارير الاخت�
 - [Phase 2 indexed prefix-query optimization](docs/optimization/phase2-prefix-query-optimization.md)
 - [تقرير اختبار V2 الكامل](docs/v2-test-report.md)
 - [دروس الهندسة](docs/engineering-lessons.md)
-- [مخطط Supabase](supabase/schema.sql)
+- [مخطط Supabase](packages/database/supabase/schema.sql)
 
 
 ---

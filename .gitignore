@@ -3,37 +3,21 @@
 .env.*
 !.env.example
 
-# Runtime database (contains real guild/user IDs & moderation records)
-json.sqlite
-json.sqlite-journal
-json.sqlite-wal
-json.sqlite-shm
-*.sqlite
-*.sqlite-journal
-*.sqlite-wal
-*.sqlite-shm
-# DB-less local fallback snapshot (same class of runtime data as above)
-ephemeral-fallback.json
-database/ephemeral-fallback.json
+# Runtime database (archived)
+_legacy_or_review/ephemeral-fallback.json
 
-# Runtime backups (test fixtures + generated backups)
-backups/
-
-# Runtime logs & tunnel state
-logs/*
-!logs/.gitkeep
-fullstack.log
-.dashboard-url
-PUBLIC_DASHBOARD.txt
-
-# Dependencies
+# Dependencies (covers all workspace packages)
 node_modules/
-dashboard/node_modules/
 
-# Build output — pure Vite artifact (publicDir: static → outDir: public,
-# emptyOutDir: true). Rebuilt by postinstall on deploy and by
-# `npm run build:dashboard` locally. Never track; it churns every build.
-dashboard/public/
+# Build output (Vite outDir + generic)
+apps/web/public/
+dist/
+build/
+coverage/
+
+# Monorepo cache
+.turbo/
+.turbo/*
 
 # OS / editor
 .DS_Store
@@ -42,14 +26,17 @@ Thumbs.db
 .idea/
 .vscode/
 
-# Scratch/probe files used while debugging. A throwaway probe was committed
-# during the audit because a cleanup command was interrupted; this makes that
-# class of mistake impossible rather than relying on remembering to delete.
+# Runtime logs, local backups, scratch/probe files
+logs/
+backups/
+*.log
 _*.js
-!_app.js
 *.bak
 *.orig
 
 # Python bytecode/cache
 __pycache__/
 *.py[cod]
+
+# Legacy directories (archived)
+_legacy_or_review/

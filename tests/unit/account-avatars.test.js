@@ -1,6 +1,6 @@
 const assert = require('assert');
 const { createCanvas, loadImage } = require('@napi-rs/canvas');
-const { storageConfig, normalizeAvatar } = require('../../shared/services/account-avatars');
+const { storageConfig, normalizeAvatar } = require('eb-bot-shared/services/account-avatars');
 
 (async () => {
     const old = { ...process.env };
