@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const LOG_DIR = path.join(__dirname, '..', '..', 'logs');
+const LOG_DIR = path.join(__dirname, '..', '..', '..', 'logs');
 const AUDIT_FILE = path.join(LOG_DIR, 'developer-audit.log');
 const SECURITY_ALERT_FILE = path.join(LOG_DIR, 'security-alerts.log');
 const SECRET_FIELD = /token|secret|password|credential|database.?url|authorization/i;

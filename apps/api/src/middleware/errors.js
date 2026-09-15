@@ -116,9 +116,10 @@ function classify(err) {
             expose: true,
         };
     }
-    if (['ENOTFOUND', 'ECONNREFUSED', 'ETIMEDOUT', 'ECONNRESET'].includes(pgCode)
+    if (['ENOTFOUND', 'ECONNREFUSED', 'ETIMEDOUT', 'ECONNRESET', 'ENETUNREACH', 'EHOSTUNREACH', 'EHOSTDOWN', 'ENETDOWN'].includes(pgCode)
         || pgMessage.includes('connection timeout')
         || pgMessage.includes('connection terminated')
+        || pgMessage.includes('network is unreachable')
         || pgMessage.includes('database is unreachable')) {
         return {
             status: 503,

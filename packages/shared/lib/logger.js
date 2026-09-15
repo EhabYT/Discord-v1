@@ -4,11 +4,11 @@ const util = require('util');
 
 class Logger {
   constructor() {
-    // Resolve against the repo root, not this file's directory. The logger
-    // used to sit at the root so __dirname WAS the root; now it lives in
-    // lib/, and a bare __dirname would silently start writing to lib/logs/
-    // while every tool still reads ./logs.
-    this.logDir = path.join(__dirname, '../../../../logs');
+    // This file lives at packages/shared/lib (three levels under the repo
+    // root), so three ups land on the root and logs/ stays next to the
+    // other runtime directories. A bare __dirname would silently write to
+    // lib/logs/ while every tool still reads ./logs.
+    this.logDir = path.join(__dirname, '../../../logs');
     this.generalLogFile = path.join(this.logDir, 'general.log');
     this.errorLogFile = path.join(this.logDir, 'error.log');
     this.maxFileSize = 5 * 1024 * 1024;
@@ -89,6 +89,8 @@ class Logger {
 
   _rotate(filePath, streamKey) {
     try {
+      // Fresh deploys have no log file yet — statSync would throw ENOENT.
+      if (!fs.existsSync(filePath)) return;
       const stats = fs.statSync(filePath);
       if (stats.size < this.maxFileSize) return;
 

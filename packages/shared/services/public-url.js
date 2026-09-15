@@ -1,8 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const FILE = path.join(__dirname, '..', '..', '.dashboard-url');
-const DEAD_FILE = path.join(__dirname, '..', '..', 'logs', 'dead-hosts.txt');
+const FILE = path.join(__dirname, '..', '..', '..', '.dashboard-url');
+const DEAD_FILE = path.join(__dirname, '..', '..', '..', 'logs', 'dead-hosts.txt');
 
 function deadHosts() {
     try {

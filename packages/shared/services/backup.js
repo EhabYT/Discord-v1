@@ -22,7 +22,7 @@ function verifyWebhookSignature(payload, signature, secret) {
     }
 }
 
-const BACKUP_DIR = path.join(__dirname, '..', '..', 'backups');
+const BACKUP_DIR = path.join(__dirname, '..', '..', '..', 'backups');
 const MAX_WEBHOOK_FILE_SIZE = 8 * 1024 * 1024; // 8MB Discord webhook limit
 
 const DEFAULT_KEYS = [

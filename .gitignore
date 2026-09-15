@@ -6,6 +6,17 @@
 # Runtime database (archived)
 _legacy_or_review/ephemeral-fallback.json
 
+# Runtime artefacts recreated by the app — never commit
+backups/
+logs/
+.dashboard-url
+fullstack.log
+PUBLIC_DASHBOARD.txt
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
 # Dependencies (covers all workspace packages)
 node_modules/
 
