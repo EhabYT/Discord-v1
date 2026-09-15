@@ -158,7 +158,7 @@ a{display:inline-block;margin-top:12px;padding:8px 14px;border-radius:8px;backgr
 </style></head><body><div class="card">
 <h1>${safeTitle}</h1>
 <p>${safeDetail}</p>
-${safeUri ? `<p>Add this exact Redirect URI in the Discord Developer Portal → OAuth2 → Redirects:</p><code>${safeUri}</code>` : ''}
+${safeUri ? `<p>Add this exact Redirect URI in the OAuth2 provider settings:</p><code>${safeUri}</code>` : ''}
 <a href="/">Back to dashboard</a>
 </div></body></html>`);
 }
