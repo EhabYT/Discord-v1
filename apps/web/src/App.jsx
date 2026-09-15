@@ -481,10 +481,15 @@ export default function App() {
   }, [navigate]);
 
   useEffect(() => {
+    // Wait for the auth state first: logged-out visitors (homepage, login,
+    // register) must not fire session-gated calls that can only 401.
+    // /api/health stays public and always loads.
+    if (authLoading) return;
+    const loggedIn = !!auth.loggedIn;
     Promise.all([
-      api.get('/api/guilds').catch(() => []),
+      loggedIn ? api.get('/api/guilds').catch(() => []) : Promise.resolve([]),
       api.get('/api/health').catch(() => null),
-      api.get('/api/developer/whoami').catch(() => ({ role: 'NONE', baseRole: 'NONE', unlocked: false })),
+      loggedIn ? api.get('/api/developer/whoami').catch(() => ({ role: 'NONE', baseRole: 'NONE', unlocked: false })) : Promise.resolve({ role: 'NONE', baseRole: 'NONE', unlocked: false }),
     ]).then(([g, h, dev]) => {
       const list = Array.isArray(g) ? g : [];
       setGuilds(list);
@@ -494,7 +499,7 @@ export default function App() {
       const remembered = rememberedGuild();
       setSelectedGuild(list.find((x) => x.id === remembered) || list[0] || null);
     }).finally(() => setLoading(false));
-  }, []);
+  }, [authLoading, auth.loggedIn]);
 
   useEffect(() => {
     const poll = () => {

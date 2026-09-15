@@ -11,20 +11,25 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    const [nextAuth, nextMe] = await Promise.all([
-      api.get('/api/auth/status').catch(() => ({ oauthEnabled: false, loggedIn: false, authRequired: true })),
-      api.get('/api/me').catch(() => null),
-    ]);
+    // Anonymous visitors are the common case on /, /login and /register:
+    // resolve the session first and only then touch session-gated endpoints,
+    // so a logged-out load costs one cheap status call instead of three
+    // guaranteed-401s (less noise, less session-store pressure).
+    const nextAuth = await api.get('/api/auth/status').catch(() => ({ oauthEnabled: false, loggedIn: false, authRequired: true }));
     setAuth(nextAuth);
-    setMe(nextMe);
-    if (nextAuth?.loggedIn) {
-      const projection = await api.get('/api/account').catch(() => null);
-      setAccount(projection?.account || null);
-      setDiscord(projection?.discord || nextMe || null);
-    } else {
+    if (!nextAuth?.loggedIn) {
+      setMe(null);
       setAccount(null);
       setDiscord(null);
+      return;
     }
+    const [nextMe, projection] = await Promise.all([
+      api.get('/api/me').catch(() => null),
+      api.get('/api/account').catch(() => null),
+    ]);
+    setMe(nextMe);
+    setAccount(projection?.account || null);
+    setDiscord(projection?.discord || nextMe || null);
   }, []);
 
   useEffect(() => {

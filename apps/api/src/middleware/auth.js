@@ -18,7 +18,7 @@
  */
 
 const logger = require('eb-bot-shared/lib/logger');
-const { getRealIP, isIPBlocked, recordFailedAttempt, recordSuccessfulAuth } = require('./ip-block');
+const { getRealIP, isIPBlocked, recordSuccessfulAuth } = require('./ip-block');
 
 let warnedAnonymous = false;
 let warnedRemoteBlocked = false;
@@ -96,9 +96,13 @@ function requireAuth(req, res, next) {
         return next();
     }
 
-    // Record failed attempt
-    recordFailedAttempt(ip);
-
+    // No session here is the normal logged-out state (public homepage, login
+    // and register pages all probe session-gated endpoints on load), NOT a
+    // brute-force attempt — so it must not feed the IP block. Counting it
+    // locked real visitors out for an hour (429 IP_BLOCKED) just for opening
+    // the site. Credential guessing stays throttled where it belongs:
+    // per-account/per-IP consumeAuthLimit on POST /api/auth/login and the
+    // oauth-start limiter on /api/auth/discord.
     return res.status(401).json({ error: 'Not authenticated', code: 'AUTH_REQUIRED' });
 }
 
