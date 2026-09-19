@@ -2,11 +2,11 @@ import React from 'react';
 
 export default function AuthLayout({ eyebrow, title, description, children, footer }) {
   return (
-    <main className="min-h-screen overflow-auto flex items-center justify-center p-4 sm:p-6 relative">
+    <main className="h-screen overflow-y-auto overscroll-contain flex items-center justify-center p-4 sm:p-6 relative">
       <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
         <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[36rem] max-w-[90vw] h-64 bg-gradient-to-r from-cyan-400/[0.08] via-sky-400/[0.05] to-indigo-400/[0.08] blur-3xl rounded-full" />
       </div>
-      <div className="relative w-full max-w-md animate-slide-up">
+      <div className="relative w-full max-w-md m-auto animate-slide-up">
         <a href="/" className="flex items-center justify-center gap-3 mb-6 group">
           <span className="relative">
             <span className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-cyan-400/30 to-indigo-400/30 blur-md opacity-70 group-hover:opacity-100 transition-opacity" aria-hidden="true" />

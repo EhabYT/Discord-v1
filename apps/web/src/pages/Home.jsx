@@ -78,7 +78,7 @@ export default function Home({ health, auth, onEnter }) {
     : null;
 
   return (
-    <div className="min-h-screen overflow-auto">
+    <div className="h-screen overflow-y-auto overscroll-contain">
       <header className="sticky top-0 z-30 glass-header">
         <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
@@ -142,11 +142,24 @@ export default function Home({ health, auth, onEnter }) {
               {t('home.titleA', 'Your server.')}<br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-200 via-sky-200 to-indigo-300 drop-shadow-[0_0_28px_rgba(34,211,238,0.25)]">{t('home.titleB', 'One desk.')}</span>
             </h1>
-            <p className="text-zinc-400 text-base sm:text-lg max-w-xl leading-relaxed mb-7">
-              {t('home.subtitle', 'Moderation, music, XP, tickets and live analytics — in one place.')}
-              {' '}100 Slash Commands · Dashboard V2.
+            <p className="text-zinc-400 text-base sm:text-lg max-w-xl leading-relaxed mb-5">
+              {t('home.subtitle', 'Moderation, music, XP, tickets and live analytics — everything your staff needs, in one fast dashboard.')}
             </p>
-            <div className="flex flex-wrap gap-3 [&>a]:min-h-[44px] [&>button]:min-h-[44px]">
+            <ul className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-zinc-400 mb-7" aria-label={t('home.trustLabel', 'Highlights')}>
+              <li className="inline-flex items-center gap-1.5">
+                <span className="w-1 h-1 rounded-full bg-cyan-300" aria-hidden="true" />
+                {t('home.trustCommands', '100 slash commands')}
+              </li>
+              <li className="inline-flex items-center gap-1.5">
+                <span className="w-1 h-1 rounded-full bg-cyan-300" aria-hidden="true" />
+                {t('home.trustLanguages', '6 languages')}
+              </li>
+              <li className="inline-flex items-center gap-1.5">
+                <span className="w-1 h-1 rounded-full bg-cyan-300" aria-hidden="true" />
+                {t('home.trustLive', 'Live analytics')}
+              </li>
+            </ul>
+            <div className="flex flex-wrap items-center gap-3 [&>a]:min-h-[44px] [&>button]:min-h-[44px]">
               <button onClick={() => go('overview')} className="cyber-button-solid px-5 py-2.5 inline-flex items-center gap-2">
                 {t('home.openDashboard', 'Open dashboard')} <ArrowRight size={16} aria-hidden="true" />
               </button>
@@ -155,20 +168,27 @@ export default function Home({ health, auth, onEnter }) {
                   {t('home.invite', 'Invite to Discord')}
                 </a>
               )}
-              {auth?.oauthEnabled && !auth?.loggedIn && (
-                <a href="/api/auth/discord" className="cyber-button px-5 py-2.5 inline-flex items-center">{t('common.loginDiscord', 'Login with Discord')}</a>
-              )}
-              {!auth?.loggedIn && (
-                <>
-                  <a href="/register" className="cyber-button px-5 py-2.5 inline-flex items-center">
-                    {t('home.signup', 'Sign up')}
-                  </a>
-                  <a href="/login" className="px-5 py-2.5 text-sm text-zinc-400 hover:text-white transition-colors inline-flex items-center">
-                    {t('home.login', 'Log in')}
-                  </a>
-                </>
-              )}
             </div>
+            {!auth?.loggedIn && (
+              <p className="text-xs text-zinc-500 mt-4 leading-relaxed">
+                {t('home.newHere', 'New here?')}{' '}
+                <a href="/register" className="text-cyan-300 hover:text-cyan-200 font-medium">
+                  {t('home.signup', 'Sign up')}
+                </a>
+                {auth?.oauthEnabled && (
+                  <>
+                    {' '}·{' '}
+                    <a href="/api/auth/discord" className="text-zinc-300 hover:text-white font-medium">
+                      {t('common.loginDiscord', 'Login with Discord')}
+                    </a>
+                  </>
+                )}{' '}
+                ·{' '}
+                <a href="/login" className="text-zinc-300 hover:text-white font-medium">
+                  {t('home.login', 'Log in')}
+                </a>
+              </p>
+            )}
           </div>
 
           <div className="relative flex justify-center animate-slide-up">
@@ -197,12 +217,12 @@ export default function Home({ health, auth, onEnter }) {
 
         <div className="relative grid grid-cols-2 md:grid-cols-4 gap-3 mt-14">
           {[
-            { label: t('home.statStatus', 'Status'), value: online ? t('common.online', 'Online') : t('common.offline', 'Offline'), sub: health?.uptime ? formatUptime(health.uptime * 1000) : '—', dot: online },
-            { label: t('home.statServers', 'Servers'), value: health?.guilds ?? '—', sub: t('home.statServersSub', 'connected') },
+            { label: t('home.statStatus', 'Status'), value: online ? t('common.online', 'Online') : t('common.offline', 'Offline'), sub: health?.uptime ? formatUptime(health.uptime * 1000) : (online ? t('home.statOnlineNow', 'online now') : '—'), dot: online },
+            { label: t('home.statServers', 'Servers'), value: health?.guilds ?? '—', sub: health?.guilds != null ? t('home.statServersSub', 'connected') : t('home.statServersLogin', 'log in for live count') },
             { label: t('home.statCommands', 'Commands'), value: '100', sub: t('home.statCommandsSub', 'slash ready') },
             { label: t('home.statDashboard', 'Dashboard'), value: 'V2', sub: health?.maintenance ? t('home.statMaintenance', 'maintenance') : t('home.statLive', 'live control') },
           ].map((s, i) => (
-            <div key={s.label} className="glass-panel mesh-glow p-4 animate-fade-in" style={{ animationDelay: `${i * 60}ms` }}>
+            <div key={`stat-${i}`} className="glass-panel mesh-glow p-4 animate-fade-in" style={{ animationDelay: `${i * 60}ms` }}>
               <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-500 flex items-center gap-1.5">
                 {s.dot !== undefined && (
                   <span className={`w-1.5 h-1.5 rounded-full ${s.dot ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]' : 'bg-red-400'}`} />
@@ -245,7 +265,7 @@ export default function Home({ health, auth, onEnter }) {
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {FEATURES.map(({ id, icon: Icon, title, text }, i) => (
-            <button key={title} onClick={() => go(id)} className="cyber-card-hover p-4 text-start group animate-fade-in" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
+            <button key={id} onClick={() => go(id)} className="cyber-card-hover p-4 text-start group animate-fade-in" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
               <span className="w-10 h-10 rounded-2xl bg-gradient-to-br from-cyan-400/20 to-indigo-400/10 border border-cyan-300/20 flex items-center justify-center text-cyan-200 mb-3 shadow-[0_0_18px_rgba(34,211,238,0.12)] group-hover:shadow-[0_0_26px_rgba(34,211,238,0.22)] transition-shadow">
                 <Icon size={17} />
               </span>
@@ -317,7 +337,7 @@ export default function Home({ health, auth, onEnter }) {
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             <button onClick={() => go('overview')} className="cyber-button-solid px-5 py-2.5 inline-flex items-center gap-2">
-              {t('home.openDashboard', 'Open dashboard')} <ArrowRight size={16} />
+              {t('home.openDashboard', 'Open dashboard')} <ArrowRight size={16} aria-hidden="true" />
             </button>
             {inviteUrl && <a href={inviteUrl} target="_blank" rel="noreferrer" className="cyber-button px-5 py-2.5">{t('home.invite', 'Invite')}</a>}
             <button onClick={() => go('developer')} className="cyber-button px-5 py-2.5 inline-flex items-center gap-1.5">
