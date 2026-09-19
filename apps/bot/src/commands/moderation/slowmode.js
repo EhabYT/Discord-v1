@@ -7,7 +7,7 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
         .addIntegerOption(opt => opt.setName('seconds').setDescription('Slowmode duration in seconds (0 to disable)').setRequired(true).setMinValue(0).setMaxValue(21600)),
 
-    async execute(interaction, client, db) {
+    async execute(interaction, client, _db) {
         const seconds = interaction.options.getInteger('seconds');
         const { safeReply } = client.helpers;
 

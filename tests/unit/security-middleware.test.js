@@ -99,7 +99,7 @@ const mockReq2 = { path: '/api/test', session: {}, requestId: 'test' };
 const mockRes2 = {
     headersSent: false,
     setHeader: () => {},
-    on: (event, cb) => { if (event === 'finish') timerSet = true; },
+    on: (event, _cb) => { if (event === 'finish') timerSet = true; },
     status: () => ({ json: () => {} }),
 };
 requestTimeout(5000)(mockReq2, mockRes2, () => {});

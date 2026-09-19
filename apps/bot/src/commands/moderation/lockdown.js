@@ -9,7 +9,7 @@ module.exports = {
             .addChoices({ name: 'Lock', value: 'lock' }, { name: 'Unlock', value: 'unlock' }))
         .addStringOption(opt => opt.setName('reason').setDescription('Reason')),
 
-    async execute(interaction, client) {
+    async execute(interaction, _client) {
         await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
         const action = interaction.options.getString('action');
         const reason = interaction.options.getString('reason') || 'Lockdown';

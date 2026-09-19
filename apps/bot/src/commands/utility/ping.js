@@ -5,7 +5,7 @@ module.exports = {
     .setName('ping')
     .setDescription('Check bot and API latency'),
 
-  async execute(interaction, client, db) {
+  async execute(interaction, client, _db) {
     const sentAt = Date.now();
     await interaction.reply({ content: '📡 Pinging...' });
     const reply = await interaction.fetchReply().catch(() => null);

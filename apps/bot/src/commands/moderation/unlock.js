@@ -6,7 +6,7 @@ module.exports = {
         .setDescription('Unlock the current channel')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
 
-    async execute(interaction, client, db) {
+    async execute(interaction, client, _db) {
         const { safeReply } = client.helpers;
 
         try {

@@ -23,7 +23,7 @@ function registerCommunityRoutes(router, { requirePerm, botClient }) {
             const visible = level >= 2
                 ? [...items].reverse()
                 : [...items].reverse().map((s) => (s.anonymous
-                    ? (({ authorId, authorTag, ...rest }) => rest)(s)
+                    ? (({ _authorId, _authorTag, ...rest }) => rest)(s)
                     : s));
             res.json({
                 items: visible,
@@ -147,7 +147,7 @@ function registerCommunityRoutes(router, { requirePerm, botClient }) {
             const level = await getUserPermLevel(botClient, req.params.guildId, sessionUserId(req));
             const safe = level >= 2
                 ? items
-                : items.map(({ authorId, authorTag, ...rest }) => rest);
+                : items.map(({ _authorId, _authorTag, ...rest }) => rest);
             res.json({ items: safe, config });
         } catch (err) { next(err); }
     });

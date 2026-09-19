@@ -13,7 +13,7 @@ module.exports = {
             opt.setName('level').setDescription('Target level (1–500)').setRequired(true).setMinValue(1).setMaxValue(500)
         ),
 
-    async execute(interaction, client, db) {
+    async execute(interaction, _client, _db) {
         await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
         const target  = interaction.options.getUser('user');

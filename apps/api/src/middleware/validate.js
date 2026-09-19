@@ -168,12 +168,12 @@ function validateField(name, value, rules) {
 // Pre-built validators for common patterns
 
 const validators = {
-    snowflake: (name = 'id') => ({
+    snowflake: (_name = 'id') => ({
         type: 'string', required: true, pattern: SNOWFLAKE,
         custom: (v) => !SNOWFLAKE.test(v) ? 'Invalid ID format' : null,
     }),
 
-    optionalSnowflake: (name = 'id') => ({
+    optionalSnowflake: (_name = 'id') => ({
         type: 'string', pattern: SNOWFLAKE,
         custom: (v) => v && !SNOWFLAKE.test(v) ? 'Invalid ID format' : null,
     }),

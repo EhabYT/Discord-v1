@@ -6,7 +6,7 @@ module.exports = {
             .setName('help')
             .setDescription('Explore EB Bot’s power — commands and utilities'),
 
-      async execute(interaction, client, db) {
+      async execute(interaction, client, _db) {
             const categories = {
                   Moderation: { emoji: '🛡️', commands: '`ban`, `softban`, `kick`, `timeout`, `warn`, `warnings` (`list`, `remove`, `clear`), `removewarn`, `note`, `role`, `lockdown`, `snipe`, `announce`, `say`, `move`, `steal`' },
                   AutoMod: { emoji: '🤖', commands: '`automod`, `whitelist`, `lock`, `unlock`, `slowmode`' },

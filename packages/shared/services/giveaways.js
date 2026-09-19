@@ -41,7 +41,7 @@ async function getEligibleUserIds(message, guild, requiredRoleId, excludedIds = 
     return eligible;
 }
 
-async function finalizeGiveaway(guild, giveaway, logger) {
+async function finalizeGiveaway(guild, giveaway, _logger) {
     const channel = await guild.channels.fetch(giveaway.channelId).catch(() => null);
     if (!channel) {
         giveaway.active = false;

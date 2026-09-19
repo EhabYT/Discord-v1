@@ -13,7 +13,7 @@ module.exports = {
             opt.setName('amount').setDescription('XP to give (use negative to remove)').setRequired(true)
         ),
 
-    async execute(interaction, client, db) {
+    async execute(interaction, _client, _db) {
         await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
         const target  = interaction.options.getUser('user');

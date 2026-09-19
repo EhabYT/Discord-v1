@@ -770,7 +770,6 @@ async function fixHierarchy(guild, db) {
         err.code = 'NO_PERMS';
         throw err;
     }
-    const _botTop = me.roles.highest.position;
     const targets = [];
     if (cfg.roleId) {
         const prob = getRoleProblem(guild, cfg.roleId);

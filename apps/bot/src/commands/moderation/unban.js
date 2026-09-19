@@ -9,7 +9,7 @@ module.exports = {
     .addStringOption(opt => opt.setName('id').setDescription('User ID').setRequired(true))
     .addStringOption(opt => opt.setName('reason').setDescription('Reason')),
 
-  async execute(interaction, client, db) {
+  async execute(interaction, _client, _db) {
     const userId = interaction.options.getString('id');
     const reason = interaction.options.getString('reason') || 'No reason provided';
 

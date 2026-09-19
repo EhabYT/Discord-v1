@@ -8,7 +8,7 @@ module.exports = {
     .addStringOption(opt => opt.setName('query').setDescription('Song name')),
   defer: true,
 
-  async execute(interaction, client, db) {
+  async execute(interaction, client, _db) {
     const queue = client.helpers.getGuildQueue(client, interaction.guild.id);
     const query = interaction.options.getString('query') || queue?.currentTrack?.title;
 

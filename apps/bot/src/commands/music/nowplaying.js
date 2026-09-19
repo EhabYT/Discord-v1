@@ -6,7 +6,7 @@ module.exports = {
     .setName('nowplaying')
     .setDescription('View details of the current song'),
 
-  async execute(interaction, client, db) {
+  async execute(interaction, client, _db) {
     const queue = client.helpers.getGuildQueue(client, interaction.guild.id);
     if (!queue || !queue.currentTrack) {
       return safeReply(interaction, {

@@ -82,7 +82,7 @@ async function safeReply(i, options) {
  * @param {any} db 
  * @returns {Promise<boolean>}
  */
-async function checkDJPerms(i, db) {
+async function checkDJPerms(i, _db) {
     if (!i.guild) return false;
     const djRoleId = await getCached(`djrole_${i.guild.id}`);
     if (!djRoleId) return true;

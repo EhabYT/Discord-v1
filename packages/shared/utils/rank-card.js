@@ -30,7 +30,7 @@ function roundRect(ctx, x, y, w, h, r) {
 // ── Main generator ────────────────────────────────────────────────────────────
 async function generateRankCard({
     username, displayName, avatarURL,
-    level, xp, xpNeeded, rank, totalUsers,
+    level, xp, xpNeeded, rank, _totalUsers,
     accentColor = '#00FFFF',
 }) {
     const W = 934, H = 282;

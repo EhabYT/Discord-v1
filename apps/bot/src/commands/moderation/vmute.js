@@ -8,7 +8,7 @@ module.exports = {
         .addUserOption(opt => opt.setName('user').setDescription('User to mute').setRequired(true))
         .addStringOption(opt => opt.setName('reason').setDescription('Reason for mute')),
 
-    async execute(interaction, client, db) {
+    async execute(interaction, _client, _db) {
         const logger = require('eb-bot-shared/lib/logger');
         const user = interaction.options.getUser('user');
         const reason = interaction.options.getString('reason') || 'No reason provided';

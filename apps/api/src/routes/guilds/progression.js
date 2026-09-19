@@ -5,7 +5,7 @@ const { db } = require('eb-bot-database');
 // XP paths are distinct from every neighbor, so consolidating them here
 // changes no matching behavior.
 function registerProgressionRoutes(router, { requirePerm, rl }) {
-    router.get('/rewards', async (req, res, next) => {
+    router.get('/rewards', async (req, res, _next) => {
         const rewards = await db.get(`rewards_${req.params.guildId}`) || [];
         res.json(rewards);
     });

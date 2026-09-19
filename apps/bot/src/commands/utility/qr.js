@@ -6,7 +6,7 @@ module.exports = {
         .setDescription('Generate a QR code for text or a URL')
         .addStringOption(opt => opt.setName('text').setDescription('The text or URL to encode').setRequired(true)),
 
-    async execute(interaction, client, db) {
+    async execute(interaction, client, _db) {
         const text = interaction.options.getString('text');
         const { safeReply } = client.helpers;
 

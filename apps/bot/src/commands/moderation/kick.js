@@ -9,7 +9,7 @@ module.exports = {
     .addUserOption(opt => opt.setName('user').setDescription('User to kick').setRequired(true))
     .addStringOption(opt => opt.setName('reason').setDescription('Reason')),
 
-  async execute(interaction, client, db) {
+  async execute(interaction, _client, _db) {
     const user = interaction.options.getUser('user');
     const reason = interaction.options.getString('reason') || 'No reason provided';
 

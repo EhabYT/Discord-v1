@@ -6,7 +6,7 @@ module.exports = {
     .setName('info')
     .setDescription('Display bot information'),
 
-  async execute(interaction, client, db) {
+  async execute(interaction, client, _db) {
     const uptime = client.helpers.formatDuration(client.uptime);
     const embed = new EmbedBuilder()
       .setColor('#0099FF')

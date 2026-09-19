@@ -10,7 +10,7 @@ module.exports = {
             opt.setName('user').setDescription('Member to reset').setRequired(true)
         ),
 
-    async execute(interaction, client, db) {
+    async execute(interaction, _client, _db) {
         const target = interaction.options.getUser('user');
 
         const confirm = new ButtonBuilder()

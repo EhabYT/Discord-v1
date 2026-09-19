@@ -6,7 +6,7 @@ module.exports = {
         .setDescription('Roll a die!')
         .addIntegerOption(opt => opt.setName('sides').setDescription('Number of sides (default 6)').setMinValue(2).setMaxValue(100)),
 
-    async execute(interaction, client, db) {
+    async execute(interaction, client, _db) {
         const sides = interaction.options.getInteger('sides') || 6;
         const { safeReply } = client.helpers;
 

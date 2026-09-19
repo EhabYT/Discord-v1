@@ -81,7 +81,7 @@ module.exports = {
             )
         ),
 
-    async execute(interaction, client, db) {
+    async execute(interaction, _client, _db) {
         await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
         const guildId = interaction.guild.id;
         const sub     = interaction.options.getSubcommand();

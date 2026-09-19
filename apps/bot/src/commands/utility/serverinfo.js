@@ -5,7 +5,7 @@ module.exports = {
         .setName('serverinfo')
         .setDescription('Display server information'),
 
-    async execute(interaction, client, db) {
+    async execute(interaction, _client, _db) {
         const { guild } = interaction;
         const owner = await guild.fetchOwner().catch(() => null);
         const channels = guild.channels.cache;

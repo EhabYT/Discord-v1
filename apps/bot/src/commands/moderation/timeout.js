@@ -10,7 +10,7 @@ module.exports = {
     .addStringOption(opt => opt.setName('time').setDescription('Duration (1m, 1h, 1d, 1w)').setRequired(true))
     .addStringOption(opt => opt.setName('reason').setDescription('Reason')),
 
-  async execute(interaction, client, db) {
+  async execute(interaction, client, _db) {
     const user = interaction.options.getUser('user');
     const timeStr = interaction.options.getString('time');
     const reason = interaction.options.getString('reason') || 'No reason provided';

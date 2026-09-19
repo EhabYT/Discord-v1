@@ -6,7 +6,7 @@ module.exports = {
     .setDescription('Display user information')
     .addUserOption(opt => opt.setName('user').setDescription('User')),
 
-  async execute(interaction, client, db) {
+  async execute(interaction, _client, _db) {
     const user = interaction.options.getUser('user') || interaction.user;
     const member = await interaction.guild.members.fetch(user.id).catch(() => null);
 

@@ -9,7 +9,7 @@ module.exports = {
     .addIntegerOption(opt => opt.setName('amount').setDescription('Number of messages').setRequired(true).setMinValue(1).setMaxValue(100))
     .addStringOption(opt => opt.setName('target').setDescription('Filter: "bots" or @user')),
 
-  async execute(interaction, client, db) {
+  async execute(interaction, _client, _db) {
     const amount = interaction.options.getInteger('amount');
     const target = interaction.options.getString('target');
 

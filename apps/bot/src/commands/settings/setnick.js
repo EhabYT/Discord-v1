@@ -8,7 +8,7 @@ module.exports = {
     .addUserOption(opt => opt.setName('user').setDescription('User').setRequired(true))
     .addStringOption(opt => opt.setName('nick').setDescription('New nickname (empty to reset)')),
 
-  async execute(interaction, client, db) {
+  async execute(interaction, _client, _db) {
     const user = interaction.options.getUser('user');
     const nick = interaction.options.getString('nick') || null;
     const member = await interaction.guild.members.fetch(user.id).catch(() => null);

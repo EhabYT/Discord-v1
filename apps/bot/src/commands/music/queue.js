@@ -6,7 +6,7 @@ module.exports = {
         .setName('queue')
         .setDescription('View the current music queue'),
 
-    async execute(interaction, client, db) {
+    async execute(interaction, client, _db) {
         const queue = client.helpers.getGuildQueue(client, interaction.guild.id);
         if (!queue || (!queue.isPlaying() && !queue.tracks.size)) {
             return safeReply(interaction, {

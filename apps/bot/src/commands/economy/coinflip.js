@@ -5,7 +5,7 @@ module.exports = {
         .setName('coinflip')
         .setDescription('Flip a coin!'),
 
-    async execute(interaction, client, db) {
+    async execute(interaction, client, _db) {
         const { safeReply } = client.helpers;
         const result = Math.random() < 0.5 ? 'Heads' : 'Tails';
         const icon = result === 'Heads' ? '🪙' : '📀';

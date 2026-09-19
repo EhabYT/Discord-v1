@@ -5,7 +5,7 @@ module.exports = {
         .setName('membercount')
         .setDescription('Show total members, humans, and bots in the server'),
 
-    async execute(interaction, client, db) {
+    async execute(interaction, client, _db) {
         const { guild } = interaction;
         const { safeReply } = client.helpers;
 

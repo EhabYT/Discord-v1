@@ -226,7 +226,7 @@ module.exports = () => {
         } catch (err) { return next(err); }
     });
 
-    router.post('/forgot-password', async (req, res, next) => {
+    router.post('/forgot-password', async (req, res, _next) => {
         const generic = { success: true, message: 'If that verified account exists, a password reset email has been requested.' };
         try {
             if (!getPool()) return res.json(generic);
