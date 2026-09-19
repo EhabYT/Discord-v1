@@ -170,24 +170,29 @@ export default function Home({ health, auth, onEnter }) {
               )}
             </div>
             {!auth?.loggedIn && (
-              <p className="text-xs text-zinc-500 mt-4 leading-relaxed">
-                {t('home.newHere', 'New here?')}{' '}
-                <a href="/register" className="text-cyan-300 hover:text-cyan-200 font-medium">
-                  {t('home.signup', 'Sign up')}
-                </a>
+              <div className="mt-5 max-w-md rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-zinc-400 mb-3">
+                  {t('home.newHere', 'New here?')}
+                </p>
+                <div className="flex flex-wrap gap-2.5">
+                  <a href="/register" className="cyber-button-solid flex-1 min-w-[140px] flex items-center justify-center px-5 py-2.5">
+                    {t('home.signup', 'Sign up')}
+                  </a>
+                  <a href="/login" className="cyber-button flex-1 min-w-[140px] flex items-center justify-center px-5 py-2.5">
+                    {t('home.login', 'Log in')}
+                  </a>
+                </div>
                 {auth?.oauthEnabled && (
                   <>
-                    {' '}·{' '}
-                    <a href="/api/auth/discord" className="text-zinc-300 hover:text-white font-medium">
+                    <div className="flex items-center gap-3 my-3 text-[10px] uppercase tracking-[0.14em] text-zinc-500" aria-hidden="true">
+                      <span className="h-px flex-1 bg-white/10" />{t('auth.or', 'or')}<span className="h-px flex-1 bg-white/10" />
+                    </div>
+                    <a href="/api/auth/discord" className="cyber-button w-full flex items-center justify-center gap-2 px-5 py-2.5 border-indigo-400/25 hover:border-indigo-300/50 hover:text-indigo-100">
                       {t('common.loginDiscord', 'Login with Discord')}
                     </a>
                   </>
-                )}{' '}
-                ·{' '}
-                <a href="/login" className="text-zinc-300 hover:text-white font-medium">
-                  {t('home.login', 'Log in')}
-                </a>
-              </p>
+                )}
+              </div>
             )}
           </div>
 
