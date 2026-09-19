@@ -112,6 +112,16 @@ export default function Home({ health, auth, onEnter }) {
             <a href="/login" className="hidden sm:inline-flex text-xs px-3 py-2 text-zinc-400 hover:text-white transition-colors">
               {t('home.login', 'Log in')}
             </a>
+            {!auth?.loggedIn && auth?.oauthEnabled && (
+              <a href="/api/auth/discord" className="hidden lg:inline-flex cyber-button text-xs px-3 py-2 border-indigo-400/25 hover:border-indigo-300/50 hover:text-indigo-100">
+                {t('home.loginDiscordShort', 'Discord')}
+              </a>
+            )}
+            {!auth?.loggedIn && auth?.googleOAuthEnabled && (
+              <a href="/api/auth/google" className="hidden lg:inline-flex cyber-button text-xs px-3 py-2">
+                {t('home.loginGoogleShort', 'Google')}
+              </a>
+            )}
             <button onClick={() => go('overview')} className="cyber-button-solid text-xs px-3 py-2 inline-flex items-center gap-1.5">
               {t('home.openDashboard', 'Open dashboard')} <ArrowRight size={13} />
             </button>
@@ -352,6 +362,16 @@ export default function Home({ health, auth, onEnter }) {
               {t('home.openDashboard', 'Open dashboard')} <ArrowRight size={16} aria-hidden="true" />
             </button>
             {inviteUrl && <a href={inviteUrl} target="_blank" rel="noreferrer" className="cyber-button px-5 py-2.5">{t('home.invite', 'Invite')}</a>}
+            {!auth?.loggedIn && auth?.oauthEnabled && (
+              <a href="/api/auth/discord" className="cyber-button px-5 py-2.5 inline-flex items-center gap-1.5 border-indigo-400/25 hover:border-indigo-300/50 hover:text-indigo-100">
+                {t('common.loginDiscord', 'Login with Discord')}
+              </a>
+            )}
+            {!auth?.loggedIn && auth?.googleOAuthEnabled && (
+              <a href="/api/auth/google" className="cyber-button px-5 py-2.5 inline-flex items-center gap-1.5">
+                {t('auth.continueGoogle', 'Continue with Google')}
+              </a>
+            )}
             <button onClick={() => go('developer')} className="cyber-button px-5 py-2.5 inline-flex items-center gap-1.5">
               <Terminal size={13} /> Developer
             </button>
