@@ -12,8 +12,10 @@ import api from '../api.js';
 
 const EMPTY_ROW = () => ({ emoji: '✅', roleId: '', label: '' });
 
-export default function ReactionRoles({ guild, guildData }) {
+export default function ReactionRoles({ guild, guildData, permLevel = 0 }) {
   const toast = useToast();
+  // All writes (panel post, mapping delete) require Admin (3) backend-side.
+  const canEdit = permLevel >= 3;
   const [tab, setTab] = useState('create');
   const [mappings, setMappings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +49,7 @@ export default function ReactionRoles({ guild, guildData }) {
     try {
       const d = await api.get(`/api/guild/${guild.id}/reactionroles`);
       setMappings(d.mappings || []);
-    } catch { setMappings([]); }
+    } catch (e) { toast.error(e.message || 'Failed to load reaction roles.'); }
     setLoading(false);
   }, [guild?.id]);
 
@@ -58,6 +60,7 @@ export default function ReactionRoles({ guild, guildData }) {
   const delRow = (i) => setRows((prev) => prev.filter((_, idx) => idx !== i));
 
   const post = async () => {
+    if (!canEdit) { toast.error('Admin access required.'); return; }
     if (!channelId) { toast.warning('Pick a channel.'); return; }
     const rolesOk = rows.filter((r) => r.roleId);
     if (!rolesOk.length) { toast.warning('Add at least one role.'); return; }
@@ -88,6 +91,7 @@ export default function ReactionRoles({ guild, guildData }) {
   };
 
   const remove = async (id) => {
+    if (!canEdit) { toast.error('Admin access required.'); return; }
     try {
       const r = await api.delete(`/api/guild/${guild.id}/reactionroles/${id}`);
       setMappings(r.mappings || []);
@@ -123,6 +127,10 @@ export default function ReactionRoles({ guild, guildData }) {
         subtitle={`Self-assign roles in ${guild.name}`}
         badge={`${mappings.length} maps`}
       />
+
+      {!canEdit && (
+        <p className="text-[11px] text-amber-300/80 flex items-center gap-1.5" role="note">Read-only access — Admin level or higher is required to post panels or remove mappings.</p>
+      )}
 
       <div className="grid grid-cols-3 gap-3">
         <StatCard icon={MousePointerClick} label="Buttons" value={buttons} color="cyan" />
@@ -262,7 +270,7 @@ export default function ReactionRoles({ guild, guildData }) {
             </div>
           </div>
 
-          <button onClick={post} disabled={posting} className="cyber-button-solid inline-flex items-center gap-2">
+          <button onClick={post} disabled={posting || !canEdit} title={canEdit ? undefined : 'Admin access required'} className="cyber-button-solid inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
             {posting ? <Loader size={13} className="animate-spin" /> : <Send size={13} />}
             {posting ? 'Posting…' : 'Post panel'}
           </button>
@@ -297,7 +305,7 @@ export default function ReactionRoles({ guild, guildData }) {
                         {m.channelId ? ` · #${channels.find((c) => c.id === m.channelId)?.name || m.channelId}` : ''}
                       </p>
                     </div>
-                    <button onClick={() => setConfirm(m.id)} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0" title="Remove mapping" aria-label={`Remove role mapping ${m.label || m.roleId || ''}`}>
+                    <button onClick={() => setConfirm(m.id)} disabled={!canEdit} title={canEdit ? 'Remove mapping' : 'Admin access required'} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed" aria-label={`Remove role mapping ${m.label || m.roleId || ''}`}>
                       <Trash2 size={14} aria-hidden="true" />
                     </button>
                   </div>

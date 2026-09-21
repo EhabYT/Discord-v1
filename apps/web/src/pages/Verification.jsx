@@ -161,9 +161,15 @@ function PanelPreview({ cfg, guildName }) {
   );
 }
 
-export default function Verification({ guild, guildData }) {
+export default function Verification({ guild, guildData, permLevel = 0 }) {
   const toast = useToast();
   const { t } = useI18n();
+  // Backend gates: config/panel/roles/quick-setup/lock/kick/wipe need level 3;
+  // only member verify/unverify need level 2.
+  // Read-only viewers get a banner and disabled Save instead of silent 403s.
+  const canModerate = permLevel >= 2;
+  const canEdit = permLevel >= 3;
+  const canDestroy = permLevel >= 3;
   const [tab, setTab] = useState('quick');
   const [extraRoles, setExtraRoles] = useState([]);
   const [cfg, setCfg] = useState(DEFAULT_CFG);
@@ -214,6 +220,7 @@ export default function Verification({ guild, guildData }) {
   const set = (patch) => setCfg((c) => ({ ...c, ...patch }));
 
   const save = async () => {
+    if (!canEdit) { toast.error('Admin access required.'); return; }
     setSaving(true);
     try {
       const saved = await api.post(`/api/guild/${guild.id}/verification`, cfg);
@@ -227,6 +234,7 @@ export default function Verification({ guild, guildData }) {
   };
 
   const postPanel = async () => {
+    if (!canEdit) { toast.error('Admin access required.'); return; }
     if (!cfg.roleId) { toast.warning('Pick a verified role first.'); return; }
     if (!cfg.channelId) { toast.warning('Pick a panel channel first.'); return; }
     setPosting(true);
@@ -256,6 +264,7 @@ export default function Verification({ guild, guildData }) {
   };
 
   const act = async (userId, action) => {
+    if (!canModerate) { toast.error('Mod access required.'); return; }
     setBusyId(userId + action);
     try {
       await api.post(`/api/guild/${guild.id}/verification/members/${userId}/${action}`);
@@ -268,6 +277,7 @@ export default function Verification({ guild, guildData }) {
   };
 
   const kickPending = async (overdueOnly) => {
+    if (!canDestroy) { toast.error('Admin access required.'); return; }
     setBusyId('kick');
     try {
       const r = await api.post(`/api/guild/${guild.id}/verification/kick-pending`, { overdueOnly });
@@ -281,6 +291,7 @@ export default function Verification({ guild, guildData }) {
   };
 
   const createRole = async (which) => {
+    if (!canEdit) { toast.error('Admin access required.'); return; }
     setBusyId('role-' + which);
     try {
       const r = await api.post(`/api/guild/${guild.id}/verification/roles`, { which });
@@ -297,6 +308,7 @@ export default function Verification({ guild, guildData }) {
   };
 
   const toggleLock = async (enable) => {
+    if (!canDestroy) { toast.error('Admin access required.'); return; }
     setBusyId('lock');
     try {
       const r = await api.post(`/api/guild/${guild.id}/verification/lock`, { enable, channelId: cfg.channelId });
@@ -309,6 +321,7 @@ export default function Verification({ guild, guildData }) {
   };
 
   const quickSetup = async (lockServer) => {
+    if (!canEdit) { toast.error('Admin access required.'); return; }
     if (!cfg.channelId) { toast.warning('Pick a panel channel first.'); return; }
     setBusyId('quick');
     try {
@@ -329,6 +342,7 @@ export default function Verification({ guild, guildData }) {
   };
 
   const fixHierarchy = async () => {
+    if (!canEdit) { toast.error('Admin access required.'); return; }
     setBusyId('fix-hierarchy');
     try {
       const r = await api.post(`/api/guild/${guild.id}/verification/fix-hierarchy`);
@@ -351,6 +365,7 @@ export default function Verification({ guild, guildData }) {
   };
 
   const wipeLog = async () => {
+    if (!canDestroy) { toast.error('Admin access required.'); return; }
     try {
       await api.delete(`/api/guild/${guild.id}/verification/log`);
       setLog([]);
@@ -408,11 +423,18 @@ export default function Verification({ guild, guildData }) {
         <button onClick={load} className="cyber-button text-xs flex items-center gap-1.5">
           <RefreshCw size={12} className={loading ? 'animate-spin' : ''} /> Refresh
         </button>
-        <button onClick={save} disabled={saving} className="cyber-button-solid text-xs flex items-center gap-1.5">
+        <button onClick={save} disabled={saving || !canEdit} title={canEdit ? undefined : 'Admin access required'} className="cyber-button-solid text-xs flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
           {saving ? <Loader size={12} className="animate-spin" /> : <Save size={12} />}
           {saving ? 'Saving…' : 'Save'}
         </button>
       </PageHeader>
+
+      {!canEdit && (
+        <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 flex gap-2" role="note">
+          <AlertTriangle size={14} className="text-amber-300 flex-shrink-0 mt-0.5" aria-hidden="true" />
+          <p className="text-xs text-amber-200 leading-relaxed">Read-only access — Admin level or higher is required to change verification.</p>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard icon={Shield} label="Gate" value={cfg.enabled ? 'On' : 'Off'} sub={cfg.mode === 'captcha' ? 'Math captcha' : 'Button click'} color={cfg.enabled ? 'green' : 'yellow'} />

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import AuthLayout from '../auth/AuthLayout.jsx';
 import api from '../api.js';
 import { useAuth } from '../auth/AuthContext.jsx';
@@ -10,12 +10,16 @@ export default function VerifyEmail() {
   const { account, refresh } = useAuth();
   const [state, setState] = useState(token ? 'working' : 'missing');
   const [message, setMessage] = useState('');
+  // Single-use token: fire exactly once. `t` is recreated on locale/dict
+  // loads (i18n.jsx) and must not re-trigger the POST (second call → 400).
+  const fired = useRef(false);
   useEffect(() => {
-    if (!token) return;
+    if (!token || fired.current) return;
+    fired.current = true;
     api.post('/api/auth/verify-email', { token })
       .then(() => { setState('done'); setMessage(t('auth.verified', 'Your email is verified.')); return refresh(); })
       .catch(err => { setState('error'); setMessage(err.message); });
-  }, [token, refresh, t]);
+  }, [token]);
   const resend = async () => {
     try { const result = await api.post('/api/auth/resend-verification', {}); setMessage(result.message); }
     catch (err) { setMessage(err.message); }

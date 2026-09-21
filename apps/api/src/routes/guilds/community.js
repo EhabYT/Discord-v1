@@ -22,9 +22,16 @@ function registerCommunityRoutes(router, { requirePerm, botClient }) {
             const level = await getUserPermLevel(botClient, req.params.guildId, sessionUserId(req));
             const visible = level >= 2
                 ? [...items].reverse()
-                : [...items].reverse().map((s) => (s.anonymous
-                    ? (({ _authorId, _authorTag, ...rest }) => rest)(s)
-                    : s));
+                // Stored shape is authorId/authorTag (no underscore prefix).
+                : [...items].reverse().map((s) => {
+                    if (!s.anonymous) return s;
+                    const rest = { ...s };
+                    delete rest.authorId;
+                    delete rest.authorTag;
+                    delete rest._authorId;
+                    delete rest._authorTag;
+                    return rest;
+                });
             res.json({
                 items: visible,
                 config,
@@ -145,9 +152,17 @@ function registerCommunityRoutes(router, { requirePerm, botClient }) {
             // retained when staffLog is enabled, and must not be handed to every
             // dashboard Viewer — strip them below Moderator (level 2).
             const level = await getUserPermLevel(botClient, req.params.guildId, sessionUserId(req));
+            // Stored shape is authorId/authorTag (no underscore prefix).
             const safe = level >= 2
                 ? items
-                : items.map(({ _authorId, _authorTag, ...rest }) => rest);
+                : items.map((item) => {
+                    const rest = { ...item };
+                    delete rest.authorId;
+                    delete rest.authorTag;
+                    delete rest._authorId;
+                    delete rest._authorTag;
+                    return rest;
+                });
             res.json({ items: safe, config });
         } catch (err) { next(err); }
     });

@@ -8,8 +8,11 @@ import CyanToggle from '../components/CyanToggle.jsx';
 import { useToast } from '../components/Toast.jsx';
 import api from '../api.js';
 
-export default function Confessions({ guild, guildData }) {
+export default function Confessions({ guild, guildData, permLevel = 0 }) {
   const toast = useToast();
+  // Backend gates: config save needs Admin (3); post/delete need Mod (2).
+  const canEdit = permLevel >= 3;
+  const canAct = permLevel >= 2;
   const [tab, setTab] = useState('inbox');
   const [items, setItems] = useState([]);
   const [cfg, setCfg] = useState({ channelId: null, enabled: true, cooldownMinutes: 10, staffLog: false, title: 'Anonymous Confession', color: '#9B59B6' });
@@ -29,13 +32,14 @@ export default function Confessions({ guild, guildData }) {
       const d = await api.get(`/api/guild/${guild.id}/confessions`);
       setItems(d.items || []);
       setCfg((c) => ({ ...c, ...(d.config || {}) }));
-    } catch { setItems([]); }
+    } catch (e) { toast.error(e.message || 'Failed to load confessions.'); }
     setLoading(false);
   }, [guild?.id]);
 
   useEffect(() => { load(); }, [load]);
 
   const save = async () => {
+    if (!canEdit) { toast.error('Admin access required.'); return; }
     setSaving(true);
     try {
       const saved = await api.post(`/api/guild/${guild.id}/confessions/config`, cfg);
@@ -46,6 +50,7 @@ export default function Confessions({ guild, guildData }) {
   };
 
   const post = async () => {
+    if (!canAct) { toast.error('Mod access required.'); return; }
     if (!draft.trim()) return;
     setPosting(true);
     try {
@@ -58,6 +63,7 @@ export default function Confessions({ guild, guildData }) {
   };
 
   const remove = async (id) => {
+    if (!canAct) { toast.error('Mod access required.'); return; }
     try {
       await api.delete(`/api/guild/${guild.id}/confessions/${id}`);
       setItems((prev) => prev.filter((x) => x.id !== id));
@@ -83,10 +89,14 @@ export default function Confessions({ guild, guildData }) {
         badge={cfg.enabled ? 'On' : 'Off'}
         badgeColor={cfg.enabled ? 'green' : 'yellow'}
       >
-        <button onClick={save} disabled={saving} className="cyber-button-solid text-xs flex items-center gap-1.5">
+        <button onClick={save} disabled={saving || !canEdit} title={canEdit ? undefined : 'Admin access required'} className="cyber-button-solid text-xs flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
           {saving ? <Loader size={12} className="animate-spin" /> : <Save size={12} />} Save
         </button>
       </PageHeader>
+
+      {!canAct && (
+        <p className="text-[11px] text-amber-300/80 flex items-center gap-1.5" role="note">Read-only access — Mod level or higher is required (Admin for settings).</p>
+      )}
 
       <div className="grid grid-cols-3 gap-3">
         <StatCard icon={Inbox} label="Logged" value={items.length} color="purple" />
@@ -108,7 +118,7 @@ export default function Confessions({ guild, guildData }) {
           <div className="cyber-card p-4 space-y-3">
             <p className="text-xs font-semibold text-white">Post as staff (no cooldown)</p>
             <textarea rows={3} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Anonymous confession…" aria-label="Staff confession text" className="cyber-input resize-none text-xs" />
-            <button onClick={post} disabled={posting || !draft.trim()} className="cyber-button-solid text-xs flex items-center gap-1.5">
+            <button onClick={post} disabled={posting || !draft.trim() || !canAct} title={canAct ? undefined : 'Mod access required'} className="cyber-button-solid text-xs flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
               {posting ? <Loader size={12} className="animate-spin" aria-hidden="true" /> : <Send size={12} aria-hidden="true" />} Post
             </button>
           </div>
@@ -130,7 +140,7 @@ export default function Confessions({ guild, guildData }) {
                       <p className="text-xs text-zinc-300 mt-1 whitespace-pre-wrap">{x.message}</p>
                       {x.authorTag && <p className="text-[10px] text-amber-200 mt-1">Staff log: {x.authorTag}</p>}
                     </div>
-                    <button onClick={() => setConfirm(x.id)} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0" title="Delete confession" aria-label={`Delete confession ${x.id}`}>
+                    <button onClick={() => setConfirm(x.id)} disabled={!canAct} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed" title={canAct ? 'Delete confession' : 'Mod access required'} aria-label={`Delete confession ${x.id}`}>
                       <Trash2 size={13} aria-hidden="true" />
                     </button>
                   </div>
@@ -169,7 +179,7 @@ export default function Confessions({ guild, guildData }) {
               </div>
             </div>
             <CyanToggle enabled={!!cfg.staffLog} onChange={(v) => setCfg((c) => ({ ...c, staffLog: v }))} label="Staff log authors" description="Keep Discord anonymous, store author only here" />
-            <button onClick={save} disabled={saving} className="cyber-button-solid flex items-center gap-2">
+            <button onClick={save} disabled={saving || !canEdit} title={canEdit ? undefined : 'Admin access required'} className="cyber-button-solid flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
               {saving ? <Loader size={13} className="animate-spin" aria-hidden="true" /> : <Save size={13} aria-hidden="true" />} Save
             </button>
           </div>

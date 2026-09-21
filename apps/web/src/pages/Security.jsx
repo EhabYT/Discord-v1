@@ -29,7 +29,7 @@ const AUTOMOD_FEATURES = [
   { key: 'mentions',  label: 'Mass Mentions',   desc: 'Block bulk user mentions',           simple: false, icon: AtSign },
 ];
 
-export default function Security({ guild, guildData, onNavigate }) {
+export default function Security({ guild, guildData, onNavigate, permLevel = 0 }) {
   const toast = useToast();
   const [verification, setVerification] = useState({ enabled: false, roleId: null, logChannelId: null });
   const [automod, setAutomod] = useState({});
@@ -38,6 +38,10 @@ export default function Security({ guild, guildData, onNavigate }) {
   const [saving, setSaving] = useState('');
 
   const channels = guildData?.guild?.channels?.filter(c => c.type === 0) || [];
+  // Backend gates: POST /security needs level 3, POST /automod needs level 2.
+  // Disable the UI for Viewers instead of letting every toggle 403.
+  const canEditAutomod = permLevel >= 2;
+  const canEditSecurity = permLevel >= 3;
 
   const loadPerf = useCallback(async () => {
     try { setPerf(await api.get('/api/performance')); } catch {}
@@ -64,6 +68,7 @@ export default function Security({ guild, guildData, onNavigate }) {
   }, [guildData, guild?.id, loadPerf]);
 
   const saveRaid = async () => {
+    if (!canEditSecurity) { toast.error('Admin access required.'); return; }
     setSaving('raid');
     try {
       await api.post(`/api/guild/${guild.id}/security`, {
@@ -76,11 +81,12 @@ export default function Security({ guild, guildData, onNavigate }) {
         },
       });
       toast.success('Anti-raid saved.');
-    } catch { toast.error('Failed to save anti-raid.'); }
+    } catch (e) { toast.error(e.message || 'Failed to save anti-raid.'); }
     setSaving('');
   };
 
   const toggleAutomod = async (setting, value, extra = {}) => {
+    if (!canEditAutomod) { toast.error('Mod access required.'); return; }
     try {
       const updated = { ...automod };
       if (['antiSpam', 'antiLinks', 'antiInvite', 'badWords'].includes(setting)) {
@@ -91,8 +97,8 @@ export default function Security({ guild, guildData, onNavigate }) {
       setAutomod(updated);
       await api.post(`/api/guild/${guild.id}/automod`, { setting, value, ...extra });
       toast.success(`${setting} ${value ? 'enabled' : 'disabled'}`);
-    } catch {
-      toast.error('Failed to update AutoMod.');
+    } catch (e) {
+      toast.error(e.message || 'Failed to update AutoMod.');
     }
   };
 
@@ -192,29 +198,35 @@ export default function Security({ guild, guildData, onNavigate }) {
       </div>
 
       <SectionCard icon={Users} title="Anti-Raid" iconColor="text-red-400" badge={raid.enabled ? 'Armed' : 'Off'}>
+        {!canEditSecurity && (
+          <p className="text-[11px] text-amber-300/80 flex items-center gap-1.5 mb-1"><Lock size={11} aria-hidden="true" /> Admin access required to change anti-raid.</p>
+        )}
         <div className="space-y-4">
           <CyanToggle
             enabled={raid.enabled}
             onChange={(v) => setRaid((r) => ({ ...r, enabled: v }))}
             label="Detect join bursts"
             description="Alert (and optionally lock down) when too many members join at once"
+            disabled={!canEditSecurity}
           />
           <div className="grid sm:grid-cols-3 gap-3">
             <div>
               <label className="text-xs text-gray-500 block mb-1.5">Joins</label>
               <input type="number" min="2" max="30" value={raid.threshold}
+                disabled={!canEditSecurity}
                 onChange={(e) => setRaid((r) => ({ ...r, threshold: parseInt(e.target.value) || 5 }))}
                 className="cyber-input text-xs" />
             </div>
             <div>
               <label className="text-xs text-gray-500 block mb-1.5">Window (seconds)</label>
               <input type="number" min="3" max="120" value={Math.round((raid.windowMs || 8000) / 1000)}
+                disabled={!canEditSecurity}
                 onChange={(e) => setRaid((r) => ({ ...r, windowMs: (parseInt(e.target.value) || 8) * 1000 }))}
                 className="cyber-input text-xs" />
             </div>
             <div>
               <label className="text-xs text-gray-500 block mb-1.5">Auto action</label>
-              <select value={raid.autoAction} onChange={(e) => setRaid((r) => ({ ...r, autoAction: e.target.value }))} className="cyber-select text-xs">
+              <select value={raid.autoAction} disabled={!canEditSecurity} onChange={(e) => setRaid((r) => ({ ...r, autoAction: e.target.value }))} className="cyber-select text-xs">
                 <option value="none">Alert only</option>
                 <option value="lockdown">Lockdown @everyone</option>
               </select>
@@ -222,12 +234,12 @@ export default function Security({ guild, guildData, onNavigate }) {
           </div>
           <div>
             <label className="text-xs text-gray-500 block mb-1.5">Alert channel</label>
-            <select value={raid.alertChannel || ''} onChange={(e) => setRaid((r) => ({ ...r, alertChannel: e.target.value }))} className="cyber-select">
+            <select value={raid.alertChannel || ''} disabled={!canEditSecurity} onChange={(e) => setRaid((r) => ({ ...r, alertChannel: e.target.value }))} className="cyber-select">
               <option value="">— Member log / none —</option>
               {channels.map((c) => <option key={c.id} value={c.id}>#{c.name}</option>)}
             </select>
           </div>
-          <button onClick={saveRaid} disabled={saving === 'raid'} className="cyber-button-solid text-xs">
+          <button onClick={saveRaid} disabled={saving === 'raid' || !canEditSecurity} className="cyber-button-solid text-xs disabled:opacity-50 disabled:cursor-not-allowed">
             {saving === 'raid' ? 'Saving…' : 'Save anti-raid'}
           </button>
         </div>
@@ -240,6 +252,9 @@ export default function Security({ guild, guildData, onNavigate }) {
           <h2 className="text-sm font-semibold text-white">AutoMod Configuration</h2>
           <span className="ml-auto cyber-badge-cyan">{activeCount}/{AUTOMOD_FEATURES.length} active</span>
         </div>
+        {!canEditAutomod && (
+          <p className="text-[11px] text-amber-300/80 flex items-center gap-1.5 mb-3"><Lock size={11} aria-hidden="true" /> Mod access required to change AutoMod.</p>
+        )}
 
         <div className="grid md:grid-cols-2 gap-3">
           {AUTOMOD_FEATURES.map(({ key, label, desc, simple, icon: Icon }) => {
@@ -261,6 +276,7 @@ export default function Security({ guild, guildData, onNavigate }) {
                       onChange={v => toggleAutomod(key, v)}
                       label={label}
                       description={desc}
+                      disabled={!canEditAutomod}
                     />
                     {!simple && val && (
                       <div className="mt-3 flex items-center gap-2">
@@ -268,6 +284,7 @@ export default function Security({ guild, guildData, onNavigate }) {
                         <input
                           type="number"
                           value={automod[key]?.threshold || 5}
+                          disabled={!canEditAutomod}
                           onChange={e => toggleAutomod(key, val, { threshold: parseInt(e.target.value) || 5 })}
                           className="cyber-input w-20 text-xs"
                           min="1" max="50"

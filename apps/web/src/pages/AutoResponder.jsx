@@ -55,8 +55,8 @@ export default function AutoResponder({ guild, guildData, permLevel }) {
       setNewResponse('');
       setExact(false);
       toast.success(exact ? 'Exact trigger added!' : 'Trigger added!');
-    } catch {
-      toast.error('Failed to add trigger.');
+    } catch (e) {
+      toast.error(e.message || 'Failed to add trigger.');
     }
     setSaving(false);
   };
@@ -69,13 +69,17 @@ export default function AutoResponder({ guild, guildData, permLevel }) {
         const result = await api.delete(`/api/guild/${guild.id}/autoresponder/${item.id}`);
         setTriggers(result.responders || result || []);
       } else {
+        // Legacy triggers stored before ids existed have no DELETE route.
+        // Bulk rewrite lives on POST /config, which is DEVELOPER-gated
+        // backend-side (guilds.js) — surface that instead of a generic error
+        // so Mods/Admins know to re-add the trigger to migrate it.
         const updated = triggers.filter((_, idx) => idx !== i);
         await api.post(`/api/guild/${guild.id}/config`, { autoresponder: updated });
         setTriggers(updated);
       }
       toast.success('Trigger removed.');
-    } catch {
-      toast.error('Failed to remove trigger.');
+    } catch (e) {
+      toast.error(e.message || 'Failed to remove trigger.');
     }
     setSaving(false);
     setRemoveIndex(null);

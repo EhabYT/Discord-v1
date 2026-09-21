@@ -173,9 +173,11 @@ export default function Overview({ guild, guildData, onNavigate, publicUrl: publ
   const [catFilter, setCatFilter]   = useState('all');
   const [showAll, setShowAll]       = useState(false);
   const [updatedAt, setUpdatedAt]   = useState(null);
+  const [loadError, setLoadError]   = useState('');
 
   const load = useCallback(async () => {
     setRefreshing(true);
+    setLoadError('');
     try {
       const [s, p, h] = await Promise.all([
         api.get('/api/stats'),
@@ -194,7 +196,7 @@ export default function Overview({ guild, guildData, onNavigate, publicUrl: publ
         setActivity(act);
         setGrowth(g);
       }
-    } catch (e) {}
+    } catch (e) { setLoadError(e.message || 'Failed to load overview.'); }
     setRefreshing(false);
     setLoading(false);
   }, [guild?.id]);
@@ -245,6 +247,13 @@ export default function Overview({ guild, guildData, onNavigate, publicUrl: publ
           </button>
         </div>
       </PageHeader>
+
+      {loadError && !loading && (
+        <div className="rounded-xl border border-red-400/30 bg-red-400/10 p-3 flex items-center justify-between gap-3" role="alert">
+          <p className="text-xs text-red-200">{loadError}</p>
+          <button onClick={load} className="cyber-button text-xs flex-shrink-0">Retry</button>
+        </div>
+      )}
 
       {loading ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

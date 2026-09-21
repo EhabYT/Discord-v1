@@ -28,6 +28,7 @@ export default function Permissions({ guild, guildData }) {
   const [myLevel,     setMyLevel]     = useState(0);
   const [roles,       setRoles]       = useState([]);
   const [loading,     setLoading]     = useState(true);
+  const [loadError,   setLoadError]   = useState('');
   const [saving,      setSaving]      = useState(false);
   const [selectedRole,  setSelectedRole]  = useState('');
   const [selectedLevel, setSelectedLevel] = useState(2);
@@ -37,6 +38,7 @@ export default function Permissions({ guild, guildData }) {
   const load = useCallback(async () => {
     if (!guild?.id) return;
     setLoading(true);
+    setLoadError('');
     try {
       const [p, me] = await Promise.all([
         api.get(`/api/guild/${guild.id}/permissions`),
@@ -44,7 +46,7 @@ export default function Permissions({ guild, guildData }) {
       ]);
       setPerms(p.perms || []);
       setMyLevel(me.level ?? 0);
-    } catch (_) {}
+    } catch (e) { setLoadError(e.message || 'Failed to load permissions.'); }
     setLoading(false);
   }, [guild?.id]);
 
@@ -108,6 +110,13 @@ export default function Permissions({ guild, guildData }) {
           <RefreshCw size={12} className={loading ? 'animate-spin' : ''} aria-hidden="true" /> Refresh
         </button>
       </PageHeader>
+
+      {loadError && (
+        <div className="rounded-xl border border-red-400/30 bg-red-400/10 p-3 flex items-center justify-between gap-3" role="alert">
+          <p className="text-xs text-red-200">{loadError}</p>
+          <button onClick={load} className="cyber-button text-xs flex-shrink-0">Retry</button>
+        </div>
+      )}
 
       {/* Level reference */}
       <div className="cyber-card p-5">

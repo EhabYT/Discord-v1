@@ -30,8 +30,10 @@ const LB_TABS = [
   { id: 'voice',    icon: Mic,          label: 'Voice'    },
 ];
 
-export default function Progression({ guild, guildData }) {
+export default function Progression({ guild, guildData, permLevel = 0 }) {
   const toast = useToast();
+  // All writes on this desk require guild Admin (level 3) backend-side.
+  const canEdit = permLevel >= 3;
   const [tab,    setTab]    = useState('settings');
   const [lbTab,  setLbTab]  = useState('xp');
   const [saving, setSaving] = useState(false);
@@ -57,12 +59,18 @@ export default function Progression({ guild, guildData }) {
   const roles    = guildData?.guild?.roles    || [];
   const channels = (guildData?.guild?.channels || []).filter(c => c.type === 0);
 
+  // Sync server-driven state whenever guildData arrives (App.jsx fetches it
+  // async and nulls it on guild switch — guild.id alone never changes then).
   useEffect(() => {
     if (!guild?.id) return;
     if (guildData) {
       setXpEnabled(guildData.guild?.xpEnabled !== false);
       setRewards(guildData.rewards || []);
     }
+  }, [guild?.id, guildData]);
+
+  useEffect(() => {
+    if (!guild?.id) return;
     loadXpDetails();
     loadRoleMultipliers();
     loadAnnounce();
@@ -103,16 +111,19 @@ export default function Progression({ guild, guildData }) {
   }, [tab, lbTab]);
 
   const saveSettings = async () => {
+    if (!canEdit) { toast.error('Admin access required.'); return; }
     setSaving(true);
     try {
-      await api.post(`/api/guild/${guild.id}/config`, { xpEnabled });
+      // /xp/enabled is the guild-level toggle (POST /config is
+      // DEVELOPER-gated and 403s for normal admins).
+      await api.post(`/api/guild/${guild.id}/xp/enabled`, { xpEnabled });
       await api.post(`/api/guild/${guild.id}/xp/advanced`, { multiplier, ignoredChannels });
       const body = announceMode === 'disabled' ? { disabled: true }
                  : announceMode === 'channel'  ? { channelId: announceChannel }
                  : {};
       await api.post(`/api/guild/${guild.id}/xp/announce`, body);
       toast.success('XP settings saved!');
-    } catch (e) { toast.error('Error saving settings.'); }
+    } catch (e) { toast.error(e.message || 'Error saving settings.'); }
     setSaving(false);
   };
 
@@ -120,31 +131,35 @@ export default function Progression({ guild, guildData }) {
   const removeIgnored = (id) => setIgnoredChannels(p => p.filter(x => x !== id));
 
   const addReward = async () => {
+    if (!canEdit) { toast.error('Admin access required.'); return; }
     if (!newLevel || !newRole) return;
     try {
       const r = await api.post(`/api/guild/${guild.id}/rewards`, { level: parseInt(newLevel), roleId: newRole });
       setRewards(r); setNewLevel(''); setNewRole('');
       toast.success('Role reward added!');
-    } catch (_) { toast.error('Failed to add reward.'); }
+    } catch (e) { toast.error(e.message || 'Failed to add reward.'); }
   };
 
   const removeReward = async (reward) => {
+    if (!canEdit) { toast.error('Admin access required.'); return; }
     try { setRewards(await api.post(`/api/guild/${guild.id}/rewards/delete`, reward)); }
-    catch (_) {}
+    catch (e) { toast.error(e.message || 'Failed to remove reward.'); }
   };
 
   const addRoleMultiplier = async () => {
+    if (!canEdit) { toast.error('Admin access required.'); return; }
     if (!newMultRole || !newMultValue) return;
     try {
       const r = await api.post(`/api/guild/${guild.id}/xp/rolemultipliers`, { roleId: newMultRole, value: parseFloat(newMultValue) });
       setRoleMultipliers(r); setNewMultRole(''); setNewMultValue('2');
       toast.success('Role multiplier added!');
-    } catch (_) { toast.error('Failed to add multiplier.'); }
+    } catch (e) { toast.error(e.message || 'Failed to add multiplier.'); }
   };
 
   const removeRoleMultiplier = async (roleId) => {
+    if (!canEdit) { toast.error('Admin access required.'); return; }
     try { setRoleMultipliers(await api.delete(`/api/guild/${guild.id}/xp/rolemultipliers/${roleId}`)); }
-    catch (_) {}
+    catch (e) { toast.error(e.message || 'Failed to remove multiplier.'); }
   };
 
   if (!guild) return <div className="p-6 text-zinc-400 text-sm">Select a server first.</div>;
@@ -152,6 +167,10 @@ export default function Progression({ guild, guildData }) {
   return (
     <div className="page-shell-sm animate-fade-in">
       <PageHeader icon={TrendingUp} title="Progression & XP" subtitle="Leveling system, role rewards, and XP multipliers" />
+
+      {!canEdit && (
+        <p className="text-[11px] text-amber-300/80 flex items-center gap-1.5" role="note">Read-only access — Admin level or higher is required to change XP settings.</p>
+      )}
 
       <div className="seg-tabs" role="tablist" aria-label="Progression sections">
         {TABS.map(({ id, icon: Icon, label }) => (
@@ -254,13 +273,16 @@ export default function Progression({ guild, guildData }) {
             )}
           </div>
 
-          <button onClick={saveSettings} disabled={saving}
-            className="cyber-button-solid w-full py-2.5 text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50">
+          <button onClick={saveSettings} disabled={saving || !canEdit}
+            title={canEdit ? undefined : 'Admin access required'}
+            className="cyber-button-solid w-full py-2.5 text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
             {saving ? 'Saving…' : <><Save size={14} /> Save Settings</>}
           </button>
           <button
-            onClick={() => setResetOpen(true)}
-            className="cyber-button-danger w-full text-xs py-2"
+            onClick={() => { if (!canEdit) { toast.error('Admin access required.'); return; } setResetOpen(true); }}
+            className="cyber-button-danger w-full text-xs py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={!canEdit}
+            title={canEdit ? undefined : 'Admin access required'}
           >
             Reset all XP & stats
           </button>
@@ -449,11 +471,12 @@ export default function Progression({ guild, guildData }) {
         variant="danger"
         onConfirm={async () => {
           setResetOpen(false);
+          if (!canEdit) { toast.error('Admin access required.'); return; }
           try {
             const r = await api.post(`/api/guild/${guild.id}/xp/reset`);
             toast.success(`Reset ${r.cleared || 0} records.`);
             setLeaderboard([]);
-          } catch { toast.error('XP reset failed.'); }
+          } catch (e) { toast.error(e.message || 'XP reset failed.'); }
         }}
         onCancel={() => setResetOpen(false)}
       />

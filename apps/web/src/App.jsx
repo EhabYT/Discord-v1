@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useState, useEffect, useCallback } from 'react';
+import React, { lazy, Suspense, useState, useEffect, useCallback, useRef } from 'react';
 import Sidebar from './components/Sidebar.jsx';
 import CommandPalette from './components/CommandPalette.jsx';
 import CopyButton from './components/CopyButton.jsx';
@@ -384,6 +384,11 @@ export default function App() {
   const { auth, account, discord, displayUser: me, loading: authLoading, refresh: refreshAuth } = useAuth();
   const [page, setPage] = useState(getHashPage);
   const [guilds, setGuilds] = useState([]);
+  // Kept separate from the guild list itself: a failed /api/guilds call
+  // (bot initializing → 503, transient network) must not look identical to
+  // "no shared servers", or the picker dead-ends with no way to retry.
+  const [guildsLoading, setGuildsLoading] = useState(true);
+  const [guildsError, setGuildsError] = useState('');
   const [selectedGuild, setSelectedGuild] = useState(null);
   const [guildData, setGuildData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -480,26 +485,64 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [navigate]);
 
+  // Guild list loader, shared by the initial effect and the sidebar Retry
+  // button. Never throws: failures land in guildsError so the picker can
+  // tell "couldn't load" apart from "no shared servers".
+  const loadGuilds = useCallback(async () => {
+    if (authLoading) return;
+    if (!auth.loggedIn) {
+      setGuilds([]);
+      setGuildsError('');
+      setGuildsLoading(false);
+      setSelectedGuild(null);
+      return;
+    }
+    // Credential-only sessions have no Discord user, so every guild route
+    // can only 401 — skip the call instead of flashing a bogus load error;
+    // the picker prompts to link Discord instead.
+    if (!auth.discordLinked) {
+      setGuilds([]);
+      setGuildsError('');
+      setGuildsLoading(false);
+      setSelectedGuild(null);
+      return;
+    }
+    setGuildsLoading(true);
+    try {
+      const g = await api.get('/api/guilds');
+      const list = Array.isArray(g) ? g : [];
+      setGuilds(list);
+      setGuildsError('');
+      setSelectedGuild((prev) => {
+        // Keep a still-present selection (retry must not yank it away);
+        // fall back to remembered/first when it vanished or is unset.
+        const remembered = rememberedGuild();
+        if (prev && list.some((x) => x.id === prev.id)) return prev;
+        return list.find((x) => x.id === remembered) || list[0] || null;
+      });
+    } catch (e) {
+      setGuildsError(e.message || 'Failed to load servers.');
+    } finally {
+      setGuildsLoading(false);
+    }
+  }, [authLoading, auth.loggedIn, auth.discordLinked]);
+
   useEffect(() => {
     // Wait for the auth state first: logged-out visitors (homepage, login,
     // register) must not fire session-gated calls that can only 401.
     // /api/health stays public and always loads.
     if (authLoading) return;
     const loggedIn = !!auth.loggedIn;
+    loadGuilds();
     Promise.all([
-      loggedIn ? api.get('/api/guilds').catch(() => []) : Promise.resolve([]),
       api.get('/api/health').catch(() => null),
       loggedIn ? api.get('/api/developer/whoami').catch(() => ({ role: 'NONE', baseRole: 'NONE', unlocked: false })) : Promise.resolve({ role: 'NONE', baseRole: 'NONE', unlocked: false }),
-    ]).then(([g, h, dev]) => {
-      const list = Array.isArray(g) ? g : [];
-      setGuilds(list);
+    ]).then(([h, dev]) => {
       setDeveloperAccess(dev || { role: 'NONE', baseRole: 'NONE', unlocked: false });
       setHealth(h);
       setApiReachable(Boolean(h));
-      const remembered = rememberedGuild();
-      setSelectedGuild(list.find((x) => x.id === remembered) || list[0] || null);
     }).finally(() => setLoading(false));
-  }, [authLoading, auth.loggedIn]);
+  }, [authLoading, auth.loggedIn, loadGuilds]);
 
   useEffect(() => {
     const poll = () => {
@@ -592,9 +635,21 @@ export default function App() {
   }, [authLoading, auth.loggedIn]);
 
   // Session expiry / multi-tab logout: any API 401 refreshes the auth state,
-  // and the guard above redirects protected pages to /login.
+  // and the guard above redirects protected pages to /login. Guarded against
+  // re-entry + cooldown: endpoints that legitimately 401 for valid sessions
+  // (unlinked credential accounts hitting Discord-gated routes) would
+  // otherwise retrigger refreshes without bound — each refresh re-fires the
+  // same 401s, each of which fires this event again.
+  const refreshGuard = useRef({ pending: false, last: 0 });
   useEffect(() => {
-    const onUnauthorized = () => { refreshAuth().catch(() => {}); };
+    const onUnauthorized = () => {
+      const g = refreshGuard.current;
+      if (g.pending) return;
+      if (Date.now() - g.last < 5000) return;
+      g.pending = true;
+      g.last = Date.now();
+      refreshAuth().catch(() => {}).finally(() => { refreshGuard.current.pending = false; });
+    };
     window.addEventListener('eb:unauthorized', onUnauthorized);
     return () => window.removeEventListener('eb:unauthorized', onUnauthorized);
   }, [refreshAuth]);
@@ -664,6 +719,9 @@ export default function App() {
             page={page}
             setPage={navigate}
             guilds={guilds}
+            guildsLoading={guildsLoading}
+            guildsError={guildsError}
+            onRetryGuilds={loadGuilds}
             selectedGuild={selectedGuild}
             setSelectedGuild={setSelectedGuild}
             me={me}
@@ -834,9 +892,14 @@ export default function App() {
                     <p className="text-sm text-zinc-400 mb-5 leading-relaxed">
                       {auth.oauthEnabled && !auth.loggedIn
                         ? t('shell.loginToSee', 'Log in with Discord to see the servers you can manage.')
-                        : t('shell.inviteRefresh', 'Invite the bot to a server, then refresh this page.')}
+                        : auth.loggedIn && !auth.discordLinked
+                          ? t('side.linkDiscordHint', 'Your EB account is signed in, but server administration needs a linked Discord identity.')
+                          : t('shell.inviteRefresh', 'Invite the bot to a server, then refresh this page.')}
                     </p>
                     {auth.oauthEnabled && !auth.loggedIn && (
+                      <a href="/api/auth/discord" className="cyber-button-solid inline-flex items-center min-h-[44px]">{t('common.loginDiscord', 'Login with Discord')}</a>
+                    )}
+                    {auth.oauthEnabled && auth.loggedIn && !auth.discordLinked && (
                       <a href="/api/auth/discord" className="cyber-button-solid inline-flex items-center min-h-[44px]">{t('common.loginDiscord', 'Login with Discord')}</a>
                     )}
                   </div>

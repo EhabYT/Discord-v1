@@ -10,8 +10,11 @@ import api from '../api.js';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-export default function Birthdays({ guild, guildData }) {
+export default function Birthdays({ guild, guildData, permLevel = 0 }) {
   const toast = useToast();
+  // Backend gates: config save needs Admin (3); test + remove need Mod (2).
+  const canEdit = permLevel >= 3;
+  const canAct = permLevel >= 2;
   const [tab, setTab] = useState('list');
   const [entries, setEntries] = useState([]);
   const [cfg, setCfg] = useState({ disabled: false, channelId: null, roleId: null, message: '' });
@@ -33,13 +36,14 @@ export default function Birthdays({ guild, guildData }) {
       setEntries(d.entries || []);
       setCfg((c) => ({ ...c, ...(d.config || {}) }));
       setToday(d.today || 0);
-    } catch { setEntries([]); }
+    } catch (e) { toast.error(e.message || 'Failed to load birthdays.'); }
     setLoading(false);
   }, [guild?.id]);
 
   useEffect(() => { load(); }, [load]);
 
   const save = async () => {
+    if (!canEdit) { toast.error('Admin access required.'); return; }
     setSaving(true);
     try {
       const saved = await api.post(`/api/guild/${guild.id}/birthdays/config`, cfg);
@@ -52,6 +56,7 @@ export default function Birthdays({ guild, guildData }) {
   };
 
   const test = async () => {
+    if (!canAct) { toast.error('Mod access required.'); return; }
     setTesting(true);
     try {
       await api.post(`/api/guild/${guild.id}/birthdays/test`, { channelId: cfg.channelId });
@@ -63,6 +68,7 @@ export default function Birthdays({ guild, guildData }) {
   };
 
   const remove = async (userId) => {
+    if (!canAct) { toast.error('Mod access required.'); return; }
     try {
       await api.delete(`/api/guild/${guild.id}/birthdays/${userId}`);
       setEntries((prev) => prev.filter((e) => e.userId !== userId));
@@ -91,11 +97,15 @@ export default function Birthdays({ guild, guildData }) {
         badge={cfg.disabled ? 'Off' : 'On'}
         badgeColor={cfg.disabled ? 'yellow' : 'green'}
       >
-        <button onClick={save} disabled={saving} className="cyber-button-solid text-xs flex items-center gap-1.5">
+        <button onClick={save} disabled={saving || !canEdit} title={canEdit ? undefined : 'Admin access required'} className="cyber-button-solid text-xs flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
           {saving ? <Loader size={12} className="animate-spin" /> : <Save size={12} />}
           Save
         </button>
       </PageHeader>
+
+      {!canAct && (
+        <p className="text-[11px] text-amber-300/80 flex items-center gap-1.5" role="note">Read-only access — Mod level or higher is required (Admin for settings).</p>
+      )}
 
       <div className="grid grid-cols-3 gap-3">
         <StatCard icon={Users} label="Registered" value={entries.length} color="cyan" />
@@ -136,7 +146,7 @@ export default function Birthdays({ guild, guildData }) {
                       {e.today ? ' · TODAY' : ` · in ${e.days}d`}
                     </p>
                   </div>
-                  <button onClick={() => setConfirm(e.userId)} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0" title="Remove birthday" aria-label={`Remove birthday for ${e.username || e.userId}`}>
+                  <button onClick={() => setConfirm(e.userId)} disabled={!canAct} title={canAct ? 'Remove birthday' : 'Mod access required'} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed" aria-label={`Remove birthday for ${e.username || e.userId}`}>
                     <Trash2 size={14} aria-hidden="true" />
                   </button>
                 </div>
@@ -183,10 +193,10 @@ export default function Birthdays({ guild, guildData }) {
               <textarea rows={3} value={cfg.message || ''} onChange={(e) => setCfg((c) => ({ ...c, message: e.target.value }))} className="cyber-input resize-none" />
             </div>
             <div className="flex gap-2">
-              <button onClick={save} disabled={saving} className="cyber-button-solid flex items-center gap-2">
+              <button onClick={save} disabled={saving || !canEdit} title={canEdit ? undefined : 'Admin access required'} className="cyber-button-solid flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                 {saving ? <Loader size={13} className="animate-spin" aria-hidden="true" /> : <Save size={13} aria-hidden="true" />} Save
               </button>
-              <button onClick={test} disabled={testing || !cfg.channelId} className="cyber-button flex items-center gap-2">
+              <button onClick={test} disabled={testing || !cfg.channelId || !canAct} title={!canAct ? 'Mod access required' : undefined} className="cyber-button flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                 {testing ? <Loader size={13} className="animate-spin" aria-hidden="true" /> : <Send size={13} aria-hidden="true" />} Test
               </button>
             </div>

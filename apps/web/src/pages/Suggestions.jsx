@@ -15,8 +15,11 @@ const FILTERS = [
   { id: 'all', label: 'All' },
 ];
 
-export default function Suggestions({ guild, guildData }) {
+export default function Suggestions({ guild, guildData, permLevel = 0 }) {
   const toast = useToast();
+  // Backend gates: config save needs Admin (3); post/approve/deny/delete Mod (2).
+  const canEdit = permLevel >= 3;
+  const canAct = permLevel >= 2;
   const [tab, setTab] = useState('inbox');
   const [items, setItems] = useState([]);
   const [cfg, setCfg] = useState({ channelId: null, anonymousDefault: false, autoReact: true });
@@ -40,13 +43,14 @@ export default function Suggestions({ guild, guildData }) {
       const d = await api.get(`/api/guild/${guild.id}/suggestions`);
       setItems(d.items || []);
       setCfg((c) => ({ ...c, ...(d.config || {}) }));
-    } catch { setItems([]); }
+    } catch (e) { toast.error(e.message || 'Failed to load suggestions.'); }
     setLoading(false);
   }, [guild?.id]);
 
   useEffect(() => { load(); }, [load]);
 
   const save = async () => {
+    if (!canEdit) { toast.error('Admin access required.'); return; }
     setSaving(true);
     try {
       const saved = await api.post(`/api/guild/${guild.id}/suggestions/config`, cfg);
@@ -57,6 +61,7 @@ export default function Suggestions({ guild, guildData }) {
   };
 
   const post = async () => {
+    if (!canAct) { toast.error('Mod access required.'); return; }
     if (!draft.trim()) return;
     setPosting(true);
     try {
@@ -69,6 +74,7 @@ export default function Suggestions({ guild, guildData }) {
   };
 
   const act = async (id, action) => {
+    if (!canAct) { toast.error('Mod access required.'); return; }
     setBusy(`${action}-${id}`);
     try {
       if (action === 'delete') {
@@ -96,7 +102,8 @@ export default function Suggestions({ guild, guildData }) {
     return items.filter((s) => {
       if (filter !== 'all' && s.status !== filter) return false;
       if (!q) return true;
-      return `${s.message} ${s.authorTag} ${s.id}`.toLowerCase().includes(q);
+      // authorTag is redacted for anonymous items below Moderator (backend).
+      return `${s.message || ''} ${s.authorTag || ''} ${s.id}`.toLowerCase().includes(q);
     });
   }, [items, filter, query]);
 
@@ -111,10 +118,14 @@ export default function Suggestions({ guild, guildData }) {
         badge={`${counts.pending} pending`}
         badgeColor={counts.pending ? 'yellow' : 'green'}
       >
-        <button onClick={save} disabled={saving} className="cyber-button-solid text-xs flex items-center gap-1.5">
+        <button onClick={save} disabled={saving || !canEdit} title={canEdit ? undefined : 'Admin access required'} className="cyber-button-solid text-xs flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
           {saving ? <Loader size={12} className="animate-spin" /> : <Save size={12} />} Save
         </button>
       </PageHeader>
+
+      {!canAct && (
+        <p className="text-[11px] text-amber-300/80 flex items-center gap-1.5" role="note">Read-only access — Mod level or higher is required (Admin for settings).</p>
+      )}
 
       <div className="grid grid-cols-3 gap-3">
         <StatCard icon={Inbox} label="Pending" value={counts.pending} color="yellow" />
@@ -140,7 +151,7 @@ export default function Suggestions({ guild, guildData }) {
               <label className="flex items-center gap-2 min-h-[32px] text-[11px] text-zinc-400 cursor-pointer select-none">
                 <input type="checkbox" checked={anon} onChange={(e) => setAnon(e.target.checked)} className="w-4 h-4 accent-cyan-400 flex-shrink-0" /> Anonymous
               </label>
-              <button onClick={post} disabled={posting || !draft.trim()} className="cyber-button-solid text-xs flex items-center gap-1.5">
+              <button onClick={post} disabled={posting || !draft.trim() || !canAct} title={canAct ? undefined : 'Mod access required'} className="cyber-button-solid text-xs flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
                 {posting ? <Loader size={12} className="animate-spin" aria-hidden="true" /> : <Send size={12} aria-hidden="true" />} Post
               </button>
             </div>
@@ -177,13 +188,13 @@ export default function Suggestions({ guild, guildData }) {
                     <>
                       <input value={note[s.id] || ''} onChange={(e) => setNote((n) => ({ ...n, [s.id]: e.target.value }))} placeholder="Staff note (optional)" aria-label={`Staff note for suggestion ${s.id}`} className="cyber-input text-xs" />
                       <div className="flex gap-2 flex-wrap">
-                        <button onClick={() => act(s.id, 'approve')} disabled={!!busy} className="cyber-button-success text-xs flex items-center gap-1.5">
+                        <button onClick={() => act(s.id, 'approve')} disabled={!!busy || !canAct} title={canAct ? undefined : 'Mod access required'} className="cyber-button-success text-xs flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
                           {busy === `approve-${s.id}` ? <Loader size={11} className="animate-spin" aria-hidden="true" /> : <Check size={11} aria-hidden="true" />} Approve
                         </button>
-                        <button onClick={() => act(s.id, 'deny')} disabled={!!busy} className="cyber-button text-xs text-red-300 flex items-center gap-1.5">
+                        <button onClick={() => act(s.id, 'deny')} disabled={!!busy || !canAct} title={canAct ? undefined : 'Mod access required'} className="cyber-button text-xs text-red-300 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
                           {busy === `deny-${s.id}` ? <Loader size={11} className="animate-spin" aria-hidden="true" /> : <X size={11} aria-hidden="true" />} Deny
                         </button>
-                        <button onClick={() => setConfirm(s.id)} className="cyber-button text-xs text-zinc-400 flex items-center gap-1.5" aria-label={`Delete suggestion ${s.id}`}>
+                        <button onClick={() => setConfirm(s.id)} disabled={!canAct} title={canAct ? undefined : 'Mod access required'} className="cyber-button text-xs text-zinc-400 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed" aria-label={`Delete suggestion ${s.id}`}>
                           <Trash2 size={11} aria-hidden="true" /> Delete
                         </button>
                       </div>
@@ -191,7 +202,7 @@ export default function Suggestions({ guild, guildData }) {
                   )}
                   {s.status !== 'pending' && (
                     <div className="flex justify-end">
-                      <button onClick={() => setConfirm(s.id)} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors" title="Delete suggestion" aria-label={`Delete suggestion ${s.id}`}>
+                      <button onClick={() => setConfirm(s.id)} disabled={!canAct} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed" title={canAct ? 'Delete suggestion' : 'Mod access required'} aria-label={`Delete suggestion ${s.id}`}>
                         <Trash2 size={13} aria-hidden="true" />
                       </button>
                     </div>
@@ -221,7 +232,7 @@ export default function Suggestions({ guild, guildData }) {
             </div>
             <CyanToggle enabled={!!cfg.anonymousDefault} onChange={(v) => setCfg((c) => ({ ...c, anonymousDefault: v }))} label="Anonymous by default" description="Hide usernames unless they opt out" />
             <CyanToggle enabled={cfg.autoReact !== false} onChange={(v) => setCfg((c) => ({ ...c, autoReact: v }))} label="Auto 👍 / 👎" description="Add vote reactions on every new suggestion" />
-            <button onClick={save} disabled={saving} className="cyber-button-solid flex items-center gap-2">
+            <button onClick={save} disabled={saving || !canEdit} title={canEdit ? undefined : 'Admin access required'} className="cyber-button-solid flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
               {saving ? <Loader size={13} className="animate-spin" /> : <Save size={13} />} Save
             </button>
           </div>

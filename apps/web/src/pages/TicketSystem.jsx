@@ -12,8 +12,11 @@ const STATUS_STYLES = {
   pending: 'cyber-badge-yellow',
 };
 
-export default function TicketSystem({ guild, guildData }) {
+export default function TicketSystem({ guild, guildData, permLevel = 0 }) {
   const toast = useToast();
+  // Backend gates: config save needs Admin (3); panel post + close need Mod (2).
+  const canEdit = permLevel >= 3;
+  const canModerate = permLevel >= 2;
   const [config, setConfig] = useState({
     categoryId: null,
     transcriptChannelId: null,
@@ -33,7 +36,7 @@ export default function TicketSystem({ guild, guildData }) {
 
   const refreshTickets = () => {
     if (!guild?.id) return;
-    api.get(`/api/guild/${guild.id}/tickets`).then(setTickets).catch(() => {});
+    api.get(`/api/guild/${guild.id}/tickets`).then(setTickets).catch((e) => toast.error(e.message || 'Failed to load tickets.'));
   };
 
   const channels   = guildData?.guild?.channels || [];
@@ -43,10 +46,11 @@ export default function TicketSystem({ guild, guildData }) {
 
   useEffect(() => {
     if (guildData?.tickets) setConfig(prev => ({ ...prev, ...guildData.tickets }));
-    if (guild?.id) api.get(`/api/guild/${guild.id}/tickets`).then(setTickets).catch(() => {});
+    if (guild?.id) api.get(`/api/guild/${guild.id}/tickets`).then(setTickets).catch((e) => toast.error(e.message || 'Failed to load tickets.'));
   }, [guildData, guild?.id]);
 
   const save = async () => {
+    if (!canEdit) { toast.error('Admin access required.'); return; }
     setSaving(true);
     try {
       const payload = {
@@ -66,6 +70,7 @@ export default function TicketSystem({ guild, guildData }) {
   };
 
   const postPanel = async () => {
+    if (!canModerate) { toast.error('Mod access required.'); return; }
     if (!config.panelChannelId) { toast.warning('Select a channel to post the panel in.'); return; }
     setPosting(true);
     try {
@@ -83,6 +88,7 @@ export default function TicketSystem({ guild, guildData }) {
   };
 
   const closeTicket = async (ticketId) => {
+    if (!canModerate) { toast.error('Mod access required.'); return; }
     try {
       await api.post(`/api/guild/${guild.id}/tickets/${ticketId}/close`);
       setTickets(prev => prev.map(t => String(t.id) === String(ticketId) ? { ...t, status: 'closed' } : t));
@@ -129,6 +135,10 @@ export default function TicketSystem({ guild, guildData }) {
           <AlertCircle size={14} className="flex-shrink-0" />
           <span>Ticket system is not configured — select a category and click <b>Save Configuration</b> before members use the ticket button.</span>
         </div>
+      )}
+
+      {!canModerate && (
+        <p className="text-[11px] text-amber-300/80 flex items-center gap-1.5 mb-4" role="note">Read-only access — Mod level or higher is required (Admin for configuration).</p>
       )}
 
       {/* Stats row */}
@@ -222,7 +232,7 @@ export default function TicketSystem({ guild, guildData }) {
           </div>
 
           <div className="border-t border-white/[0.06] mt-5 pt-5">
-            <button onClick={save} disabled={saving} className="cyber-button-solid flex items-center gap-2">
+            <button onClick={save} disabled={saving || !canEdit} title={canEdit ? undefined : 'Admin access required'} className="cyber-button-solid flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
               {saving ? <Loader size={14} className="animate-spin" /> : <Save size={14} />}
               {saving ? 'Saving…' : 'Save Configuration'}
             </button>
@@ -283,7 +293,7 @@ export default function TicketSystem({ guild, guildData }) {
             </div>
           </div>
 
-          <button onClick={postPanel} disabled={posting} className="cyber-button-solid flex items-center gap-2">
+          <button onClick={postPanel} disabled={posting || !canModerate} title={canModerate ? undefined : 'Mod access required'} className="cyber-button-solid flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
             {posting ? <Loader size={14} className="animate-spin" /> : <Plus size={14} />}
             {posting ? 'Posting…' : 'Post Panel to Channel'}
           </button>
@@ -360,8 +370,9 @@ export default function TicketSystem({ guild, guildData }) {
                     {(ticket.status === 'open' || !ticket.status) && (
                       <button
                         onClick={() => setConfirmClose(ticket.id)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0"
-                        title="Close ticket"
+                        disabled={!canModerate}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                        title={canModerate ? 'Close ticket' : 'Mod access required'}
                         aria-label={`Close ticket ${ticket.id?.slice(-6) || ''}`}
                       >
                         <X size={14} aria-hidden="true" />

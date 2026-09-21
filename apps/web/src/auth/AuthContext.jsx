@@ -24,7 +24,11 @@ export function AuthProvider({ children }) {
       return;
     }
     const [nextMe, projection] = await Promise.all([
-      api.get('/api/me').catch(() => null),
+      // /api/me requires the Discord-linked session user (requireAuth) and
+      // can only 401 for credential-only accounts — each 401 also fires
+      // eb:unauthorized, which retriggers refresh: an unbounded loop. The
+      // status payload already carries discordLinked, so skip the probe.
+      nextAuth?.discordLinked ? api.get('/api/me').catch(() => null) : Promise.resolve(null),
       api.get('/api/account').catch(() => null),
     ]);
     setMe(nextMe);

@@ -37,17 +37,14 @@ export default function Register() {
         <div><PasswordField label={t('auth.password', 'Password')} required minLength={15} maxLength={128} autoComplete="new-password" value={form.password} onChange={update('password')} /><PasswordStrength password={form.password} /></div>
         <PasswordField label={t('auth.confirmPassword', 'Confirm password')} required minLength={15} maxLength={128} autoComplete="new-password" value={form.confirmPassword} onChange={update('confirmPassword')} />
         <button disabled={busy} className="cyber-button-solid w-full">{busy ? t('auth.creating', 'Creating account…') : t('auth.createAccount', 'Create account')}</button>
+        {(auth.oauthEnabled || auth.googleOAuthEnabled) && (
+          <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.14em] text-zinc-500" aria-hidden="true"><span className="h-px flex-1 bg-white/10" />{t('auth.or', 'or')}<span className="h-px flex-1 bg-white/10" /></div>
+        )}
         {auth.oauthEnabled && (
-          <>
-            <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.14em] text-zinc-500" aria-hidden="true"><span className="h-px flex-1 bg-white/10" />{t('auth.or', 'or')}<span className="h-px flex-1 bg-white/10" /></div>
-            <a href="/api/auth/discord" onClick={() => rememberReturn(rawReturn)} className="cyber-button w-full flex justify-center">{t('auth.signupDiscord', 'Sign up with Discord')}</a>
-          </>
+          <a href="/api/auth/discord" onClick={() => rememberReturn(rawReturn)} className="cyber-button w-full flex justify-center">{t('auth.signupDiscord', 'Sign up with Discord')}</a>
         )}
         {auth.googleOAuthEnabled && (
-          <>
-            <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.14em] text-zinc-500" aria-hidden="true"><span className="h-px flex-1 bg-white/10" />{t('auth.or', 'or')}<span className="h-px flex-1 bg-white/10" /></div>
-            <a href="/api/auth/google" onClick={() => rememberReturn(rawReturn)} className="cyber-button w-full flex justify-center">{t('auth.signupGoogle', 'Sign up with Google')}</a>
-          </>
+          <a href="/api/auth/google" onClick={() => rememberReturn(rawReturn)} className="cyber-button w-full flex justify-center">{t('auth.signupGoogle', 'Sign up with Google')}</a>
         )}
       </form>
     </AuthLayout>

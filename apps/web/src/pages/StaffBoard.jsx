@@ -7,8 +7,10 @@ import ConfirmModal from '../components/ConfirmModal.jsx';
 import { useToast } from '../components/Toast.jsx';
 import api from '../api.js';
 
-export default function StaffBoard({ guild, guildData }) {
+export default function StaffBoard({ guild, guildData, permLevel = 0 }) {
   const toast = useToast();
+  // All writes (announce, AFK clear, reminders) require Mod (2) backend-side.
+  const canAct = permLevel >= 2;
   const [tab, setTab] = useState('announce');
   const [loading, setLoading] = useState(true);
   const [ann, setAnn] = useState([]);
@@ -30,8 +32,8 @@ export default function StaffBoard({ guild, guildData }) {
       setAnn(d.announcements || []);
       setAfk(d.afk || []);
       setRems(d.reminders || []);
-    } catch {
-      setAnn([]); setAfk([]); setRems([]);
+    } catch (e) {
+      toast.error(e.message || 'Failed to load staff board.');
     }
     setLoading(false);
   }, [guild?.id]);
@@ -39,6 +41,7 @@ export default function StaffBoard({ guild, guildData }) {
   useEffect(() => { load(); }, [load]);
 
   const sendAnn = async () => {
+    if (!canAct) { toast.error('Mod access required.'); return; }
     if (!form.channelId || !form.message.trim()) {
       toast.error('Pick a channel and write a message.');
       return;
@@ -54,6 +57,7 @@ export default function StaffBoard({ guild, guildData }) {
   };
 
   const addRem = async () => {
+    if (!canAct) { toast.error('Mod access required.'); return; }
     if (!remForm.channelId || !remForm.reason.trim()) {
       toast.error('Channel and reason required.');
       return;
@@ -70,6 +74,7 @@ export default function StaffBoard({ guild, guildData }) {
 
   const act = async () => {
     if (!confirm) return;
+    if (!canAct) { toast.error('Mod access required.'); setConfirm(null); return; }
     try {
       if (confirm.kind === 'ann') {
         await api.delete(`/api/guild/${guild.id}/board/announce/${confirm.id}`);
@@ -96,6 +101,10 @@ export default function StaffBoard({ guild, guildData }) {
   return (
     <div className="page-shell-sm animate-fade-in">
       <PageHeader icon={Megaphone} title="Staff Board" subtitle={`Announce, AFK and reminders · ${guild.name}`} />
+
+      {!canAct && (
+        <p className="text-[11px] text-amber-300/80 flex items-center gap-1.5" role="note">Read-only access — Mod level or higher is required to post or remove items.</p>
+      )}
 
       <div className="grid grid-cols-3 gap-3">
         <StatCard icon={Megaphone} label="Announcements" value={ann.length} color="cyan" />
@@ -134,7 +143,7 @@ export default function StaffBoard({ guild, guildData }) {
             <label className="flex items-center gap-2 min-h-[32px] text-[11px] text-zinc-400 cursor-pointer select-none">
               <input type="checkbox" checked={form.ping} onChange={(e) => setForm((f) => ({ ...f, ping: e.target.checked }))} className="w-4 h-4 accent-cyan-400 flex-shrink-0" /> Ping @everyone
             </label>
-            <button onClick={sendAnn} disabled={sending} className="cyber-button-solid text-xs flex items-center gap-1.5">
+            <button onClick={sendAnn} disabled={sending || !canAct} title={canAct ? undefined : 'Mod access required'} className="cyber-button-solid text-xs flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
               {sending ? <Loader size={12} className="animate-spin" aria-hidden="true" /> : <Send size={12} aria-hidden="true" />} Post
             </button>
             <p className="text-[11px] text-zinc-500 inline-flex items-center gap-1.5">
@@ -150,7 +159,7 @@ export default function StaffBoard({ guild, guildData }) {
                   <p className="text-xs text-zinc-400 mt-1 line-clamp-3">{x.message}</p>
                   <p className="text-[10px] text-zinc-500 mt-1">{new Date(x.createdAt).toLocaleString()} · {x.authorTag}</p>
                 </div>
-                <button onClick={() => setConfirm({ kind: 'ann', id: x.id })} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0" title="Delete announcement" aria-label={`Delete announcement ${x.title || ''}`}>
+                <button onClick={() => setConfirm({ kind: 'ann', id: x.id })} disabled={!canAct} title={canAct ? 'Delete announcement' : 'Mod access required'} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed" aria-label={`Delete announcement ${x.title || ''}`}>
                   <Trash2 size={13} aria-hidden="true" />
                 </button>
               </div>
@@ -173,7 +182,7 @@ export default function StaffBoard({ guild, guildData }) {
                   <p className="text-xs font-semibold text-white truncate">{x.username}</p>
                   <p className="text-[11px] text-zinc-500 truncate">{x.reason}</p>
                 </div>
-                <button onClick={() => setConfirm({ kind: 'afk', id: x.userId })} className="cyber-button text-[11px] min-h-[36px]" aria-label={`Clear AFK status for ${x.username || ''}`}>Clear</button>
+                <button onClick={() => setConfirm({ kind: 'afk', id: x.userId })} disabled={!canAct} title={canAct ? undefined : 'Mod access required'} className="cyber-button text-[11px] min-h-[36px] disabled:opacity-50 disabled:cursor-not-allowed" aria-label={`Clear AFK status for ${x.username || ''}`}>Clear</button>
               </div>
             ))}
         </div>
@@ -191,7 +200,7 @@ export default function StaffBoard({ guild, guildData }) {
               <input value={remForm.time} onChange={(e) => setRemForm((f) => ({ ...f, time: e.target.value }))} placeholder="10m / 1h / 1d" aria-label="Reminder delay, for example 10m, 1h or 1d" className="cyber-input text-xs font-mono" />
               <input value={remForm.reason} onChange={(e) => setRemForm((f) => ({ ...f, reason: e.target.value }))} placeholder="What?" aria-label="Reminder message" className="cyber-input text-xs" />
             </div>
-            <button onClick={addRem} disabled={sending} className="cyber-button-solid text-xs flex items-center gap-1.5">
+            <button onClick={addRem} disabled={sending || !canAct} title={canAct ? undefined : 'Mod access required'} className="cyber-button-solid text-xs flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
               {sending ? <Loader size={12} className="animate-spin" aria-hidden="true" /> : <Clock size={12} aria-hidden="true" />} Remind
             </button>
           </div>
@@ -203,7 +212,7 @@ export default function StaffBoard({ guild, guildData }) {
                   <p className="text-xs text-white truncate">{x.reason}</p>
                   <p className="text-[10px] text-zinc-500 tabular-nums">{new Date(x.expiresAt).toLocaleString()}</p>
                 </div>
-                <button onClick={() => setConfirm({ kind: 'rem', userId: x.userId, index: x.index })} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0" title="Remove reminder" aria-label="Remove reminder">
+                <button onClick={() => setConfirm({ kind: 'rem', userId: x.userId, index: x.index })} disabled={!canAct} title={canAct ? 'Remove reminder' : 'Mod access required'} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed" aria-label="Remove reminder">
                   <Trash2 size={13} aria-hidden="true" />
                 </button>
               </div>

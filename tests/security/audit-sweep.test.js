@@ -208,7 +208,9 @@ const check = (label, ok, detail = '') => {
     // Verified 2026-09-15: monorepo move is surface-identical (199 routes in
     // both backend/* and apps/api/* trees) and every route rejects anonymous
     // callers, so the pin is refreshed from the stale 197 to the real 199.
-    check('route discovery found the full API surface', routes.length === 199, `${routes.length} routes`);
+    // 2026-09-19: POST /api/guild/:guildId/xp/enabled added (guild-level XP
+    // toggle; POST /config is DEVELOPER-gated) -> 200 routes.
+    check('route discovery found the full API surface', routes.length === 200, `${routes.length} routes`);
 
     const leaks = [];
     for (const r of routes) {

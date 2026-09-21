@@ -31,8 +31,15 @@ const PRESETS = [
 const typeLabel = v => ACTIVITY_TYPES.find(t => t.value === v)?.label || 'Playing';
 const uplabel   = v => ({ online:'Online', idle:'Idle', dnd:'Do Not Disturb', invisible:'Invisible' }[v] || v);
 
-export default function BotControls({ guild, guildData, setGuildData }) {
+export default function BotControls({ guild, guildData, setGuildData, developerAccess }) {
   const toast = useToast();
+  // App.jsx gates this whole desk to DEVELOPER/SUPER_ADMIN (presence drives
+  // the bot's public identity; nickname is perm3+developerOnly backend-side).
+  // Keep an in-component check so a manually rendered instance degrades
+  // gracefully instead of 403-spamming.
+  const isDev = !developerAccess
+    || ['DEVELOPER', 'SUPER_ADMIN'].includes(developerAccess.baseRole)
+    || ['DEVELOPER', 'SUPER_ADMIN'].includes(developerAccess.role);
   const [botInfo, setBotInfo] = useState(null);
   const [status,  setStatus]  = useState('online');
   const [actType, setActType] = useState(0);
@@ -50,6 +57,7 @@ export default function BotControls({ guild, guildData, setGuildData }) {
   }, [guild?.id, guildData?.guild?.botNickname]);
 
   const load = useCallback(() => {
+    if (!isDev) return;
     setLoading(true);
     api.get('/api/bot/presence')
       .then(d => {
@@ -59,27 +67,29 @@ export default function BotControls({ guild, guildData, setGuildData }) {
         setActText(d.activityText || '');
         setDirty(false);
       })
-      .catch(() => toast.error('Failed to load bot status'))
+      .catch((e) => toast.error(e.message || 'Failed to load bot status'))
       .finally(() => setLoading(false));
-  }, []);
+  }, [isDev]);
 
   useEffect(() => { load(); }, [load]);
 
   const handleSave = async () => {
+    if (!isDev) { toast.error('System access required.'); return; }
     setSaving(true);
     try {
       await api.post('/api/bot/presence', { status, activityType: actType, activityText: actText });
       toast.success('Bot presence updated!');
       setDirty(false);
       load();
-    } catch {
-      toast.error('Failed to update presence.');
+    } catch (e) {
+      toast.error(e.message || 'Failed to update presence.');
     }
     setSaving(false);
   };
 
   const saveNickname = async () => {
     if (!guild?.id) return;
+    if (!isDev) { toast.error('System access required.'); return; }
     setSavingNick(true);
     try {
       const result = await api.post(`/api/guild/${guild.id}/nickname`, { nickname });
@@ -102,6 +112,18 @@ export default function BotControls({ guild, guildData, setGuildData }) {
   };
 
   const selectedStatus = STATUS_OPTIONS.find(s => s.value === status) || STATUS_OPTIONS[0];
+
+  if (!isDev) {
+    return (
+      <div className="min-h-full flex items-center justify-center p-8">
+        <div className="cyber-card max-w-sm p-7 text-center">
+          <Bot size={28} className="mx-auto text-red-300 mb-3" aria-hidden="true" />
+          <p className="text-white font-semibold">System access required</p>
+          <p className="text-sm text-zinc-400 mt-2 leading-relaxed">Bot Controls are available only to configured DEVELOPER or SUPER_ADMIN identities.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page-shell-sm animate-fade-in">
@@ -174,6 +196,7 @@ export default function BotControls({ guild, guildData, setGuildData }) {
             </div>
             <p className="text-xs text-zinc-400 mt-1.5 ml-9">
               How the bot appears in {guild?.name || 'this server'}. Blank + Save resets to the global username.
+              Guild Admin plus a DEVELOPER system role is required.
             </p>
           </div>
           <span className="cyber-badge-cyan tabular-nums">{currentNick ? `Now: ${currentNick}` : 'Default name'}</span>

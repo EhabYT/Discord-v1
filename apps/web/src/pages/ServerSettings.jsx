@@ -69,13 +69,13 @@ export default function ServerSettings({ guild, guildData, setGuildData }) {
       setCustomFilters(result);
       setNewFilter('');
       toast.success('Filter added.');
-    } catch { toast.error('Failed to add filter.'); }
+    } catch (e) { toast.error(e.message || 'Failed to add filter.'); }
   };
 
   const removeFilter = async (pattern) => {
     try {
       setCustomFilters(await api.post(`/api/guild/${guild.id}/automod/custom/delete`, { pattern }));
-    } catch { toast.error('Failed to remove filter.'); }
+    } catch (e) { toast.error(e.message || 'Failed to remove filter.'); }
   };
 
   const saveGeneral = async () => {
@@ -90,7 +90,7 @@ export default function ServerSettings({ guild, guildData, setGuildData }) {
         } : prev);
       }
       toast.success('Server options saved.');
-    } catch { toast.error('Failed to save options.'); }
+    } catch (e) { toast.error(e.message || 'Failed to save options.'); }
     setSaving('');
   };
 
@@ -110,16 +110,16 @@ export default function ServerSettings({ guild, guildData, setGuildData }) {
       const config = await api.post(`/api/guild/${guild.id}/backup-config`, update);
       setBackupConfig(config);
       toast.success('Backup settings saved.');
-    } catch { toast.error('Failed to save backup settings.'); }
+    } catch (e) { toast.error(e.message || 'Failed to save backup settings.'); }
   };
 
   const toggleCommand = async (name, enabled) => {
     setCommands((prev) => prev.map((c) => c.name === name ? { ...c, enabled } : c));
     try {
       await api.post(`/api/guild/${guild.id}/commands/toggle`, { commandName: name, enabled });
-    } catch {
+    } catch (e) {
       setCommands((prev) => prev.map((c) => c.name === name ? { ...c, enabled: !enabled } : c));
-      toast.error('Failed to toggle command.');
+      toast.error(e.message || 'Failed to toggle command.');
     }
   };
 
@@ -132,7 +132,7 @@ export default function ServerSettings({ guild, guildData, setGuildData }) {
       a.download = `eb-backup-${guild.id}.json`;
       a.click();
       toast.success('Backup downloaded.');
-    } catch { toast.error('Backup failed.'); }
+    } catch (e) { toast.error(e.message || 'Backup failed.'); }
   };
 
   const restoreBackup = async (file) => {
@@ -141,14 +141,14 @@ export default function ServerSettings({ guild, guildData, setGuildData }) {
       const json = JSON.parse(await file.text());
       await api.post(`/api/guild/${guild.id}/restore`, json);
       toast.success('Backup restored. Refresh the page.');
-    } catch { toast.error('Restore failed — check the file.'); }
+    } catch (e) { toast.error(e.message || 'Restore failed — check the file.'); }
   };
 
   const restoreFromServerBackup = async (filename) => {
     try {
       await api.post(`/api/guild/${guild.id}/restore-from-backup`, { filename });
       toast.success(`Restored from ${filename}. Refresh the page.`);
-    } catch { toast.error('Restore failed.'); }
+    } catch (e) { toast.error(e.message || 'Restore failed.'); }
   };
 
   const deleteBackup = async (filename) => {
@@ -156,7 +156,7 @@ export default function ServerSettings({ guild, guildData, setGuildData }) {
       await api.delete(`/api/guild/${guild.id}/backups/${filename}`);
       setBackups((prev) => prev.filter((b) => b.filename !== filename));
       toast.success(`Deleted ${filename}`);
-    } catch { toast.error('Delete failed.'); }
+    } catch (e) { toast.error(e.message || 'Delete failed.'); }
   };
 
   const leaveServer = async () => {

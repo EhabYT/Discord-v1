@@ -106,8 +106,11 @@ function Section({ title, icon: Icon, children, className = '' }) {
 }
 
 /* ── Main component ─────────────────────────────────────────────── */
-export default function WelcomeAutoResponse({ guild, guildData }) {
+export default function WelcomeAutoResponse({ guild, guildData, permLevel = 0 }) {
   const toast = useToast();
+  // Backend gates: POST /welcome needs Admin (3), POST /welcome/test Mod (2).
+  const canEdit = permLevel >= 3;
+  const canTest = permLevel >= 2;
   const [tab, setTab] = useState('join');
 
   /* Join state */
@@ -170,6 +173,7 @@ export default function WelcomeAutoResponse({ guild, guildData }) {
   }, [guildData]);
 
   const save = async () => {
+    if (!canEdit) { toast.error('Admin access required.'); return; }
     setSaving(true);
     try {
       const payload = {
@@ -186,22 +190,46 @@ export default function WelcomeAutoResponse({ guild, guildData }) {
         dmMessage:    dm.message,
       };
       const r = await api.post(`/api/guild/${guild.id}/welcome`, payload);
-      setJoin(j => ({ ...j, ...r }));
+      // Backend echoes the full config (join + leave + dm + embed keys).
+      // Merge only join keys into `join` so leave/dm keys never pollute it,
+      // and sync the embed toggle — otherwise disabling the embed doesn't
+      // stick in the UI and the next save silently re-enables it.
+      setJoin((j) => ({
+        ...j,
+        enabled: r.enabled ?? j.enabled,
+        message: r.message ?? j.message,
+        channelId: r.channelId ?? j.channelId,
+        autoRoleId: r.autoRoleId ?? j.autoRoleId,
+        cardEnabled: r.cardEnabled ?? j.cardEnabled,
+      }));
+      setWEmbed((e) => (r.embed ? { ...e, enabled: true, ...r.embed } : { ...e, enabled: false }));
+      setLeave((l) => ({
+        ...l,
+        enabled: r.leaveEnabled ?? l.enabled,
+        channelId: r.leaveChannel ?? l.channelId,
+        message: r.leaveMessage ?? l.message,
+      }));
+      setDm((d) => ({
+        ...d,
+        enabled: r.dmEnabled ?? d.enabled,
+        message: r.dmMessage ?? d.message,
+      }));
       toast.success('Welcome settings saved!');
-    } catch {
-      toast.error('Failed to save welcome settings.');
+    } catch (e) {
+      toast.error(e.message || 'Failed to save welcome settings.');
     }
     setSaving(false);
   };
 
   const test = async () => {
+    if (!canTest) { toast.error('Mod access required.'); return; }
     if (!join.channelId) { toast.error('Set a welcome channel first.'); return; }
     setTesting(true);
     try {
       await api.post(`/api/guild/${guild.id}/welcome/test`, { channelId: join.channelId });
       toast.success('Test welcome sent!');
-    } catch {
-      toast.error('Failed to send test message.');
+    } catch (e) {
+      toast.error(e.message || 'Failed to send test message.');
     }
     setTesting(false);
   };
@@ -221,11 +249,15 @@ export default function WelcomeAutoResponse({ guild, guildData }) {
         title="Welcome System"
         subtitle={`Configure join/leave messages and DMs for ${guild.name}`}
       >
-        <button onClick={save} disabled={saving} className="cyber-button-solid flex items-center gap-2">
+        <button onClick={save} disabled={saving || !canEdit} title={canEdit ? undefined : 'Admin access required'} className="cyber-button-solid flex items-center gap-2">
           {saving ? <Loader size={13} className="animate-spin" aria-hidden="true" /> : <Save size={13} aria-hidden="true" />}
           {saving ? 'Saving…' : 'Save All'}
         </button>
       </PageHeader>
+
+      {!canEdit && (
+        <p className="text-[11px] text-amber-300/80 flex items-center gap-1.5" role="note">Read-only access — Admin level or higher is required to change welcome settings.</p>
+      )}
 
       <div className="seg-tabs" role="tablist" aria-label="Welcome message sections">
         {TABS.map(({ id, label, icon: Icon }) => (
@@ -353,12 +385,12 @@ export default function WelcomeAutoResponse({ guild, guildData }) {
           </Section>
 
           <div className="flex gap-2">
-            <button onClick={save} disabled={saving} className="cyber-button-solid flex items-center gap-2">
+            <button onClick={save} disabled={saving || !canEdit} title={canEdit ? undefined : 'Admin access required'} className="cyber-button-solid flex items-center gap-2">
               {saving ? <Loader size={13} className="animate-spin" aria-hidden="true" /> : <Save size={13} aria-hidden="true" />}
               {saving ? 'Saving…' : 'Save Configuration'}
             </button>
-            <button onClick={test} disabled={testing || !join.channelId} className="cyber-button flex items-center gap-2"
-              title={!join.channelId ? 'Set a welcome channel first' : 'Send a test welcome message'}>
+            <button onClick={test} disabled={testing || !join.channelId || !canTest} className="cyber-button flex items-center gap-2"
+              title={!canTest ? 'Mod access required' : (!join.channelId ? 'Set a welcome channel first' : 'Send a test welcome message')}>
               {testing ? <Loader size={13} className="animate-spin" aria-hidden="true" /> : <Send size={13} aria-hidden="true" />}
               {testing ? 'Sending…' : 'Test Welcome'}
             </button>
@@ -411,7 +443,7 @@ export default function WelcomeAutoResponse({ guild, guildData }) {
             <DiscordPreview text={leave.message} guildName={guild.name} />
           </Section>
 
-          <button onClick={save} disabled={saving} className="cyber-button-solid flex items-center gap-2">
+          <button onClick={save} disabled={saving || !canEdit} title={canEdit ? undefined : 'Admin access required'} className="cyber-button-solid flex items-center gap-2">
             {saving ? <Loader size={13} className="animate-spin" aria-hidden="true" /> : <Save size={13} aria-hidden="true" />}
             {saving ? 'Saving…' : 'Save Leave Settings'}
           </button>
@@ -474,7 +506,7 @@ export default function WelcomeAutoResponse({ guild, guildData }) {
             </div>
           </Section>
 
-          <button onClick={save} disabled={saving} className="cyber-button-solid flex items-center gap-2">
+          <button onClick={save} disabled={saving || !canEdit} title={canEdit ? undefined : 'Admin access required'} className="cyber-button-solid flex items-center gap-2">
             {saving ? <Loader size={13} className="animate-spin" aria-hidden="true" /> : <Save size={13} aria-hidden="true" />}
             {saving ? 'Saving…' : 'Save DM Settings'}
           </button>

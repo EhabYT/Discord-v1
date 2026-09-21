@@ -102,12 +102,14 @@ export default function SystemStatus({ pageHint, onNavigate, developerAccess = {
     setRefreshing(true);
     try {
       const [snap, s, p, h] = await Promise.all([
-        api.get('/api/developer/system-status'),
+        // system-status is supportOnly (403 for others): never let one denied
+        // endpoint discard the healthy stats/performance/health alongside it.
+        api.get('/api/developer/system-status').catch(() => null),
         api.get('/api/stats').catch(() => null),
         api.get('/api/performance').catch(() => null),
         api.get('/api/health').catch(() => null),
       ]);
-      setSnapshot(snap);
+      if (snap) setSnapshot(snap);
       if (s) setStats(s);
       if (p) setPerf(p);
       if (h?.publicUrl) setPublicUrl(h.publicUrl);

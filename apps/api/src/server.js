@@ -397,7 +397,20 @@ function startDashboard(botClient) {
         // Anonymous callers therefore get a minimal payload only — guild counts,
         // SSE client counts and the public URL are operational intel.
         const authed = !!req.session?.user?.id;
-        const body = { ok: true, botOnline: !!botClient?.user, maintenance, ts: Date.now() };
+        // Process-local client first; fall back to the shared presence
+        // heartbeat so client-less processes (standalone dev:api, split
+        // deployments) still report a logged-in bot as online. Only a fresh
+        // stamp counts — a crashed bot goes stale within ~75s and reads
+        // offline again. Boolean only: no presence detail leaks.
+        let botOnline = !!botClient?.user;
+        if (!botOnline) {
+            try {
+                const { db } = require('eb-bot-database');
+                const ts = Number(await db.get('bot_heartbeat'));
+                if (Number.isFinite(ts) && Date.now() - ts < 75_000) botOnline = true;
+            } catch { /* no shared DB (ephemeral per-process memory) → stay offline */ }
+        }
+        const body = { ok: true, botOnline, maintenance, ts: Date.now() };
         if (authed) {
             Object.assign(body, {
                 uptime: botClient?.uptime ? botClient.uptime / 1000 : process.uptime(),

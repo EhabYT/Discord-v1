@@ -51,6 +51,19 @@ function registerProgressionRoutes(router, { requirePerm, rl }) {
         } catch (err) { next(err); }
     });
 
+    // XP on/off toggle for guild admins. POST /config also flips xpEnabled
+    // but is DEVELOPER-gated (it shares the endpoint with djRoleId bulk
+    // rewrites), so the public Progression desk needs its own guild-level
+    // route — otherwise every non-developer admin gets 403 on Save.
+    router.post('/xp/enabled', requirePerm(3), async (req, res, next) => {
+        try {
+            const { xpEnabled } = req.body || {};
+            if (typeof xpEnabled === 'undefined') return res.status(400).json({ error: 'Missing xpEnabled' });
+            await db.set(`xp_enabled_${req.params.guildId}`, xpEnabled !== false);
+            res.json({ success: true, xpEnabled: xpEnabled !== false });
+        } catch (err) { next(err); }
+    });
+
     // ── XP Announce ──────────────────────────────────────────────────────────
     router.get('/xp/announce', async (req, res, next) => {
         try {

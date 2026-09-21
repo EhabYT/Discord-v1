@@ -118,7 +118,7 @@ const fmtDuration = (ms) => DURATIONS.find(d => d.ms === ms)?.label
     : `${Math.round(ms / (60 * 1000))}m`);
 
 /* ── GiveawayCard ───────────────────────────────────────────────── */
-function GiveawayCard({ g, channels, roles, onEnd, onReroll, onDelete, onDuplicate, actionPending }) {
+function GiveawayCard({ g, channels, roles, onEnd, onReroll, onDelete, onDuplicate, actionPending, canAct = true }) {
   const [expanded, setExpanded] = useState(false);
   const { left, pct } = useCountdown(g.endsAt);
   const isActive   = g.active && g.endsAt > Date.now();
@@ -200,8 +200,10 @@ function GiveawayCard({ g, channels, roles, onEnd, onReroll, onDelete, onDuplica
             )}
           </div>
 
-          {/* Action buttons */}
+          {/* Action buttons — end/reroll/delete all require Mod (level 2)
+              backend-side; read-only viewers keep the expand toggle. */}
           <div className="flex flex-col gap-1.5 flex-shrink-0">
+            {canAct && (
             <button
               onClick={() => onReroll(g.id)}
               disabled={actionPending === rerollId}
@@ -209,7 +211,8 @@ function GiveawayCard({ g, channels, roles, onEnd, onReroll, onDelete, onDuplica
               <RotateCcw size={11} className={actionPending === rerollId ? 'animate-spin' : ''} aria-hidden="true" />
               {actionPending === rerollId ? 'Rolling…' : 'Reroll'}
             </button>
-            {isActive && (
+            )}
+            {canAct && isActive && (
               <button
                 onClick={() => onEnd(g.id)}
                 disabled={actionPending === endingId}
@@ -267,6 +270,7 @@ function GiveawayCard({ g, channels, roles, onEnd, onReroll, onDelete, onDuplica
               </div>
             )}
           </div>
+          {canAct && (
           <div className="flex gap-2 pt-1">
             <button onClick={() => onDuplicate(g)} aria-label={`Duplicate giveaway ${g.prize || ''}`}
               className="flex items-center gap-1.5 text-[11px] font-medium px-3 py-2 min-h-[36px] rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 text-cyan-300 transition-all">
@@ -280,6 +284,7 @@ function GiveawayCard({ g, channels, roles, onEnd, onReroll, onDelete, onDuplica
               {actionPending === deleteId ? 'Deleting…' : 'Delete'}
             </button>
           </div>
+          )}
         </div>
       )}
     </div>
@@ -387,7 +392,7 @@ export default function Giveaways({ guild, guildData, permLevel }) {
       await api.post(`/api/guild/${guild.id}/giveaways/${id}/end`, {});
       toast.success('Giveaway ended — winners picked!');
       await load();
-    } catch { toast.error('Failed to end giveaway.'); }
+    } catch (e) { toast.error(e.message || 'Failed to end giveaway.'); }
     setActionPending('');
   };
 
@@ -397,7 +402,7 @@ export default function Giveaways({ guild, guildData, permLevel }) {
       await api.post(`/api/guild/${guild.id}/giveaways/${id}/reroll`, {});
       toast.success('New winner selected! 🎉');
       await load();
-    } catch { toast.error('Failed to reroll.'); }
+    } catch (e) { toast.error(e.message || 'Failed to reroll.'); }
     setActionPending('');
   };
 
@@ -407,7 +412,7 @@ export default function Giveaways({ guild, guildData, permLevel }) {
       await api.delete(`/api/guild/${guild.id}/giveaways/${id}`);
       toast.success('Giveaway removed.');
       setGiveaways(gs => gs.filter(g => g.id !== id));
-    } catch { toast.error('Failed to delete giveaway.'); }
+    } catch (e) { toast.error(e.message || 'Failed to delete giveaway.'); }
     setActionPending('');
   };
 
@@ -727,7 +732,7 @@ export default function Giveaways({ guild, guildData, permLevel }) {
                 <GiveawayCard g={g} channels={channels} roles={roles}
                   onEnd={endGiveaway} onReroll={reroll}
                   onDelete={deleteGiveaway} onDuplicate={duplicate}
-                  actionPending={actionPending} />
+                  actionPending={actionPending} canAct={canCreate} />
               </div>
             ))}
           </div>
@@ -747,7 +752,7 @@ export default function Giveaways({ guild, guildData, permLevel }) {
                 <GiveawayCard g={g} channels={channels} roles={roles}
                   onEnd={endGiveaway} onReroll={reroll}
                   onDelete={deleteGiveaway} onDuplicate={duplicate}
-                  actionPending={actionPending} />
+                  actionPending={actionPending} canAct={canCreate} />
               </div>
             ))}
           </div>

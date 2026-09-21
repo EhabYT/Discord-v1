@@ -31,6 +31,12 @@ function groupOf(name) {
   return 'tools';
 }
 
+function allSubs(c) {
+  // Backend shape (guilds.js): { subs: [...], groups: [{ subs: [...] }] }.
+  // Option groups hold the real subcommands for complex commands.
+  return [...(c.subs || []), ...(c.groups || []).flatMap((g) => g.subs || [])];
+}
+
 function copyText(text) {
   return navigator.clipboard?.writeText(text).catch(() => {});
 }
@@ -59,7 +65,7 @@ export default function Commands({ guild, permLevel = 0 }) {
       if (!q) return true;
       const blob = [
         c.name, c.description,
-        ...(c.subs || []).map((s) => `${s.name} ${s.description}`),
+        ...allSubs(c).map((s) => `${s.name} ${s.description}`),
       ].join(' ').toLowerCase();
       return blob.includes(q);
     });
@@ -77,7 +83,7 @@ export default function Commands({ guild, permLevel = 0 }) {
   };
 
   const disabled = commands.filter((c) => !c.enabled).length;
-  const subCount = commands.reduce((n, c) => n + (c.subs?.length || 0), 0);
+  const subCount = commands.reduce((n, c) => n + allSubs(c).length, 0);
 
   return (
     <div className="page-shell-sm animate-fade-in">
@@ -135,7 +141,8 @@ export default function Commands({ guild, permLevel = 0 }) {
 
       <div className="space-y-1.5">
         {filtered.map((c) => {
-          const hasSubs = (c.subs && c.subs.length) || (c.groups && c.groups.length);
+          const subs = allSubs(c);
+          const hasSubs = subs.length > 0;
           const expanded = open === c.name;
           return (
             <div key={c.name} className="cyber-card px-3 py-2.5">
@@ -150,7 +157,7 @@ export default function Commands({ guild, permLevel = 0 }) {
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-xs text-cyan-300">/{c.name}</span>
                     {hasSubs ? (
-                      <span className="text-[10px] text-zinc-500 tabular-nums">{c.subs.length} subs</span>
+                      <span className="text-[10px] text-zinc-500 tabular-nums">{subs.length} subs</span>
                     ) : null}
                     <ChevronDown size={12} className={`text-zinc-500 transition ${expanded ? 'rotate-180' : ''}`} aria-hidden="true" />
                   </div>
@@ -184,6 +191,19 @@ export default function Commands({ guild, permLevel = 0 }) {
               </div>
               {expanded && hasSubs && (
                 <div className="mt-2 pl-2 border-l border-white/10 space-y-1">
+                  {(c.groups || []).map((g) => (
+                    <div key={`g-${g.name}`}>
+                      <p className="font-mono text-[11px] text-indigo-300/90">{g.name}</p>
+                      <div className="ml-2 space-y-1">
+                        {(g.subs || []).map((s) => (
+                          <div key={s.name} className="flex items-baseline gap-2">
+                            <span className="font-mono text-[11px] text-cyan-200/80">{s.name}</span>
+                            <span className="text-[11px] text-zinc-500 truncate">{s.description}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                   {(c.subs || []).map((s) => (
                     <div key={s.name} className="flex items-baseline gap-2">
                       <span className="font-mono text-[11px] text-cyan-200/80">{s.name}</span>

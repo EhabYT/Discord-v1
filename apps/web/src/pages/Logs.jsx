@@ -85,8 +85,11 @@ function LogEntry({ log }) {
   );
 }
 
-export default function Logs({ guild, guildData }) {
+export default function Logs({ guild, guildData, permLevel = 0 }) {
   const toast = useToast();
+  // POST /logs (channel mapping) requires Mod (2) backend-side; the live
+  // stream itself stays readable for every level.
+  const canEdit = permLevel >= 2;
   const [logs, setLogs]           = useState([]);
   const [filter, setFilter]       = useState('all');
   const [connected, setConnected] = useState(false);
@@ -108,7 +111,7 @@ export default function Logs({ guild, guildData }) {
     if (!guild?.id) return;
     api.get(`/api/guild/${guild.id}/logs`)
       .then((cfg) => { if (cfg && typeof cfg === 'object') setLogConfig(cfg); })
-      .catch(() => {});
+      .catch((e) => toast.error(e.message || 'Failed to load log channels.'));
   }, [guild?.id]);
 
   useEffect(() => {
@@ -152,6 +155,7 @@ export default function Logs({ guild, guildData }) {
   });
 
   const saveLogConfig = async () => {
+    if (!canEdit) { toast.error('Mod access required.'); return; }
     setSaving(true);
     try {
       for (const [type, channelId] of Object.entries(logConfig)) {
@@ -191,8 +195,7 @@ export default function Logs({ guild, guildData }) {
         </button>
         <button onClick={() => setConfigOpen(o => !o)} aria-expanded={configOpen} className="cyber-button flex items-center gap-1.5 text-xs py-1.5">
           <Filter size={12} aria-hidden="true" /> Log Channels
-        </button>
-        {logs.length > 0 && (
+        </button>        {logs.length > 0 && (
           <>
             <button
               onClick={() => {
@@ -222,6 +225,10 @@ export default function Logs({ guild, guildData }) {
         )}
       </PageHeader>
 
+      {!canEdit && (
+        <p className="text-[11px] text-amber-300/80 flex items-center gap-1.5" role="note">Read-only access — Mod level or higher is required to change log channels.</p>
+      )}
+
       {/* Log channel config panel */}
       {configOpen && (
         <div className="cyber-card p-5 mb-4 animate-fade-in">
@@ -244,7 +251,7 @@ export default function Logs({ guild, guildData }) {
               </div>
             ))}
           </div>
-          <button onClick={saveLogConfig} disabled={saving} className="cyber-button-solid flex items-center gap-2 text-xs">
+          <button onClick={saveLogConfig} disabled={saving || !canEdit} title={canEdit ? undefined : 'Mod access required'} className="cyber-button-solid flex items-center gap-2 text-xs disabled:opacity-50 disabled:cursor-not-allowed">
             {saving ? <Loader size={12} className="animate-spin" aria-hidden="true" /> : <Save size={12} aria-hidden="true" />}
             {saving ? 'Saving…' : 'Save Log Channels'}
           </button>

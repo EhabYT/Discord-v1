@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, Crown, LogIn, LogOut, Menu, Search, UserRound, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, Crown, LogIn, LogOut, Menu, RefreshCw, Search, UserRound, X } from 'lucide-react';
 import clsx from 'clsx';
 import { LEVEL_LABELS, LEVEL_COLORS, NAV, GROUP_ORDER, SHORTCUT_BY_ID, isNavItemVisible, visibleNavNodes } from '../nav.js';
 import { readRecentPages } from '../lib/clipboard.js';
@@ -13,7 +13,8 @@ function readCollapsedGroups() {
 }
 
 export default function Sidebar({
-  page, setPage, guilds, selectedGuild, setSelectedGuild, me, account,
+  page, setPage, guilds, guildsLoading = false, guildsError = '', onRetryGuilds,
+  selectedGuild, setSelectedGuild, me, account,
   permLevel = 0, auth = {}, developerAccess = {}, mobileOpen, setMobileOpen, collapsed, onToggleCollapsed,
 }) {
   const { t } = useI18n();
@@ -138,7 +139,13 @@ export default function Sidebar({
                 {selectedGuild?.name || t('side.selectServer', 'Select server')}
               </span>
               <span className="block text-[10px] text-zinc-500 truncate">
-                {guilds.length > 0 ? `${guilds.length} ${guilds.length === 1 ? t('side.server', 'server') : t('side.servers', 'servers')}` : t('side.noServers', 'No servers yet')}
+                {guildsLoading
+                  ? t('side.loadingServers', 'Loading servers…')
+                  : guildsError
+                    ? t('side.serversFailed', 'Couldn’t load servers')
+                    : guilds.length > 0
+                      ? `${guilds.length} ${guilds.length === 1 ? t('side.server', 'server') : t('side.servers', 'servers')}`
+                      : t('side.noServers', 'No servers yet')}
               </span>
             </span>
             <ChevronDown size={14} className={clsx('text-zinc-500 transition-transform duration-200', guildOpen && 'rotate-180')} />
@@ -172,7 +179,33 @@ export default function Sidebar({
             </div>
           </div>
           <div className="max-h-64 overflow-y-auto p-1">
-            {filteredGuilds.length === 0 ? (
+            {guildsLoading ? (
+              <div className="space-y-1 p-1" aria-label={t('side.loadingServers', 'Loading servers…')} role="status">
+                {[0, 1, 2].map((n) => (
+                  <div key={n} className="flex items-center gap-2.5 px-2.5 py-2.5">
+                    <div className="skeleton h-6 w-6 !rounded-full flex-shrink-0" aria-hidden="true" />
+                    <div className="space-y-1.5 flex-1">
+                      <div className="skeleton h-3 w-2/3" aria-hidden="true" />
+                      <div className="skeleton h-2 w-1/3" aria-hidden="true" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : guildsError ? (
+              <div className="px-3 py-4 text-center" role="alert">
+                <p className="text-xs text-red-300 leading-relaxed">{guildsError}</p>
+                <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed">
+                  {t('side.serversFailedHint', 'The bot may be starting, or the connection dropped.')}
+                </p>
+                <button
+                  onClick={() => onRetryGuilds?.()}
+                  className="cyber-button-solid inline-flex items-center gap-1.5 mt-3 text-xs px-3 py-1.5"
+                >
+                  <RefreshCw size={12} aria-hidden="true" />
+                  {t('common.retry', 'Retry')}
+                </button>
+              </div>
+            ) : filteredGuilds.length === 0 ? (
               guilds.length === 0 && !auth?.loggedIn ? (
                 <div className="px-3 py-4 text-center">
                   <p className="text-xs text-zinc-500 leading-relaxed">
@@ -186,6 +219,35 @@ export default function Sidebar({
                       {t('common.loginDiscord', 'Login with Discord')}
                     </a>
                   )}
+                </div>
+              ) : auth?.loggedIn && !auth?.discordLinked ? (
+                <div className="px-3 py-4 text-center">
+                  <p className="text-xs text-zinc-300 font-medium">
+                    {t('side.linkDiscordTitle', 'Link Discord to manage servers')}
+                  </p>
+                  <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed">
+                    {t('side.linkDiscordHint', 'Your EB account is signed in, but server administration needs a linked Discord identity.')}
+                  </p>
+                  <a href="/api/auth/discord" className="cyber-button-solid inline-flex items-center gap-1.5 mt-3 text-xs px-3 py-1.5">
+                    <LogIn size={12} aria-hidden="true" />
+                    {t('common.loginDiscord', 'Login with Discord')}
+                  </a>
+                </div>
+              ) : guilds.length === 0 ? (
+                <div className="px-3 py-4 text-center">
+                  <p className="text-xs text-zinc-300 font-medium">
+                    {t('side.noSharedServers', 'No shared servers found')}
+                  </p>
+                  <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed">
+                    {t('side.noSharedHint', 'Invite the bot to a server you manage, then try again.')}
+                  </p>
+                  <button
+                    onClick={() => onRetryGuilds?.()}
+                    className="cyber-button inline-flex items-center gap-1.5 mt-3 text-xs px-3 py-1.5"
+                  >
+                    <RefreshCw size={12} aria-hidden="true" />
+                    {t('common.retry', 'Retry')}
+                  </button>
                 </div>
               ) : (
                 <p className="px-3 py-4 text-xs text-zinc-500 text-center">{t('side.noMatch', 'No servers match')} “{guildQuery}”</p>

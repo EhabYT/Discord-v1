@@ -84,6 +84,12 @@ export default function LiveFeed({ guild }) {
     });
   }, []);
 
+  // Malformed SSE payloads must not throw inside the listener (uncaught
+  // exception kills that listener on some browsers).
+  const safeParse = (raw) => {
+    try { return JSON.parse(raw); } catch { return null; }
+  };
+
   useEffect(() => {
     if (!guild?.id) return undefined;
     const es = new EventSource(`/api/events/stream?guildId=${window.encodeURIComponent(guild.id)}`);
@@ -93,20 +99,24 @@ export default function LiveFeed({ guild }) {
     es.onerror = () => setConnected(false);
 
     es.addEventListener('connected', (e) => {
-      const d = JSON.parse(e.data);
+      const d = safeParse(e.data);
+      if (!d) return;
       setTotalCommands(d.totalCommands || 0);
       setConnected(true);
     });
 
     es.addEventListener('stats_update', (e) => {
-      const d = JSON.parse(e.data);
+      const d = safeParse(e.data);
+      if (!d) return;
       setTotalCommands(d.totalCommands || 0);
     });
 
     ALL_TYPES.forEach(type => {
       if (type === 'stats_update') return;
       es.addEventListener(type, (e) => {
-        addEvent(type, JSON.parse(e.data));
+        const d = safeParse(e.data);
+        if (!d) return;
+        addEvent(type, d);
       });
     });
 

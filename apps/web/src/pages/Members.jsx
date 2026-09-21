@@ -31,7 +31,7 @@ const ACTIONS = [
   { id: 'ban',        label: 'Ban',        icon: Ban,           color: 'text-red-300 bg-red-500/10 border-red-500/30' },
 ];
 
-function ActionMenu({ member, guildId, onAction, onOpenNotes }) {
+function ActionMenu({ member, guildId, onAction, onOpenNotes, canMod = true }) {
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [action, setAction] = useState('');
@@ -50,6 +50,7 @@ function ActionMenu({ member, guildId, onAction, onOpenNotes }) {
   }, []);
 
   const submit = async () => {
+    if (!canMod) { toast.error('Mod access required.'); return; }
     if (!action || action === 'note') return;
     setPending(true);
     try {
@@ -72,7 +73,7 @@ function ActionMenu({ member, guildId, onAction, onOpenNotes }) {
 
   return (
     <div className="relative" ref={ref}>
-      <button onClick={() => setOpen(!open)} aria-expanded={open} aria-haspopup="menu" aria-label={`Staff actions for ${member.displayName || member.username || ''}`} className="cyber-button flex items-center gap-1 text-xs">
+      <button onClick={() => setOpen(!open)} disabled={!canMod} title={canMod ? undefined : 'Mod access required'} aria-expanded={open} aria-haspopup="menu" aria-label={`Staff actions for ${member.displayName || member.username || ''}`} className="cyber-button flex items-center gap-1 text-xs disabled:opacity-50 disabled:cursor-not-allowed">
         Staff <ChevronDown size={10} className={`transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
       </button>
       {open && (
@@ -186,7 +187,7 @@ function NoteCount({ count }) {
   );
 }
 
-function NotesPanel({ guild, member, onClose, onChanged }) {
+function NotesPanel({ guild, member, onClose, onChanged, canMod = true }) {
   const toast = useToast();
   const [notes, setNotes] = useState([]);
   const [text, setText] = useState('');
@@ -198,7 +199,7 @@ function NotesPanel({ guild, member, onClose, onChanged }) {
     if (!guild?.id || !member?.id) return;
     setLoading(true);
     try { setNotes(await api.get(`/api/guild/${guild.id}/members/${member.id}/notes`) || []); }
-    catch { setNotes([]); }
+    catch (e) { toast.error(e.message || 'Failed to load notes.'); }
     setLoading(false);
   }, [guild?.id, member?.id]);
 
@@ -217,6 +218,7 @@ function NotesPanel({ guild, member, onClose, onChanged }) {
   }, [onClose]);
 
   const add = async () => {
+    if (!canMod) { toast.error('Mod access required.'); return; }
     if (!text.trim()) return;
     setSaving(true);
     try {
@@ -230,6 +232,7 @@ function NotesPanel({ guild, member, onClose, onChanged }) {
   };
 
   const remove = async (noteId) => {
+    if (!canMod) { toast.error('Mod access required.'); return; }
     try {
       const list = await api.delete(`/api/guild/${guild.id}/members/${member.id}/notes/${noteId}`);
       setNotes(list);
@@ -239,6 +242,7 @@ function NotesPanel({ guild, member, onClose, onChanged }) {
   };
 
   const clearAll = async () => {
+    if (!canMod) { toast.error('Mod access required.'); return; }
     if (!notes.length) return;
     try {
       await api.delete(`/api/guild/${guild.id}/members/${member.id}/notes`);
@@ -279,7 +283,7 @@ function NotesPanel({ guild, member, onClose, onChanged }) {
           />
           <div className="flex items-center justify-between">
             <span className="text-[10px] text-zinc-500 tabular-nums">{text.length}/500</span>
-            <button onClick={add} disabled={saving || !text.trim()} className="cyber-button-solid flex items-center gap-1.5 text-xs">
+            <button onClick={add} disabled={saving || !text.trim() || !canMod} title={canMod ? undefined : 'Mod access required'} className="cyber-button-solid flex items-center gap-1.5 text-xs disabled:opacity-50 disabled:cursor-not-allowed">
               {saving ? <Loader2 size={12} className="animate-spin" aria-hidden="true" /> : <Plus size={12} aria-hidden="true" />} Add note
             </button>
           </div>
@@ -295,7 +299,7 @@ function NotesPanel({ guild, member, onClose, onChanged }) {
               <p className="text-sm text-zinc-100 whitespace-pre-wrap">{n.text}</p>
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[11px] text-zinc-500">{n.mod} · {n.ts ? new Date(n.ts).toLocaleString() : '—'}</span>
-                <button onClick={() => remove(n.id)} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0" title="Delete note" aria-label="Delete note">
+                <button onClick={() => remove(n.id)} disabled={!canMod} title={canMod ? 'Delete note' : 'Mod access required'} className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-red-300 hover:bg-red-500/10 transition-colors flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed" aria-label="Delete note">
                   <Trash2 size={13} aria-hidden="true" />
                 </button>
               </div>
@@ -305,7 +309,7 @@ function NotesPanel({ guild, member, onClose, onChanged }) {
 
         {notes.length > 0 && (
           <div className="p-4 border-t border-white/[0.06]">
-            <button onClick={() => setConfirmClear(true)} className="cyber-button-danger w-full text-xs flex items-center justify-center gap-1.5">
+            <button onClick={() => setConfirmClear(true)} disabled={!canMod} title={canMod ? undefined : 'Mod access required'} className="cyber-button-danger w-full text-xs flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
               <Trash2 size={12} aria-hidden="true" /> Clear all notes
             </button>
           </div>
@@ -424,7 +428,7 @@ function warningId(row, i = 0) {
   return row.id || String(row.timestamp || row.ts || i);
 }
 
-function WarningActions({ guildId, userId, warning, member, onDeleted, onEdited, onOpenNotes, onCleared }) {
+function WarningActions({ guildId, userId, warning, member, onDeleted, onEdited, onOpenNotes, onCleared, canMod = true }) {
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -442,6 +446,7 @@ function WarningActions({ guildId, userId, warning, member, onDeleted, onEdited,
   }, []);
 
   const run = async (label, fn) => {
+    if (!canMod) { toast.error('Mod access required.'); return; }
     setPending(label);
     try { await fn(); setOpen(false); }
     catch (e) { toast.error(e.message || 'Action failed'); }
@@ -450,7 +455,7 @@ function WarningActions({ guildId, userId, warning, member, onDeleted, onEdited,
 
   return (
     <div className="relative" ref={ref}>
-      <button onClick={() => setOpen((v) => !v)} className="cyber-icon-button" title="Warning options" aria-label="Warning options" aria-expanded={open} aria-haspopup="menu">
+      <button onClick={() => setOpen((v) => !v)} disabled={!canMod} title={canMod ? 'Warning options' : 'Mod access required'} className="cyber-icon-button disabled:opacity-40 disabled:cursor-not-allowed" aria-label="Warning options" aria-expanded={open} aria-haspopup="menu">
         <MoreHorizontal size={14} aria-hidden="true" />
       </button>
       {open && (
@@ -531,7 +536,7 @@ function WarningActions({ guildId, userId, warning, member, onDeleted, onEdited,
   );
 }
 
-function WarningsDesk({ guild, warnings, members, onDeleted, onEdited, onCleared, onClearedAll, onOpenNotes }) {
+function WarningsDesk({ guild, warnings, members, onDeleted, onEdited, onCleared, onClearedAll, onOpenNotes, canMod = true, canAdmin = false }) {
   const toast = useToast();
   const [filter, setFilter] = useState('');
   const [expanded, setExpanded] = useState(new Set());
@@ -561,13 +566,19 @@ function WarningsDesk({ guild, warnings, members, onDeleted, onEdited, onCleared
   const users = new Set(warnings.map((w) => w.userId)).size;
 
   const deleteOne = async (userId, row, i) => {
+    if (!canMod) { toast.error('Mod access required.'); return; }
     const id = warningId(row, i);
-    await api.delete(`/api/guild/${guild.id}/members/${userId}/warnings/${id}`);
-    onDeleted?.(userId, id);
-    toast.success('Warning deleted');
+    try {
+      await api.delete(`/api/guild/${guild.id}/members/${userId}/warnings/${id}`);
+      onDeleted?.(userId, id);
+      toast.success('Warning deleted');
+    } catch (e) {
+      toast.error(e.message || 'Failed to delete warning');
+    }
   };
 
   const clearUser = async (userId) => {
+    if (!canMod) { toast.error('Mod access required.'); return; }
     setClearingUser(userId);
     try {
       await api.delete(`/api/guild/${guild.id}/members/${userId}/warnings`);
@@ -580,6 +591,8 @@ function WarningsDesk({ guild, warnings, members, onDeleted, onEdited, onCleared
   };
 
   const clearGuild = async () => {
+    // Guild-wide wipe lives on DELETE /warnings, which requires Admin (3).
+    if (!canAdmin) { toast.error('Admin access required.'); return; }
     setClearingAll(true);
     try {
       await api.delete(`/api/guild/${guild.id}/warnings`);
@@ -608,7 +621,8 @@ function WarningsDesk({ guild, warnings, members, onDeleted, onEdited, onCleared
           <p className="text-xs text-zinc-500">Delete a single warning, clear one member, or wipe the whole list.</p>
           <button
             type="button"
-            disabled={clearingAll}
+            disabled={clearingAll || !canAdmin}
+            title={canAdmin ? undefined : 'Admin access required'}
             onClick={() => {
               if (!armClearAll) { setArmClearAll(true); setTimeout(() => setArmClearAll(false), 4000); return; }
               setArmClearAll(false);
@@ -664,7 +678,8 @@ function WarningsDesk({ guild, warnings, members, onDeleted, onEdited, onCleared
                   </button>
                   <button
                     type="button"
-                    disabled={clearingUser === userId}
+                    disabled={clearingUser === userId || !canMod}
+                    title={canMod ? 'Delete all warnings for this member' : 'Mod access required'}
                     onClick={() => {
                       if (armClearUser !== userId) {
                         setArmClearUser(userId);
@@ -711,6 +726,7 @@ function WarningsDesk({ guild, warnings, members, onDeleted, onEdited, onCleared
                             onEdited={onEdited}
                             onOpenNotes={onOpenNotes}
                             onCleared={onCleared}
+                            canMod={canMod}
                           />
                         </div>
                       </div>
@@ -726,7 +742,7 @@ function WarningsDesk({ guild, warnings, members, onDeleted, onEdited, onCleared
   );
 }
 
-function MemberRow({ member, guildId, warnCount, noteCount, onAction, onOpenNotes, onOpenProfile, index }) {
+function MemberRow({ member, guildId, warnCount, noteCount, onAction, onOpenNotes, onOpenProfile, index, canMod = true }) {
   return (
     <div
       className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors group"
@@ -758,14 +774,18 @@ function MemberRow({ member, guildId, warnCount, noteCount, onAction, onOpenNote
       </div>
       <div className="flex-shrink-0 flex items-center gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 md:group-focus-visible:opacity-100 transition-opacity">
         <button onClick={() => onOpenNotes(member)} className="cyber-icon-button" title="Staff notes" aria-label={`Staff notes for ${member.displayName || member.username || ''}`}><StickyNote size={14} aria-hidden="true" /></button>
-        <ActionMenu member={member} guildId={guildId} onAction={onAction} onOpenNotes={onOpenNotes} />
+        <ActionMenu member={member} guildId={guildId} onAction={onAction} onOpenNotes={onOpenNotes} canMod={canMod} />
       </div>
     </div>
   );
 }
 
-export default function Members({ guild }) {
+export default function Members({ guild, permLevel = 0 }) {
   const toast = useToast();
+  // Reads are open (level 0); all member actions/notes/warnings need Mod (2),
+  // role assignment and the guild-wide warning wipe need Admin (3).
+  const canMod = permLevel >= 2;
+  const canAdmin = permLevel >= 3;
   const [tab, setTab] = useState('members');
   const [members, setMembers] = useState([]);
   const [staff, setStaff] = useState([]);
@@ -862,6 +882,7 @@ export default function Members({ guild }) {
   };
 
   const deleteNote = async (userId, noteId) => {
+    if (!canMod) { toast.error('Mod access required.'); return; }
     try {
       await api.delete(`/api/guild/${guild.id}/members/${userId}/notes/${noteId}`);
       setNotes((prev) => prev.filter((n) => !(n.userId === userId && n.id === noteId)));
@@ -889,6 +910,10 @@ export default function Members({ guild }) {
         crumb={guild.name}
         subtitle={`Staff tools, notes and moderation in ${guild.name}`}
       />
+
+      {!canMod && (
+        <p className="text-[11px] text-amber-300/80 flex items-center gap-1.5" role="note">Read-only access — Mod level or higher is required for staff actions.</p>
+      )}
 
       <div className="seg-tabs mb-1">
         {tabs.map(({ id, label, icon: Icon }) => (
@@ -918,6 +943,8 @@ export default function Members({ guild }) {
           onCleared={clearWarnings}
           onClearedAll={clearAllWarnings}
           onOpenNotes={setNotesMember}
+          canMod={canMod}
+          canAdmin={canAdmin}
         />
       )}
 
@@ -990,6 +1017,7 @@ export default function Members({ guild }) {
                     onOpenNotes={setNotesMember}
                     onOpenProfile={setProfileMember}
                     index={i}
+                    canMod={canMod}
                   />
                 ))}
               </div>
@@ -1019,6 +1047,7 @@ export default function Members({ guild }) {
           member={notesMember}
           onClose={() => setNotesMember(null)}
           onChanged={onNoteChanged}
+          canMod={canMod}
         />
       )}
     </div>

@@ -7,8 +7,10 @@ import ConfirmModal from '../components/ConfirmModal.jsx';
 import { useToast } from '../components/Toast.jsx';
 import api from '../api.js';
 
-export default function Polls({ guild, guildData }) {
+export default function Polls({ guild, guildData, permLevel = 0 }) {
   const toast = useToast();
+  // All poll writes (create, close, delete) require Mod (2) backend-side.
+  const canAct = permLevel >= 2;
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
@@ -25,13 +27,14 @@ export default function Polls({ guild, guildData }) {
     try {
       const d = await api.get(`/api/guild/${guild.id}/polls`);
       setItems(d.polls || []);
-    } catch { setItems([]); }
+    } catch (e) { toast.error(e.message || 'Failed to load polls.'); }
     setLoading(false);
   }, [guild?.id]);
 
   useEffect(() => { load(); }, [load]);
 
   const create = async () => {
+    if (!canAct) { toast.error('Mod access required.'); return; }
     if (!form.question.trim() || !form.channelId) {
       toast.error('Pick a channel and write a question.');
       return;
@@ -54,6 +57,7 @@ export default function Polls({ guild, guildData }) {
   };
 
   const act = async (id, action) => {
+    if (!canAct) { toast.error('Mod access required.'); return; }
     setBusy(`${action}-${id}`);
     try {
       if (action === 'close') {
@@ -81,6 +85,10 @@ export default function Polls({ guild, guildData }) {
   return (
     <div className="page-shell-sm animate-fade-in">
       <PageHeader icon={Vote} title="Polls" subtitle={`Vote desks for ${guild.name}`} badge={`${open} open`} badgeColor={open ? 'cyan' : 'green'} />
+
+      {!canAct && (
+        <p className="text-[11px] text-amber-300/80 flex items-center gap-1.5" role="note">Read-only access — Mod level or higher is required to post, close or delete polls.</p>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <StatCard icon={Vote} label="Open" value={open} color="cyan" />
@@ -111,7 +119,7 @@ export default function Polls({ guild, guildData }) {
         </div>
         <input value={form.question} onChange={(e) => setForm((f) => ({ ...f, question: e.target.value }))} placeholder="Question" aria-label="Poll question" className="cyber-input text-xs" />
         <input value={form.options} onChange={(e) => setForm((f) => ({ ...f, options: e.target.value }))} placeholder="Options separated by |  (empty = Yes / No)" aria-label="Poll options separated by vertical bar" className="cyber-input text-xs" />
-        <button onClick={create} disabled={creating} className="cyber-button-solid text-xs flex items-center gap-1.5">
+        <button onClick={create} disabled={creating || !canAct} title={canAct ? undefined : 'Mod access required'} className="cyber-button-solid text-xs flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
           {creating ? <Loader size={12} className="animate-spin" aria-hidden="true" /> : <Plus size={12} aria-hidden="true" />} Post poll
         </button>
         <p className="text-[11px] text-zinc-500 inline-flex items-center gap-1.5">
@@ -161,11 +169,11 @@ export default function Polls({ guild, guildData }) {
               </div>
               <div className="flex gap-2 mt-3">
                 {!p.closed && (
-                  <button onClick={() => act(p.id, 'close')} disabled={!!busy} className="cyber-button text-xs flex items-center gap-1.5">
+                  <button onClick={() => act(p.id, 'close')} disabled={!!busy || !canAct} title={canAct ? undefined : 'Mod access required'} className="cyber-button text-xs flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
                     {busy === `close-${p.id}` ? <Loader size={11} className="animate-spin" /> : <Lock size={11} />} Close
                   </button>
                 )}
-                <button onClick={() => setConfirm(p.id)} className="cyber-button text-xs text-red-300 flex items-center gap-1.5">
+                <button onClick={() => setConfirm(p.id)} disabled={!canAct} title={canAct ? undefined : 'Mod access required'} className="cyber-button text-xs text-red-300 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
                   <Trash2 size={11} /> Delete
                 </button>
               </div>

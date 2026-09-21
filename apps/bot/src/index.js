@@ -104,6 +104,26 @@ client.bootstrapState = {
 };
 let servicesLoaded = false;
 let retryTimer = null;
+let heartbeatTimer = null;
+
+// Presence heartbeat for client-less API processes: the standalone dashboard
+// (`npm run dev:api`, `startDashboard(null)`) has no Discord client, so its
+// /api/health can never report botOnline from process state. The logged-in
+// process stamps a shared key instead, and readers treat a fresh stamp as
+// online. Stale stamps (>75s, bot crashed) read offline again. Never held
+// open: unref'd, best-effort, and outside the backup key allowlist.
+function startHeartbeat() {
+  if (heartbeatTimer) return;
+  const beat = () => {
+    try {
+      const p = db.set('bot_heartbeat', Date.now());
+      if (p && typeof p.catch === 'function') p.catch(() => {});
+    } catch { /* ephemeral DB failure must never crash the bot */ }
+  };
+  beat();
+  heartbeatTimer = setInterval(beat, 20_000);
+  heartbeatTimer.unref();
+}
 
 function scheduleRetry(reason) {
   if (retryTimer) return;
@@ -179,6 +199,7 @@ async function bootstrap() {
     client.bootstrapState.state = 'ready';
     client.bootstrapState.lastError = null;
     client.bootstrapState.attempt = 0;
+    startHeartbeat();
     return;
   }
 
@@ -189,6 +210,7 @@ async function bootstrap() {
     client.bootstrapState.lastError = null;
     client.bootstrapState.nextRetryAt = null;
     client.bootstrapState.attempt = 0;
+    startHeartbeat();
   } catch (err) {
     const message = err?.message || String(err);
     client.bootstrapState.state = 'failed';
