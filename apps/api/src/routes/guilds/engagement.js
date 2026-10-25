@@ -1,5 +1,6 @@
 const { db } = require('eb-bot-database');
 const rr = require('eb-bot-shared/services/reaction-roles');
+const { mapInBatches } = require('eb-bot-shared/utils/async');
 
 // Reaction-role + birthday routes extracted from the monolithic guilds
 // router (seventh extraction). Registered inline at the exact position the
@@ -78,7 +79,7 @@ function registerEngagementRoutes(router, { requirePerm, rl, botClient }) {
         return Math.ceil((next - now) / 86400000);
     }
 
-    router.get('/birthdays', async (req, res, next) => {
+    router.get('/birthdays', rl.heavyRead(), async (req, res, next) => {
         try {
             const { guildId } = req.params;
             const cfg = await db.get(`birthday_config_${guildId}`) || {};
@@ -104,14 +105,18 @@ function registerEngagementRoutes(router, { requirePerm, rl, botClient }) {
                     };
                 })
                 .sort((a, b) => a.days - b.days);
-            const enrichedEntries = await Promise.all(entries.map(async (entry) => {
-                const user = await botClient.users.fetch(entry.userId).catch(() => null);
+            // Avoid an unbounded Discord REST fan-out when a server has many
+            // birthday records. Reuse cached users and fetch misses in small,
+            // sequential batches; the route also has a per-user heavy-read cap.
+            const enrichedEntries = await mapInBatches(entries, 8, async (entry) => {
+                const cachedUser = botClient?.users?.cache?.get(entry.userId);
+                const user = cachedUser || await botClient?.users?.fetch(entry.userId).catch(() => null);
                 return {
                     ...entry,
                     username: user?.username || entry.userId,
                     avatar: user?.displayAvatarURL({ size: 64 }) || null,
                 };
-            }));
+            });
             res.json({
                 config: {
                     disabled: !!cfg.disabled,

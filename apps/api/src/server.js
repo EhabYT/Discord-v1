@@ -43,8 +43,9 @@ const RATE_LIMIT_MAX = 400;
 
 function rateLimiter(req, res, next) {
     if (req.path === '/api/health' || req.path === '/api/auth/status') return next();
-    const forwarded = req.headers['x-forwarded-for'];
-    const ip = (typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : req.socket.remoteAddress);
+    // `trust proxy` is set above; rely on Express's resolved address rather
+    // than the attacker-controlled left-most raw X-Forwarded-For entry.
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
     const now = Date.now();
     const limit = rateLimits.get(ip) || { count: 0, resetAt: now + RATE_LIMIT_WINDOW };
     if (now > limit.resetAt) { limit.count = 1; limit.resetAt = now + RATE_LIMIT_WINDOW; }
@@ -260,6 +261,7 @@ function startDashboard(botClient) {
 
     // The OAuth entry point mints session state on every hit; throttle it.
     app.use('/api/auth/discord', rl.limit('oauth-start', 20, 5 * 60 * 1000));
+    app.use('/api/auth/google', rl.limit('oauth-google', 20, 5 * 60 * 1000));
     app.use('/api/stats', statsRouter);
     app.use('/api/auth', authRouter);
     app.use('/api/auth', accountAuthRouter);

@@ -31,9 +31,10 @@ if (typeof sweeper.unref === 'function') sweeper.unref();
 function identify(req) {
     const uid = req.session?.user?.id;
     if (uid) return `u:${uid}`;
-    const fwd = req.headers['x-forwarded-for'];
-    const ip = (typeof fwd === 'string' ? fwd.split(',')[0].trim() : null)
-        || req.socket?.remoteAddress || 'unknown';
+    // Express is configured with an explicit trusted-proxy hop count in the
+    // server. Use its resolved client address instead of parsing the raw header:
+    // the left-most X-Forwarded-For value may have been supplied by the caller.
+    const ip = req.ip || req.socket?.remoteAddress || 'unknown';
     return `ip:${ip}`;
 }
 

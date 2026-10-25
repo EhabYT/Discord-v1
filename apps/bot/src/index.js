@@ -1,6 +1,5 @@
 require('dotenv').config();
 const path = require('path');
-const fs = require('fs');
 const { Client, GatewayIntentBits, Partials, Collection } = require('discord.js');
 const { Player } = require('discord-player');
 const { db, closePool } = require('eb-bot-database');
@@ -9,6 +8,8 @@ const { config: botConfig } = require('eb-bot-shared/config/bot-config');
 const logger = require('eb-bot-shared/lib/logger');
 const scheduler = require('./scheduler.js');
 const { loadEvents } = require('./events');
+const { loadCommands } = require('./handlers/command-loader');
+const { attachClientErrorHandler } = require('./handlers/client-errors');
 const { registerJobs } = require('eb-bot-shared/services/scheduler-jobs');
 const { deployCommands, runDiagnostics } = require('eb-bot-shared/services/startup');
 const { startDashboard, stopDashboard } = require('eb-bot-api');
@@ -21,7 +22,6 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.GuildVoiceStates,
-    GatewayIntentBits.GuildPresences,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildModeration,
     GatewayIntentBits.GuildEmojisAndStickers,
@@ -35,6 +35,7 @@ const client = new Client({
     Partials.User
   ]
 });
+attachClientErrorHandler(client, logger);
 
 // Attach properties to client
 client.commands = new Collection();
@@ -53,31 +54,10 @@ const player = new Player(client, {
 
 client.player = player;
 
-// Load Commands recursively from categorized subdirectories
+// Load commands exactly once at startup. Duplicate names fail fast instead of
+// silently replacing a handler and leaving dispatch/deployment inconsistent.
 const commandsPath = path.join(__dirname, 'commands');
-if (fs.existsSync(commandsPath)) {
-  function loadCommands(dir) {
-    const entries = fs.readdirSync(dir);
-    for (const entry of entries) {
-      const fullPath = path.join(dir, entry);
-      const stat = fs.statSync(fullPath);
-      if (stat.isDirectory()) {
-        loadCommands(fullPath);
-      } else if (entry.endsWith('.js')) {
-        try {
-          const command = require(fullPath);
-          if (command.data && command.execute) {
-            client.commands.set(command.data.name, command);
-            logger.debug(`Loaded command: ${command.data.name}`);
-          }
-        } catch (err) {
-          logger.error(`Load error for ${fullPath}`, { error: err.message });
-        }
-      }
-    }
-  }
-  loadCommands(commandsPath);
-}
+loadCommands(commandsPath, client.commands, logger);
 
 // Global error handling is installed before diagnostics so a failed bootstrap
 // can never produce an unobserved rejection while the dashboard stays online.
