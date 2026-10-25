@@ -45,6 +45,11 @@ Start with:
 - [Deployment/live runbook](deployment/deployment-live-runbook.md)
 - [Deployment acceptance report](deployment/deployment-acceptance-report.md)
 
+## Current audit and phase work
+
+- [Fixes, optimization, cleanup, and sort progress](audit/phase1-progress.md)
+- [Phase 0 discovery baseline](audit/discovery.md) (historical snapshot)
+
 ## Original audit history
 
 The [`audit/`](audit/) directory preserves the original discovery,

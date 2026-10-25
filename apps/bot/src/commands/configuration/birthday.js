@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { mapInBatches } = require('eb-bot-shared/utils/async');
 
 const MONTHS = [
     'January','February','March','April','May','June',
@@ -149,14 +150,15 @@ flags: [MessageFlags.Ephemeral]
             }
 
             // Fetch usernames without mutating entries across an await boundary.
-            const enrichedEntries = await Promise.all(entries.map(async (entry) => {
-                const user = await client.users.fetch(entry.userId).catch(() => null);
+            const enrichedEntries = await mapInBatches(entries, 8, async (entry) => {
+                const cachedUser = client.users.cache.get(entry.userId);
+                const user = cachedUser || await client.users.fetch(entry.userId).catch(() => null);
                 return {
                     ...entry,
                     username: user?.username || entry.userId,
-                    avatar: user?.displayAvatarURL({ size: 32 }),
+                    avatar: user?.displayAvatarURL({ size: 32 }) || null,
                 };
-            }));
+            });
 
             const today   = new Date();
             const todayM  = today.getMonth() + 1;

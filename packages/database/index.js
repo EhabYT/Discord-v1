@@ -43,6 +43,12 @@ const TOP_SORTS = {
         sql: `CASE WHEN value->>'voiceTime' ~ '^-?[0-9]+$' THEN (value->>'voiceTime')::bigint ELSE 0 END`,
         score: (value) => numField(value?.voiceTime),
     },
+    total: {
+        sql: `(CASE WHEN value->>'messages' ~ '^-?[0-9]+$' THEN (value->>'messages')::bigint ELSE 0 END + CASE WHEN value->>'voiceTime' ~ '^-?[0-9]+$' THEN (value->>'voiceTime')::bigint / 60000 ELSE 0 END + CASE WHEN value->>'reactions' ~ '^-?[0-9]+$' THEN (value->>'reactions')::bigint ELSE 0 END)`,
+        score: (value) => numField(value?.messages)
+            + Math.floor(numField(value?.voiceTime) / 60_000)
+            + numField(value?.reactions),
+    },
 };
 
 function normalizeTopOptions(prefix, options = {}) {
@@ -61,6 +67,7 @@ function normalizeScoreThreshold(score) {
 class MemoryDatabase {
     constructor({ persist = false, snapshotPath = FALLBACK_SNAPSHOT } = {}) {
         this.data = new Map();
+        this.lockTails = new Map();
         this.persist = persist === true && !isTestProcess;
         this.snapshotPath = snapshotPath;
         this._lastMtimeMs = 0;
@@ -145,8 +152,25 @@ class MemoryDatabase {
         }
     }
     ready() { return Promise.resolve(true); }
-    withAdvisoryLocks(keys, fn) {
-        return fn(this);
+    async withAdvisoryLocks(keys, fn) {
+        const orderedKeys = [...new Set((Array.isArray(keys) ? keys : [keys]).map(String))].sort();
+        const acquired = [];
+        try {
+            for (const key of orderedKeys) {
+                const previous = this.lockTails.get(key) || Promise.resolve();
+                let release;
+                const tail = new Promise((resolve) => { release = resolve; });
+                this.lockTails.set(key, tail);
+                await previous;
+                acquired.push({ key, tail, release });
+            }
+            return await fn(this);
+        } finally {
+            for (const { key, tail, release } of acquired.reverse()) {
+                release();
+                if (this.lockTails.get(key) === tail) this.lockTails.delete(key);
+            }
+        }
     }
     get(key) {
         if (this.persist) this._maybeReload();
@@ -202,6 +226,21 @@ class MemoryDatabase {
             .map(([id, value]) => ({ id, value: structuredClone(value) }))
             .sort((a, b) => score(b.value) - score(a.value))
             .slice(0, normalized.limit));
+    }
+    aggregateStatsPrefix(prefix) {
+        if (this.persist) this._maybeReload();
+        const normalized = normalizePrefixOptions(prefix);
+        const totals = { totalMessages: 0, totalVoice: 0, totalReactions: 0, activeUsers: 0 };
+        for (const [key, value] of this.data) {
+            if (!key.startsWith(normalized.prefix)) continue;
+            const messages = numField(value?.messages);
+            const voice = numField(value?.voiceTime);
+            totals.totalMessages += messages;
+            totals.totalVoice += voice;
+            totals.totalReactions += numField(value?.reactions);
+            if (messages > 0 || voice > 0) totals.activeUsers += 1;
+        }
+        return Promise.resolve(totals);
     }
     rankCounts(prefix, options = {}) {
         if (this.persist) this._maybeReload();
@@ -432,6 +471,29 @@ class PostgresDatabase {
             LIMIT $2
         `, [normalized.likePrefix, normalized.limit]);
         return result.rows;
+    }
+
+    async aggregateStatsPrefix(prefix) {
+        await this.ready();
+        const normalized = normalizePrefixOptions(prefix);
+        const messages = "CASE WHEN value->>'messages' ~ '^-?[0-9]+$' THEN (value->>'messages')::numeric ELSE 0 END";
+        const voice = "CASE WHEN value->>'voiceTime' ~ '^-?[0-9]+$' THEN (value->>'voiceTime')::numeric ELSE 0 END";
+        const reactions = "CASE WHEN value->>'reactions' ~ '^-?[0-9]+$' THEN (value->>'reactions')::numeric ELSE 0 END";
+        const result = await this.pool.query(`
+            SELECT COALESCE(SUM(${messages}), 0) AS total_messages,
+                   COALESCE(SUM(${voice}), 0) AS total_voice,
+                   COALESCE(SUM(${reactions}), 0) AS total_reactions,
+                   COUNT(*) FILTER (WHERE (${messages}) > 0 OR (${voice}) > 0)::int AS active_users
+            FROM bot_kv
+            WHERE key LIKE $1 ESCAPE '\\'
+        `, [normalized.likePrefix]);
+        const row = result.rows[0] || {};
+        return {
+            totalMessages: Number(row.total_messages) || 0,
+            totalVoice: Number(row.total_voice) || 0,
+            totalReactions: Number(row.total_reactions) || 0,
+            activeUsers: Number(row.active_users) || 0,
+        };
     }
 
     // Rank aggregate for /rank: previously the command transferred up to

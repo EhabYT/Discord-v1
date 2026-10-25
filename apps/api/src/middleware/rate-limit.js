@@ -82,8 +82,8 @@ module.exports = {
     bulkModeration: () => limit('bulk-moderation', 3, 5 * 60 * 1000),
     /** Anything that makes the bot post into a channel. */
     botMessaging: () => limit('bot-messaging', 20, 60 * 1000),
-    /** Full-table scans and config exports. */
-    heavyRead: () => limit('heavy-read', 10, 60 * 1000),
+    /** Expensive reads, with endpoint-specific buckets to avoid cross-page starvation. */
+    heavyRead: (name = 'heavy-read') => limit(`heavy-read:${name}`, 10, 60 * 1000),
     /** Writes that replace large amounts of stored state. */
     restore: () => limit('restore', 3, 10 * 60 * 1000),
     getStats,

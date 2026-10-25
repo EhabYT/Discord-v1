@@ -61,18 +61,23 @@ function member(id, roleIds, admin = true) {
     };
 }
 
-const MOD = member('mod', ['r_mod']);          // level-2 dashboard user
-const ADMIN = member('admin', ['r_admin']);    // level-3 dashboard user
-const OWNER = member('owner', ['r_owner']);
-const BOT = member('bot', ['r_bot']);
-const PEON = member('peon', [], false);   // no Administrator => level 0 Viewer
+const MOD_ID = '100000000000000001';
+const ADMIN_ID = '100000000000000002';
+const OWNER_ID = '100000000000000003';
+const BOT_ID = '100000000000000004';
+const PEON_ID = '100000000000000005';
+const MOD = member(MOD_ID, ['r_mod']);          // level-2 dashboard user
+const ADMIN = member(ADMIN_ID, ['r_admin']);    // level-3 dashboard user
+const OWNER = member(OWNER_ID, ['r_owner']);
+const BOT = member(BOT_ID, ['r_bot']);
+const PEON = member(PEON_ID, [], false);   // no Administrator => level 0 Viewer
 
 const members = new Collection([
-    ['mod', MOD], ['admin', ADMIN], ['owner', OWNER], ['bot', BOT], ['peon', PEON],
+    [MOD_ID, MOD], [ADMIN_ID, ADMIN], [OWNER_ID, OWNER], [BOT_ID, BOT], [PEON_ID, PEON],
 ]);
 
 const guild = {
-    id: '999999999999999999', name: 'HierarchyGuild', memberCount: 5, ownerId: 'owner',
+    id: '999999999999999999', name: 'HierarchyGuild', memberCount: 5, ownerId: OWNER_ID,
     iconURL: () => null, createdTimestamp: Date.now(),
     premiumTier: 0, premiumSubscriptionCount: 0,
     roles: { cache: roles },
@@ -91,7 +96,7 @@ const guild = {
 };
 
 const botClient = Object.assign(new EventEmitter(), {
-    user: { id: 'bot', tag: 'Bot#0001', username: 'Bot', presence: { status: 'online', activities: [] },
+    user: { id: BOT_ID, tag: 'Bot#0001', username: 'Bot', presence: { status: 'online', activities: [] },
             setPresence: () => {}, displayAvatarURL: () => null },
     ws: { ping: 1 }, uptime: 1000, commands: new Collection(),
     guilds: { cache: new Collection([['999999999999999999', guild]]) },
@@ -137,8 +142,8 @@ async function loginAs(id) {
     srv.startDashboard(botClient);
     await new Promise((r) => setTimeout(r, 1500));
 
-    const modCookie = await loginAs('mod');
-    const adminCookie = await loginAs('admin');
+    const modCookie = await loginAs(MOD_ID);
+    const adminCookie = await loginAs(ADMIN_ID);
 
     let fails = 0;
     const check = (label, ok, detail = '') => {
@@ -148,48 +153,48 @@ async function loginAs(id) {
 
     console.log('\nModeration actions must respect role hierarchy:\n');
 
-    let r = await req('/api/guild/999999999999999999/members/admin/action',
+    let r = await req(`/api/guild/999999999999999999/members/${ADMIN_ID}/action`,
         { method: 'POST', body: { action: 'ban' }, cookie: modCookie });
     check('Moderator banning an Admin is refused', r.status === 403, `${r.status}`);
 
-    r = await req('/api/guild/999999999999999999/members/owner/action',
+    r = await req(`/api/guild/999999999999999999/members/${OWNER_ID}/action`,
         { method: 'POST', body: { action: 'ban' }, cookie: adminCookie });
     check('Admin banning the server owner is refused', r.status === 403, `${r.status}`);
 
-    r = await req('/api/guild/999999999999999999/members/mod/action',
+    r = await req(`/api/guild/999999999999999999/members/${MOD_ID}/action`,
         { method: 'POST', body: { action: 'ban' }, cookie: modCookie });
     check('Self-ban is refused', r.status === 403, `${r.status}`);
 
-    r = await req('/api/guild/999999999999999999/members/peon/action',
+    r = await req(`/api/guild/999999999999999999/members/${PEON_ID}/action`,
         { method: 'POST', body: { action: 'kick' }, cookie: modCookie });
     check('Moderator kicking a regular member still works', r.status === 200, `${r.status}`);
 
     console.log('\nRole assignment must respect hierarchy:\n');
 
-    r = await req('/api/guild/999999999999999999/members/peon/roles',
+    r = await req(`/api/guild/999999999999999999/members/${PEON_ID}/roles`,
         { method: 'POST', body: { roles: ['r_owner'] }, cookie: adminCookie });
     check('Admin granting a role above their own is refused', r.status === 403, `${r.status}`);
 
-    r = await req('/api/guild/999999999999999999/members/peon/roles',
+    r = await req(`/api/guild/999999999999999999/members/${PEON_ID}/roles`,
         { method: 'POST', body: { roles: ['r_managed'] }, cookie: adminCookie });
     check('Granting an integration-managed role is refused', r.status === 403, `${r.status}`);
 
-    r = await req('/api/guild/999999999999999999/members/peon/roles',
+    r = await req(`/api/guild/999999999999999999/members/${PEON_ID}/roles`,
         { method: 'POST', body: { roles: ['r_bot'] }, cookie: adminCookie });
     check("Granting a role above the bot's own is refused", r.status === 403, `${r.status}`);
 
-    r = await req('/api/guild/999999999999999999/members/peon/roles',
+    r = await req(`/api/guild/999999999999999999/members/${PEON_ID}/roles`,
         { method: 'POST', body: { roles: ['nonexistent'] }, cookie: adminCookie });
     check('Unknown role id is rejected', r.status === 400, `${r.status}`);
 
-    r = await req('/api/guild/999999999999999999/members/peon/roles',
+    r = await req(`/api/guild/999999999999999999/members/${PEON_ID}/roles`,
         { method: 'POST', body: { roles: ['r_mod'] }, cookie: adminCookie });
     check('Admin granting a role below their own still works', r.status === 200, `${r.status}`);
 
     console.log('\nAnonymous content must stay anonymous below Moderator:\n');
 
     // 'peon' holds no roles => level 0 Viewer. 'mod' holds r_mod => level 2.
-    const peonCookie = await loginAs('peon');
+    const peonCookie = await loginAs(PEON_ID);
 
     let body = JSON.parse((await req('/api/guild/999999999999999999/confessions', { cookie: peonCookie })).body || '{}');
     let it = (body.items || [])[0] || {};
@@ -211,7 +216,7 @@ async function loginAs(id) {
     check('Moderator may see anonymous suggestion author', it.authorId === 'U-9');
 
     console.log('\nSide effects:\n');
-    const bad = banned.filter((b) => /admin|owner/.test(b));
+    const bad = banned.filter((b) => [ADMIN_ID, OWNER_ID].some((id) => b.endsWith(id)));
     check('no privileged member was actioned', bad.length === 0, bad.join(',') || '');
     const badRoles = rolesSet.filter((x) => x.list.some((i) => ['r_owner', 'r_bot', 'r_managed'].includes(i)));
     check('no over-privileged role was granted', badRoles.length === 0, JSON.stringify(badRoles) || '');

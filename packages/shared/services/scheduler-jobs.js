@@ -112,7 +112,8 @@ function registerJobs(client, scheduler) {
                     if (await db.get(alreadyKey)) continue;
                     await db.set(alreadyKey, true);
 
-                    const member = await guild.members.fetch(userId).catch(() => null);
+                    const member = guild.members.cache.get(userId)
+                        || await guild.members.fetch(userId).catch(() => null);
                     if (!member) continue;
 
                     let msgText = cfg.message || "🎉 {user} it's your birthday today! Happy Birthday! 🎂";
@@ -159,7 +160,8 @@ function registerJobs(client, scheduler) {
             const guild = client.guilds.cache.get(guildId);
             const cfg = await db.get(`birthday_config_${guildId}`);
             if (guild && cfg?.roleId) {
-                const member = await guild.members.fetch(userId).catch(() => null);
+                const member = guild.members.cache.get(userId)
+                    || await guild.members.fetch(userId).catch(() => null);
                 if (member) await member.roles.remove(cfg.roleId, 'Birthday role expired').catch(() => {});
             }
             await db.delete(entry.id);

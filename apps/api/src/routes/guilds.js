@@ -8,6 +8,7 @@ const { SYSTEM_ROLES, requireSystemRole } = require('../middleware/devauth');
 const rl = require('../middleware/rate-limit');
 const logger = require('eb-bot-shared/lib/logger');
 const { performBackup } = require('eb-bot-shared/services/backup');
+const { mapInBatches } = require('eb-bot-shared/utils/async');
 const registerAnalyticsRoutes = require('./guilds/analytics');
 const registerBoardRoutes = require('./guilds/board');
 const registerVerificationRoutes = require('./guilds/verification');
@@ -154,7 +155,7 @@ module.exports = (botClient) => {
         } catch (err) { next(err); }
     });
 
-    router.get('/leaderboard', async (req, res, next) => {
+    router.get('/leaderboard', rl.heavyRead('guild-leaderboard'), async (req, res, next) => {
         try {
             const { guildId } = req.params;
             const type = req.query.type || 'xp';
@@ -165,7 +166,7 @@ module.exports = (botClient) => {
             // topPrefix ranks in Postgres and returns 15 rows. Unknown types
             // keep the legacy unsorted first-15 behavior byte-for-byte.
             let entries = [];
-            if (type === 'xp' || type === 'messages' || type === 'voice') {
+            if (type === 'xp' || type === 'messages' || type === 'voice' || type === 'total') {
                 const rows = await db.topPrefix(filterPrefix, { sort: type, limit: 15 });
                 entries = rows.map(e => ({ userId: e.id.replace(filterPrefix, ''), ...e.value }));
             } else {
@@ -175,20 +176,21 @@ module.exports = (botClient) => {
                     .slice(0, 15);
             }
 
-            const enrichedEntries = await Promise.all(entries.map(async (entry) => {
-                const user = await botClient.users.fetch(entry.userId).catch(() => null);
+            const enrichedEntries = await mapInBatches(entries, 8, async (entry) => {
+                const cachedUser = botClient?.users?.cache?.get(entry.userId);
+                const user = cachedUser || await botClient?.users?.fetch(entry.userId).catch(() => null);
                 return {
                     ...entry,
                     username: user ? user.username : entry.userId,
                     avatar: user ? user.displayAvatarURL({ size: 32 }) : null,
                 };
-            }));
+            });
 
             res.json(enrichedEntries);
         } catch (err) { next(err); }
     });
 
-    router.get('/warnings', async (req, res, next) => {
+    router.get('/warnings', rl.heavyRead('guild-warnings'), async (req, res, next) => {
         try {
             const { guildId } = req.params;
             const prefix = `warnings_${guildId}_`;
@@ -662,7 +664,7 @@ module.exports = (botClient) => {
         } catch (err) { next(err); }
     });
 
-    router.get('/backups', requirePerm(3), (req, res, next) => {
+    router.get('/backups', requirePerm(3), rl.heavyRead('guild-backups'), (req, res, next) => {
         try {
             const { getBackupDir } = require('eb-bot-shared/services/backup');
             const fs = require('fs');

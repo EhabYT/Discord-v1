@@ -2,9 +2,10 @@
 // start:api). Gated on require.main so requiring this module
 // (tests, bot process which loads dotenv itself) never picks up .env — tests
 // set their own env and must stay hermetic. Render/production inject env.
+const path = require('path');
 if (require.main === module) {
     try {
-        require('dotenv').config();
+        require('dotenv').config({ path: path.resolve(__dirname, '../../..', '.env') });
     } catch {
         /* dotenv optional */
     }
@@ -14,7 +15,6 @@ const http = require('http');
 const session = require('express-session');
 const helmet = require('helmet');
 const { createSessionStore } = require('./session-store');
-const path = require('path');
 const compression = require('compression');
 const logger = require('eb-bot-shared/lib/logger');
 const { setupSocket, closeSocket, emitLog } = require('./websocket/socket');

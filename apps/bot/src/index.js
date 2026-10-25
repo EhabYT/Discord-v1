@@ -1,5 +1,5 @@
-require('dotenv').config();
 const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../../..', '.env') });
 const { Client, GatewayIntentBits, Partials, Collection } = require('discord.js');
 const { Player } = require('discord-player');
 const { db, closePool } = require('eb-bot-database');
@@ -10,6 +10,7 @@ const scheduler = require('./scheduler.js');
 const { loadEvents } = require('./events');
 const { loadCommands } = require('./handlers/command-loader');
 const { attachClientErrorHandler } = require('./handlers/client-errors');
+const { maxRetriesFromEnv, retryDelay } = require('./handlers/bootstrap-retry');
 const { registerJobs } = require('eb-bot-shared/services/scheduler-jobs');
 const { deployCommands, runDiagnostics } = require('eb-bot-shared/services/startup');
 const { startDashboard, stopDashboard } = require('eb-bot-api');
@@ -106,9 +107,21 @@ function startHeartbeat() {
 }
 
 function scheduleRetry(reason) {
-  if (retryTimer) return;
+  if (retryTimer || shuttingDown) return;
+  const maxRetries = maxRetriesFromEnv(process.env.BOT_BOOTSTRAP_MAX_RETRIES);
+  if (client.bootstrapState.attempt >= maxRetries) {
+    client.bootstrapState.state = 'failed';
+    client.bootstrapState.lastError = reason;
+    client.bootstrapState.nextRetryAt = null;
+    logger.error('Bot bootstrap retry limit reached; dashboard remains online', {
+      attempts: client.bootstrapState.attempt,
+      maxRetries,
+      reason,
+    });
+    return;
+  }
   client.bootstrapState.attempt += 1;
-  const delay = Math.min(5 * 60_000, 15_000 * (2 ** Math.min(client.bootstrapState.attempt - 1, 5)));
+  const delay = retryDelay(client.bootstrapState.attempt);
   client.bootstrapState.state = 'waiting';
   client.bootstrapState.lastError = reason;
   client.bootstrapState.nextRetryAt = Date.now() + delay;
@@ -218,6 +231,7 @@ async function shutdown(signal) {
   const forceExit = setTimeout(() => process.exit(1), 10_000);
   forceExit.unref();
   if (retryTimer) clearTimeout(retryTimer);
+  if (heartbeatTimer) clearInterval(heartbeatTimer);
   scheduler.removeAll();
   try { await Promise.resolve(client.destroy()); } catch (err) {
     logger.warn('Discord client shutdown failed', { error: err?.message || String(err) });

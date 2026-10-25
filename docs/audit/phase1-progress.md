@@ -1,34 +1,67 @@
-# Phase 1 — Fix pass progress
+# Fixes → Optimize → Cleanup → Sort — Progress and Verification
 
 **Date:** 2026-10-25  
-**Status:** targeted fixes completed and verified; broader stack migration and remaining optimization/cleanup work are not complete.
+**Branch:** `arena/e30916a0-discord-v1`
+**Status:** implementation phases completed; local verification passes; GitHub deployment gate remains externally blocked.
 
-## Changes made
+This report supersedes the earlier Phase 1-only progress notes. The Phase 0 discovery report remains a historical baseline; it records the repository before these changes.
 
-- Updated affected production dependencies and lockfile; raised the API's direct `multer` dependency to `^2.5.0`.
-- Changed global and endpoint rate-limit identity to use Express's trusted `req.ip` instead of parsing the caller-controlled left-most `X-Forwarded-For` value.
-- Extracted bot command loading into `apps/bot/src/handlers/command-loader.js`; duplicate command names now fail fast rather than silently replacing a command.
-- Made `loadEvents()` remove only its own previous client/player listeners before registering again, avoiding duplicate listeners on reload while preserving unrelated listeners.
-- Added a Discord client `error` handler.
-- Removed the unused `GuildPresences` gateway intent; `MessageContent` remains because moderation and auto-response logic inspect message content.
-- Added regression tests for duplicate commands, repeated event loading, client errors, and forwarded-header rate-limit bypass attempts.
-- Added PKCE S256 to Discord and Google OAuth authorization/token exchanges and extended OAuth regression tests to verify the challenge/verifier binding.
-- Added a dedicated Google OAuth start/callback limiter.
-- Bounded birthday-list Discord user lookups to batches of eight, reused cached users, and applied the heavy-read rate limiter; added a reusable bounded async mapper with tests.
-- Disabled Render auto-deploy and updated the deployment runbook/release validator so only a manually selected, CI-verified commit can be deployed.
+## Scope decisions
+
+- Preserved the existing JavaScript/npm-workspace, Express, PostgreSQL, Discord.js, React/Vite, and Render architecture. No breaking migration or database schema migration was introduced.
+- Kept Render auto-deploy disabled. Do not deploy unless GitHub Actions **Verify** is green for the exact commit selected for deployment. A local verification pass does not satisfy this gate.
+- No live deployment or real-provider login was performed.
+
+## 1. Fixes
+
+- Added bounded bot bootstrap retries (configurable from 1 to 20; default 8), retry backoff, and heartbeat timer cleanup on shutdown.
+- Bounded member listing/search to 100 results; validated member/action/note/warning inputs; bounded moderation reasons, timeout durations, role lists, and warning cleanup batches.
+- Added route-isolated heavy-read rate limits for high-cost guild endpoints and a bounded request limit for member actions.
+- Added regression coverage for retry limits, route isolation, and guild-member route bounds.
+- Added `.env.example` entries for optional Google OAuth and the bot bootstrap retry setting.
+
+## 2. Optimize
+
+- Replaced bot leaderboard full-member scans with database-side top-10 ranking.
+- Replaced server-stat per-member reads with a database-side prefix aggregate.
+- Added the `total` score to both Memory and PostgreSQL leaderboard adapters and API sorting.
+- Reused cached Discord users and bounded leaderboard/birthday enrichment to batches of eight.
+- Reused cached guild members in birthday and birthday-role scheduler jobs before making REST requests.
+- Added keyed process-local advisory locking to the MemoryDatabase fallback, matching the critical-section behavior expected by the shared database lock API.
+
+## 3. Cleanup
+
+- Removed the tracked Playwright `test-results/.last-run.json` artifact and ignored regenerated `test-results/` output.
+- Reset the ESLint debt baseline to its measured current value: **0 errors / 0 warnings**.
+- Kept `file-type` as a development dependency because the dependency regression suite imports it; it is no longer a production dependency.
+- Removed obsolete Turbo configuration from `package.json`; `turbo.json` remains the single Turbo configuration source.
+- Added per-workspace start/dev/lint/test commands where appropriate, plus root `lint:workspaces` and `test:workspaces` Turbo runners. Existing root operational commands and the Render entry point remain intact.
+- Made bot/API `.env` loading resolve from the repository root so workspace-local scripts use the same development environment.
+
+## 4. Sort
+
+- Kept source modules in their existing ownership boundaries (`apps/` and `packages/`) rather than performing risky broad file moves or changing dynamic bot-loader paths.
+- Organized workspace commands by responsibility and kept Turbo task configuration in `turbo.json`.
+- Marked the Phase 0 report as a historical baseline so its original findings are not mistaken for current status.
 
 ## Verification
 
-`npm run verify` passes, including release validation, lint gate, unit/security tests, production dependency audit, and web build. The production audit now reports **0 vulnerabilities**.
+Latest completed checks:
 
-`npm audit` without `--omit=dev` still reports **3 moderate findings** in the Tailwind 3/PostCSS selector-parser development dependency chain. npm's forced fix would change Tailwind to v4, outside the supplied Tailwind 3 requirement; no forced major upgrade or incompatible parser override was applied.
+| Check | Result |
+|---|---|
+| `npm run verify` | **PASS** (release config, lint gate, all unit/security suites, production audit, web build) |
+| Lint gate | **0 errors / 0 warnings**, budget 0 / 0 |
+| Production dependency audit | **0 vulnerabilities** |
+| Web production build | **PASS** |
+| Workspace `test` scripts | **PASS** in all seven app/package workspaces |
+| `npm run lint:workspaces` | **PASS** |
+| `git diff --check` | **PASS** on the final working tree |
 
-The sandbox runs Node 22.22.3 while `.node-version` pins 22.12.0, so npm continues to emit an engine warning. Verification passed on the available runtime.
+The environment is Node 22.22.3 while the repository pins Node 22.12.x, so npm reports an engine warning. The checks passed on the available runtime.
 
-## Phase 5 deployment gate
+## External gate and remaining boundaries
 
-Do not deploy until the GitHub Actions `Verify` workflow is green for the exact commit being deployed. A local `npm run verify` pass is useful but does not replace that CI result; red, cancelled, or missing CI is a hard stop. No deployment has been performed.
+The most recent GitHub Actions Verify attempt did not start because the GitHub account is under a billing lock. This is not a code failure, but it means the exact-SHA CI gate is still **not green**. Resolve the billing issue, push this branch, and wait for Verify to pass on the exact intended deployment commit before any deployment. No deployment has occurred.
 
-## Remaining Phase 1 scope
-
-This pass keeps the existing architecture, as selected. Remaining work includes a complete route-by-route API rate-limit and validation inventory, real-provider/browser OAuth E2E, React render profiling, and a comprehensive production query/index review. The Addendum's TypeScript/pnpm/Redis/Docker stack migration was explicitly not selected. No live deployment or Discord provider login was exercised.
+Real Discord/Google OAuth, live Render health, multi-instance rate-limit coordination, and browser-level end-to-end behavior were not exercised. These remain operational/integration validation items rather than reasons to change the architecture in this pass.

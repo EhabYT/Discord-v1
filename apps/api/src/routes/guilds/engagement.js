@@ -79,7 +79,7 @@ function registerEngagementRoutes(router, { requirePerm, rl, botClient }) {
         return Math.ceil((next - now) / 86400000);
     }
 
-    router.get('/birthdays', rl.heavyRead(), async (req, res, next) => {
+    router.get('/birthdays', rl.heavyRead('guild-birthdays'), async (req, res, next) => {
         try {
             const { guildId } = req.params;
             const cfg = await db.get(`birthday_config_${guildId}`) || {};

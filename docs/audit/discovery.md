@@ -4,7 +4,9 @@
 **Discovery date:** 2026-10-25
 **Branch:** `arena/e30916a0-discord-v1`
 **Scope:** tracked repository files, workspace/package configuration, bot/API/web architecture, CI/deployment configuration, current automated checks, and the supplied project specification.
-**Implementation changes:** none. This report replaces an older discovery document whose file paths, stack inventory, counts, and findings no longer match the current checkout.
+**Implementation changes:** none at the time of discovery. This report replaces an older discovery document whose file paths, stack inventory, counts, and findings no longer match the checkout at that time.
+
+> **Historical baseline:** this Phase 0 document intentionally records the pre-fix state. It is not a claim about the current working tree. The authorized follow-up preserved the existing architecture and deployment platform; follow-up fixes, optimization, cleanup, sort, and current verification/deployment status are tracked in [`phase1-progress.md`](phase1-progress.md).
 
 ---
 

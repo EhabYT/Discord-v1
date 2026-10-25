@@ -7,8 +7,8 @@
       "outputs": ["dist/**", "public/**", ".next/**", "!.next/cache/**"]
     },
     "test": {
-      "dependsOn": ["build"],
-      "outputs": ["coverage/**"]
+      "cache": false,
+      "outputs": []
     },
     "lint": {
       "outputs": []

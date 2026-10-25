@@ -1,1 +1,12 @@
-{"name":"eb-bot-scripts","version":"3.1.0","license":"MIT","dependencies":{"dotenv":"^17.4.2"}}
+{
+  "name": "eb-bot-scripts",
+  "version": "3.1.0",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^17.4.2"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "test": "node ../../packages/scripts/validate-release-config.js && node ../../tests/security/live-smoke.test.js"
+  }
+}

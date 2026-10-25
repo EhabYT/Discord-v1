@@ -18,5 +18,11 @@
     "eb-bot-api": "*",
     "eb-bot-database": "*",
     "eb-bot-shared": "*"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "lint": "eslint src",
+    "test": "node ../../tests/unit/command-loader.test.js && node ../../tests/unit/bot-loader-regression.test.js && node ../../tests/unit/bootstrap-retry.test.js && node ../../tests/unit/bot-stat-commands.test.js"
   }
 }

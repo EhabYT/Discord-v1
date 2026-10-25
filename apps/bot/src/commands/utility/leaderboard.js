@@ -1,65 +1,54 @@
-const { SlashCommandBuilder, EmbedBuilder
-} = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+
+const STAT_PREFIX = 'stats_';
+
+function numeric(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function scoreFor(value, type) {
+  if (type === 'messages') return numeric(value?.messages);
+  if (type === 'voice') return Math.floor(numeric(value?.voiceTime) / 60_000);
+  return numeric(value?.messages)
+    + Math.floor(numeric(value?.voiceTime) / 60_000)
+    + numeric(value?.reactions);
+}
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('leaderboard')
     .setDescription('View server leaderboard')
-    .addStringOption(opt => opt.setName('type').setDescription('Type')
-      .addChoices({ name: 'Messages', value: 'messages'
-    },
-    { name: 'Voice', value: 'voice'
-    },
-    { name: 'Total', value: 'total'
-    })),
+    .addStringOption((opt) => opt.setName('type').setDescription('Type')
+      .addChoices(
+        { name: 'Messages', value: 'messages' },
+        { name: 'Voice', value: 'voice' },
+        { name: 'Total', value: 'total' },
+      )),
 
-  async execute(interaction, client, db) {
+  async execute(interaction, _client, db) {
     const type = interaction.options.getString('type') || 'total';
+    const prefix = `${STAT_PREFIX}${interaction.guild.id}_`;
     await interaction.deferReply();
-    const members = await interaction.guild.members.fetch();
-    // One batched mget per 100 members instead of N sequential single-key
-    // round-trips: a 1,000-member guild went from 1,000 sequential queries to
-    // 10 parallel ones. mget caps at 100 keys per call, hence the chunks.
-    const memberIds = [...members.keys()];
-    const chunks = [];
-    for (let i = 0; i < memberIds.length; i += 100) chunks.push(memberIds.slice(i, i + 100));
-    const batches = await Promise.all(chunks.map((ids) =>
-        db.mget(ids.map((id) => `stats_${interaction.guild.id}_${id}`)).catch(() => ({}))
-    ));
-    const statsById = Object.assign({}, ...batches);
-    const entries = [];
-    for (const memberId of memberIds) {
-      const stats = statsById[`stats_${interaction.guild.id}_${memberId}`] || { messages: 0, voiceTime: 0, reactions: 0
-            };
-      let value = 0;
-      if (type === 'messages') value = stats.messages;
-      else if (type === 'voice') value = Math.floor(stats.voiceTime / 60000);
-      else value = stats.messages + Math.floor(stats.voiceTime / 60000) + stats.reactions;
-      if (value > 0) {entries.push({ userId: memberId, value
-            });}
-        }
-    entries.sort((a, b) => b.value - a.value);
-    const top10 = entries.slice(0,
-        10);
-    const medals = ['🥇', '🥈', '🥉'
-        ];
-    const description = top10.length > 0
-      ? top10.map((e, i) => `${medals[i
-            ] || `**${i + 1
-            }.**`
-        } <@${e.userId
-        }> — ${type === 'voice' ? `${e.value
-            } min` : e.value.toLocaleString()
-        }`).join('\n')
-      : 'No data yet.';
-    const titles = { messages: '📝 Messages', voice: '🎤 Voice Time', total: '🏆 Total'
-        };
-    const embed = new EmbedBuilder().setColor('#FFD700').setTitle(`${titles[type
-            ]
-        } Leaderboard`).setDescription(description).setTimestamp();
-    await interaction.editReply({ embeds: [embed
-            ]
-        });
-    }
-};
 
+    // Rank in PostgreSQL (or the equivalent in-memory adapter) and transfer
+    // only the top ten rows. The old implementation fetched every guild member
+    // and then one stats record per member, causing unbounded gateway/DB work.
+    const rows = await db.topPrefix(prefix, { sort: type, limit: 10 });
+    const top10 = rows.map((row) => ({
+      userId: row.id.slice(prefix.length),
+      value: scoreFor(row.value, type),
+    }));
+    const medals = ['🥇', '🥈', '🥉'];
+    const description = top10.length
+      ? top10.map((entry, index) => `${medals[index] || `**${index + 1}.**`} <@${entry.userId}> — ${type === 'voice' ? `${entry.value} min` : entry.value.toLocaleString()}`).join('\n')
+      : 'No data yet.';
+    const titles = { messages: '📝 Messages', voice: '🎤 Voice Time', total: '🏆 Total' };
+    const embed = new EmbedBuilder()
+      .setColor('#FFD700')
+      .setTitle(`${titles[type] || titles.total} Leaderboard`)
+      .setDescription(description)
+      .setTimestamp();
+    await interaction.editReply({ embeds: [embed] });
+  },
+};
