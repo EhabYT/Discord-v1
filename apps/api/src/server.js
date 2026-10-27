@@ -609,7 +609,11 @@ function startDashboard(botClient) {
             });
             return;
         }
-        logger.error('Dashboard server error', { error: err.message });
+        logger.error('Dashboard server error', {
+            code: typeof err?.code === 'string' && /^[A-Z0-9_]{1,40}$/.test(err.code)
+                ? err.code
+                : 'HTTP_SERVER_ERROR',
+        });
     });
 
     logAuthMode();

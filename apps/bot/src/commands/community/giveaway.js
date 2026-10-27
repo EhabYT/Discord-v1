@@ -1,3 +1,4 @@
+const safeCommandError = require('eb-bot-shared/utils/discord').safeCommandError;
 const {
     SlashCommandBuilder,
     PermissionFlagsBits,
@@ -181,7 +182,7 @@ module.exports = {
                     flags: [MessageFlags.Ephemeral]
                 });
             } catch (err) {
-                return safeReply(interaction, { content: `❌ ${err.message}.`, flags: [MessageFlags.Ephemeral] });
+                return safeReply(interaction, { content: `❌ ${safeCommandError(err)}.`, flags: [MessageFlags.Ephemeral] });
             }
         }
 

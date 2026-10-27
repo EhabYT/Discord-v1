@@ -127,10 +127,9 @@ function auditWrap(action, handler) {
             // Log errors with context
             logger.error('Security pipeline error', {
                 action,
-                error: err.message,
-                userId: req.userId,
-                guildId: req.params.guildId,
-                path: req.originalUrl,
+                errorCode: typeof err?.code === 'number' ? `DISCORD_${err.code}` : 'SECURITY_PIPELINE_ERROR',
+                method: req.method,
+                route: typeof req.route?.path === 'string' ? req.route.path : 'unmatched',
                 requestId: req.requestId,
             });
             throw err;

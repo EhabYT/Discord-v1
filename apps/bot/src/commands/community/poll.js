@@ -1,3 +1,4 @@
+const safeCommandError = require('eb-bot-shared/utils/discord').safeCommandError;
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const polls = require('eb-bot-shared/services/polls');
 
@@ -34,7 +35,7 @@ module.exports = {
             });
         } catch (err) {
             return interaction.reply({
-                content: err.message || 'Could not create poll.',
+                content: safeCommandError(err, 'Could not create poll.'),
                 flags: [MessageFlags.Ephemeral],
             });
         }

@@ -1,3 +1,4 @@
+const safeCommandError = require('eb-bot-shared/utils/discord').safeCommandError;
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const { QueryType } = require('discord-player');
 const { safeReply, checkDJPerms } = require('eb-bot-shared/utils/discord');
@@ -57,8 +58,10 @@ module.exports = {
 
       await safeReply(interaction, { embeds: [embed] });
     } catch (err) {
-      logger.error('Play command failed', { error: err.message, query });
-      await safeReply(interaction, { content: `❌ Error: ${err.message}` });
+      const safeMessage = safeCommandError(err, 'I could not play that track. Check the URL or try another search.');
+      const errorCode = typeof err?.code === 'number' ? `DISCORD_${err.code}` : 'PLAY_FAILED';
+      logger.error('Play command failed', { errorCode });
+      await safeReply(interaction, { content: `❌ ${safeMessage}`, flags: [MessageFlags.Ephemeral] });
     }
   }
 };

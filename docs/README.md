@@ -7,6 +7,7 @@ are in the [root README](../README.md).
 
 | Document | Purpose |
 | :--- | :--- |
+| [master-prompt-discord-bot-dashboard.md](master-prompt-discord-bot-dashboard.md) | Self-contained agent prompt for safely extending the existing EB Bot architecture |
 | [file-organization-report.md](file-organization-report.md) | Repository structure and original migration accounting |
 | [engineering-lessons.md](engineering-lessons.md) | Security/correctness defects, root causes, and regression rules |
 | [v2-architecture-audit.md](v2-architecture-audit.md) | V2 runtime, authorization, observability, and deployment architecture |

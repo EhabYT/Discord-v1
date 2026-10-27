@@ -14,8 +14,8 @@
  *  2. **No classification.** A Discord "Missing Permissions" (the operator's
  *     misconfiguration, a 403) and a genuine crash (a 500) were indistinguishable
  *     to callers and to monitoring.
- *  3. **No correlation.** An operator reading a 500 in the browser had no way to
- *     find the matching stack trace in the logs.
+ *  3. **No correlation.** An operator reading a 500 in the browser had no
+ *     request id to correlate with safe operational metadata in the logs.
  *
  * This module keeps the useful half — actionable messages such as "Missing
  * Permissions" still reach the client, because operators need them — while
@@ -177,17 +177,25 @@ function errorHandler(err, req, res, next) {
     // partial download hanging forever.
     if (res.headersSent) return next(err);
 
-    const { status, message, code, expose } = classify(err);
+    const { status, message, code } = classify(err);
     const requestId = req.requestId || crypto.randomBytes(6).toString('hex');
 
+    // Keep operational logs useful for correlation without copying untrusted
+    // exception text, stacks, query strings, user IDs, or credentials into them.
+    // `req.route.path` is Express's route template (for example /:guildId),
+    // unlike `originalUrl`, which can contain OAuth codes or other secrets.
+    const route = typeof req.route?.path === 'string'
+        ? req.route.path.slice(0, 200)
+        : 'unmatched';
+    const safeCode = typeof code === 'string' && /^[A-Z][A-Z0-9_]{0,63}$/.test(code)
+        ? code
+        : `HTTP_${status}`;
     const logMeta = {
         requestId,
         status,
-        method: req.method,
-        path: req.originalUrl,
-        userId: req.session?.user?.id || null,
-        error: err?.message || String(err),
-        stack: expose ? undefined : err?.stack,
+        method: typeof req.method === 'string' ? req.method.slice(0, 12) : 'UNKNOWN',
+        route,
+        code: safeCode,
     };
     if (status >= 500) logger.error('API error', logMeta);
     else logger.warn('API request rejected', logMeta);

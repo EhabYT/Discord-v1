@@ -134,6 +134,14 @@ function makeClient() {
         redacted.nested.authorization === '[REDACTED]'
         && redacted.nested.databaseUrl === '[REDACTED]'
         && redacted.safe === 'ok');
+    const errorText = logger.constructor._sanitizeSensitiveText(
+        'failed DATABASE_URL=postgres://db-user:db-pass@db.example/app access_token=oauth-secret Bearer abcdefghijklmnopqrstuvwxyz'
+    );
+    check('logger redacts credentials embedded in error messages',
+        !/db-user|db-pass|oauth-secret|abcdefghijklmnop/i.test(errorText)
+        && errorText.includes('DATABASE_URL=[REDACTED]')
+        && errorText.includes('access_token=[REDACTED]')
+        && errorText.includes('Bearer [REDACTED]'));
 
     console.log('\nH3 — uncaughtException must terminate the process:\n');
 

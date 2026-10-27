@@ -1,3 +1,4 @@
+const safeCommandError = require('eb-bot-shared/utils/discord').safeCommandError;
 const { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder } = require('discord.js');
 const { generateRankCard } = require('eb-bot-shared/utils/rank-card');
 
@@ -62,7 +63,7 @@ module.exports = {
             await interaction.editReply({ files: [attachment] });
 
         } catch (err) {
-            require('eb-bot-shared/lib/logger').error('Rank card failed', { error: err.message });
+            require('eb-bot-shared/lib/logger').error('Rank card failed', { error: safeCommandError(err) });
             // Fallback embed if canvas fails
             const xpData   = await db.get(`xp_${interaction.guild.id}_${target.id}`) || { textXp: 0, textLevel: 1 };
             const level    = xpData.textLevel || 1;

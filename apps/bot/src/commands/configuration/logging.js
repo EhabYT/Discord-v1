@@ -1,3 +1,4 @@
+const safeCommandError = require('eb-bot-shared/utils/discord').safeCommandError;
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 
 module.exports = {
@@ -124,7 +125,7 @@ module.exports = {
 
                 return interaction.editReply({ embeds: [embed] });
             } catch (err) {
-                return interaction.editReply(`❌ Setup failed: ${err.message}`);
+                return interaction.editReply(`❌ Setup failed: ${safeCommandError(err)}`);
             }
         }
 

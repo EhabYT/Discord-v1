@@ -1,3 +1,4 @@
+const safeCommandError = require('eb-bot-shared/utils/discord').safeCommandError;
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 
 module.exports = {
@@ -23,7 +24,7 @@ module.exports = {
             await safeReply(interaction, { embeds: [embed] });
         } catch (err) {
             const { MessageFlags } = require('discord.js');
-            await safeReply(interaction, { content: `❌ Failed to unlock channel: ${err.message}`, flags: [MessageFlags.Ephemeral] });
+            await safeReply(interaction, { content: `❌ Failed to unlock channel: ${safeCommandError(err)}`, flags: [MessageFlags.Ephemeral] });
         }
     }
 };

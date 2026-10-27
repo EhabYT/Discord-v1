@@ -105,8 +105,23 @@ function googleOAuthConfigurationIssue() {
     const clientId = String(process.env.GOOGLE_CLIENT_ID || '').trim();
     const clientSecret = String(process.env.GOOGLE_CLIENT_SECRET || '').trim();
     if (!clientId) return 'GOOGLE_CLIENT_ID is missing.';
-    if (!clientId || clientId.length < 10) return 'GOOGLE_CLIENT_ID must be a valid Google OAuth client ID.';
+    if (clientId.length < 10) return 'GOOGLE_CLIENT_ID must be a valid Google OAuth client ID.';
     if (!clientSecret) return 'GOOGLE_CLIENT_SECRET is missing.';
+    if (process.env.NODE_ENV === 'production' && !String(process.env.DATABASE_URL || '').trim()) {
+        return 'DATABASE_URL is missing. Add the Supabase Session Pooler URI in Render.';
+    }
+    return null;
+}
+async function googleOAuthRuntimeIssue() {
+    const configIssue = googleOAuthConfigurationIssue();
+    if (configIssue) return configIssue;
+    if (process.env.NODE_ENV === 'production') {
+        try {
+            await db.ready();
+        } catch {
+            return 'Supabase PostgreSQL is unreachable. Verify DATABASE_URL and the Session Pooler settings.';
+        }
+    }
     return null;
 }
 async function oauthRuntimeIssue() {
@@ -327,8 +342,8 @@ module.exports = (botClient) => {
     router.get('/callback', oauthCallback);
     router.get('/discord/callback', oauthCallback);
 
-    router.get('/google', (req, res) => {
-        const configIssue = googleOAuthConfigurationIssue();
+    router.get('/google', async (req, res) => {
+        const configIssue = await googleOAuthRuntimeIssue();
         if (configIssue) {
             return oauthErrorPage(res, 'Google OAuth not configured', configIssue, googleRedirectUriFor(req));
         }
@@ -382,6 +397,10 @@ module.exports = (botClient) => {
                 '');
         }
         const redirectUri = req.session.oauthRedirect || googleRedirectUriFor(req);
+        const runtimeIssue = await googleOAuthRuntimeIssue();
+        if (runtimeIssue) {
+            return oauthErrorPage(res, 'Google login temporarily unavailable', runtimeIssue, redirectUri);
+        }
         try {
             const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', new URLSearchParams({
                 client_id: process.env.GOOGLE_CLIENT_ID,
@@ -397,34 +416,51 @@ module.exports = (botClient) => {
             const userResponse = await axios.get('https://www.googleapis.com/oauth2/v2/userinfo', {
                 headers: { Authorization: `Bearer ${accessToken}` }
             });
-            const user = {
-                id: userResponse.data.id,
-                username: userResponse.data.email.split('@')[0],
-                tag: userResponse.data.email,
-                avatar: userResponse.data.picture || null
+            const profile = userResponse.data;
+            const email = String(profile.email || '').trim();
+            const googleUser = {
+                id: String(profile.id || ''),
+                email,
+                emailVerified: profile.verified_email === true,
+                username: email.includes('@') ? email.slice(0, email.indexOf('@')) : '',
+                displayName: String(profile.name || '').slice(0, 64),
+                avatar: typeof profile.picture === 'string' ? profile.picture : null,
             };
+            if (!googleUser.id || !googleUser.emailVerified || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                throw Object.assign(new Error('Google did not provide a verified account email'), { code: 'GOOGLE_IDENTITY_INVALID' });
+            }
+            const pool = getPool();
+            if (!pool) {
+                throw Object.assign(new Error('Persistent account storage is unavailable'), { code: 'DATABASE_UNAVAILABLE' });
+            }
             const linkAccountId = req.session.oauthLinkAccountId || null;
-            const account = getPool()
-                ? (linkAccountId
-                    ? await getAccountStore().linkDiscordIdentity(linkAccountId, user, req.requestId)
-                    : await getAccountStore().ensureDiscordAccount(user, req.requestId))
-                : null;
+            const accountStore = getAccountStore();
+            const account = linkAccountId
+                ? await accountStore.linkGoogleIdentity(linkAccountId, googleUser, req.requestId)
+                : await accountStore.ensureGoogleAccount(googleUser, req.requestId);
+
             await new Promise((resolve, reject) => {
                 req.session.regenerate((sessionErr) => sessionErr ? reject(sessionErr) : resolve());
             });
-            if (account?.mfaEnabled) {
-                attachMfaChallenge(req.session, account.id, { user, userGuilds: [] });
+            if (account.mfaEnabled) {
+                attachMfaChallenge(req.session, account.id, null);
             } else {
-                attachAuthenticatedSession(req.session, user, [], account);
-                if (account) attachSessionSecurity(req.session, req);
+                // Google authenticates the EB account only. Never place a Google
+                // subject in `session.user`, which is reserved for the Discord
+                // identity used by guild membership and permission checks.
+                req.session.account = account;
+                delete req.session.user;
+                delete req.session.userGuilds;
+                delete req.session.oauthLinkAccountId;
+                attachSessionSecurity(req.session, req);
             }
             await new Promise((resolve, reject) => {
                 req.session.save((sessionErr) => sessionErr ? reject(sessionErr) : resolve());
             });
-            if (account && !account.mfaEnabled) {
-                await getAccountStore().recordSecurityEvent(account.id, 'login_success', req.requestId, { method: 'google' });
+            if (!account.mfaEnabled) {
+                await accountStore.recordSecurityEvent(account.id, 'login_success', req.requestId, { method: 'google' });
             }
-            res.redirect(303, account?.mfaEnabled
+            res.redirect(303, account.mfaEnabled
                 ? `${dashboardHomeFor(req)}/login?mfa=1`
                 : loginResultUrl(req, 'success'));
         } catch (err) {
@@ -452,16 +488,18 @@ module.exports = (botClient) => {
         const redirectUri = redirectUriFor(req);
         let databaseOnline = false;
         try { databaseOnline = !!(await db.ready()); } catch { /* reported below */ }
-        const oauthError = oauthConfigurationIssue()
-            || (!databaseOnline
-                ? 'Supabase PostgreSQL is unreachable. Verify DATABASE_URL and the Session Pooler settings.'
-                : null);
+        const databaseError = !databaseOnline
+            ? 'Supabase PostgreSQL is unreachable. Verify DATABASE_URL and the Session Pooler settings.'
+            : null;
+        const oauthError = oauthConfigurationIssue() || databaseError;
+        const googleOAuthError = googleOAuthConfigurationIssue()
+            || (process.env.NODE_ENV === 'production' ? databaseError : null);
         res.json({
             loggedIn: !!(req.session.account || req.session.user),
             accountAuthenticated: !!req.session.account,
             discordLinked: !!req.session.user,
-            googleOAuthEnabled: !googleOAuthConfigurationIssue(),
-            googleOAuthError: googleOAuthConfigurationIssue(),
+            googleOAuthEnabled: !googleOAuthError,
+            googleOAuthError,
             oauthEnabled: !oauthError,
             oauthError,
             databaseOnline,

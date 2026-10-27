@@ -8,8 +8,8 @@
  * `err.message` was returned verbatim. Verified leaks included
  * `ENOENT: no such file or directory, open '/srv/app/secret.json'` — an
  * absolute filesystem path handed to any API client — and internal TypeErrors
- * exposing code structure. There was also no way to correlate a 500 seen in the
- * browser with the stack trace in the logs.
+ * exposing code structure. Error logs must also avoid raw messages, stacks, and
+ * query strings while retaining request IDs and safe error codes for correlation.
  *
  * These tests assert the new behaviour AND that existing, deliberate status
  * codes (400/403/404) were not swallowed by the migration.
@@ -24,6 +24,14 @@ const http = require('http');
 const { EventEmitter } = require('events');
 const { Collection } = require('discord.js');
 const { classify, ApiError, badRequest } = require('../../apps/api/src/middleware/errors');
+const logger = require('eb-bot-shared/lib/logger');
+const capturedLogs = [];
+const originalLoggerError = logger.error;
+const originalLoggerWarn = logger.warn;
+logger.error = (message, metadata) => capturedLogs.push({ level: 'error', message, metadata });
+logger.warn = (message, metadata) => capturedLogs.push({ level: 'warn', message, metadata });
+const { errorHandler: legacyErrorHandler } = require('../../apps/api/src/middleware/error-handler');
+const { safeCommandError } = require('eb-bot-shared/utils/discord');
 
 const PORT = process.env.DASHBOARD_PORT;
 const GUILD = '111111111111111111';
@@ -98,6 +106,45 @@ function req(path, { method = 'GET', body, cookie } = {}) {
     c = classify(new TypeError("Cannot read properties of null (reading 'token')"));
     check('internal TypeError is not exposed', !/token|properties/.test(c.message),
         JSON.stringify(c.message));
+    check('bot command maps Discord permission errors to a safe explanation',
+        safeCommandError(Object.assign(new Error('raw Discord response'), { code: 50013 }))
+            === 'The bot is missing permissions for that action.');
+    check('bot command hides internal database details',
+        safeCommandError(new Error('connect failed to postgres://db-user:db-pass@db.example/app'))
+            === 'The action could not be completed.');
+    check('bot command keeps a simple domain error actionable',
+        safeCommandError(new Error('No playable track found for that search.'))
+            === 'No playable track found for that search.');
+
+    let legacyStatus;
+    let legacyBody;
+    const legacyRequestId = 'legacy-safe-123';
+    legacyErrorHandler(
+        Object.assign(new Error('DATABASE_URL=postgres://dbuser:dbpassword@db.example/app'), { code: 'INTERNAL' }),
+        {
+            requestId: legacyRequestId,
+            originalUrl: '/legacy?access_token=private-oauth-code',
+            method: 'GET',
+            route: { path: '/legacy' },
+            userId: 'private-user-id',
+            ip: '127.0.0.1',
+        },
+        {
+            status(status) { legacyStatus = status; return this; },
+            json(body) { legacyBody = body; return this; },
+        },
+        () => {},
+    );
+    const legacyLog = capturedLogs.find((entry) => entry.metadata?.errorId === legacyBody?.errorId);
+    const legacySerialized = JSON.stringify({ body: legacyBody, log: legacyLog || {} });
+    check('legacy handler hides stack and raw error details in development',
+        legacyStatus === 500 && legacyBody.error === 'Internal server error'
+        && !Object.hasOwn(legacyBody, 'stack') && !Object.hasOwn(legacyBody, 'details'));
+    check('legacy handler logs only safe correlation metadata',
+        Boolean(legacyLog) && legacyLog.metadata.requestId === legacyRequestId
+        && legacyLog.metadata.code === 'INTERNAL'
+        && !/dbuser|dbpassword|private-oauth-code|private-user-id|DATABASE_URL|access_token/i.test(legacySerialized)
+        && !Object.hasOwn(legacyLog.metadata, 'stack') && !Object.hasOwn(legacyLog.metadata, 'message'));
 
     console.log('\nActionable Discord errors are still surfaced:\n');
 
@@ -140,6 +187,9 @@ function req(path, { method = 'GET', body, cookie } = {}) {
     // Routes that deliberately throw, to exercise the terminal handler.
     srv.app.get('/__boom', () => { throw new Error("ENOENT: open '/srv/secret.json'"); });
     srv.app.get('/__boom-async', async () => { throw new Error("internal detail leak"); });
+    srv.app.get('/__boom-sensitive', () => {
+        throw new Error('DATABASE_URL=postgres://dbuser:dbpassword@db.example/test access_token=private-token');
+    });
     srv.app.get('/__boom-api', () => { throw new ApiError(418, 'Deliberate teapot', 'TEAPOT'); });
     srv.startDashboard(botClient);
     await new Promise((r) => setTimeout(r, 1500));
@@ -158,6 +208,21 @@ function req(path, { method = 'GET', body, cookie } = {}) {
     r = await req('/__boom-async');
     check('async rejection is caught by the handler', r.status === 500, `${r.status}`);
     check('async response is also sanitised', !/internal detail leak/.test(r.body), r.body.slice(0, 90));
+
+    r = await req('/__boom-sensitive?access_token=private-oauth-code');
+    body = {}; try { body = JSON.parse(r.body); } catch { /* ignore */ }
+    const correlatedLog = capturedLogs.find((entry) => entry.metadata?.requestId === body.requestId);
+    const serializedLog = JSON.stringify(correlatedLog || {});
+    check('error log is correlated by request id and safe code',
+        Boolean(correlatedLog) && correlatedLog.metadata.code === 'INTERNAL'
+        && correlatedLog.metadata.requestId === body.requestId);
+    const loggedMeta = correlatedLog?.metadata || {};
+    check('error log excludes exception, stack, query and credential values',
+        !/dbuser|dbpassword|private-token|private-oauth-code|DATABASE_URL|access_token/i.test(serializedLog)
+        && !Object.hasOwn(loggedMeta, 'stack') && !Object.hasOwn(loggedMeta, 'error'),
+        serializedLog.slice(0, 120));
+    check('error log uses the route template instead of the raw URL',
+        correlatedLog?.metadata.route === '/__boom-sensitive');
 
     r = await req('/__boom-api');
     body = {}; try { body = JSON.parse(r.body); } catch { /* ignore */ }
@@ -192,6 +257,9 @@ function req(path, { method = 'GET', body, cookie } = {}) {
     );
     check('no backend route returns a raw err.message', leaking.length === 0,
         leaking.map((file) => path.basename(file)).join(', '));
+
+    logger.error = originalLoggerError;
+    logger.warn = originalLoggerWarn;
 
     console.log(fails === 0
         ? '\nAll error-handling checks passed.\n'

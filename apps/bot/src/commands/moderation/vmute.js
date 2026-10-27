@@ -1,3 +1,4 @@
+const safeCommandError = require('eb-bot-shared/utils/discord').safeCommandError;
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
 
 module.exports = {
@@ -33,8 +34,8 @@ module.exports = {
 
             await interaction.reply({ embeds: [embed] });
         } catch (err) {
-            logger.error('Vmute command failed', { error: err.message });
-            await interaction.reply({ content: `❌ Failed to mute member: ${err.message}`, flags: [MessageFlags.Ephemeral] });
+            logger.error('Vmute command failed', { error: safeCommandError(err) });
+            await interaction.reply({ content: `❌ Failed to mute member: ${safeCommandError(err)}`, flags: [MessageFlags.Ephemeral] });
         }
     }
 };
