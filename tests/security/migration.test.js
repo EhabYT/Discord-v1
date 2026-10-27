@@ -25,7 +25,7 @@ import sqlite3, json
 c=sqlite3.connect(${JSON.stringify(source)})
 c.execute('CREATE TABLE json (ID TEXT PRIMARY KEY, json TEXT)')
 c.execute('INSERT INTO json VALUES (?,?)', ('welcome_123', json.dumps({'enabled': True})))
-c.execute('INSERT INTO json VALUES (?,?)', ('points_123_456', json.dumps(42)))
+c.execute('INSERT INTO json VALUES (?,?)', ('test_counter_123', json.dumps(42)))
 c.commit(); c.close()
 `]);
 

@@ -396,13 +396,6 @@ function dump(r) {
         if (!r.length) throw new Error('no reply');
         if (!String(r[0]?.content || '').includes('❌')) throw new Error('should reject bot/self');
     });
-    await t('pay-ok', async () => {
-        await db.set('points_10_1', 100);
-        const r = await run('pay.js', { ints: { amount: 25 }, user: mockUser('3') });
-        if (!r[0]?.embeds) throw new Error('no embed ' + dump(r));
-        if ((await db.get('points_10_1')) !== 75) throw new Error('balance not deducted');
-        if ((await db.get('points_10_3')) !== 25) throw new Error('not credited');
-    });
     await t('work', async () => {
         mem.delete('work_cd_10_1');
         const r = await run('work.js');
@@ -411,16 +404,6 @@ function dump(r) {
     await t('work-cd', async () => {
         const r = await run('work.js');
         if (!String(r[0]?.content || '').includes('⏳')) throw new Error('expected cooldown');
-    });
-    await t('slots-broke', async () => {
-        await db.set('points_10_1', 0);
-        const r = await run('slots.js', { ints: { bet: 50 } });
-        if (!String(r[0]?.content || '').includes('❌')) throw new Error('should be broke');
-    });
-    await t('slots-spin', async () => {
-        await db.set('points_10_1', 200);
-        const r = await run('slots.js', { ints: { bet: 50 } });
-        if (!r[0]?.embeds) throw new Error('no embed');
     });
     await t('snipe-empty', async () => {
         const r = await run('snipe.js');
