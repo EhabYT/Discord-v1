@@ -1,1 +1,9 @@
-{"name":"eb-bot-config","version":"3.1.0","main":"bot.json","license":"MIT"}
+{
+  "name": "eb-bot-config",
+  "version": "3.1.0",
+  "main": "bot.json",
+  "license": "MIT",
+  "scripts": {
+    "test": "node ../../tests/unit/bot-config.test.js"
+  }
+}

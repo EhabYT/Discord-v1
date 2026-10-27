@@ -23,6 +23,8 @@ process.env.CLIENT_ID = '123456789012345678';
 process.env.DISCORD_CLIENT_SECRET = 'test-secret';
 
 const http = require('http');
+const crypto = require('crypto');
+const axios = require('axios');
 const { EventEmitter } = require('events');
 const { Collection } = require('discord.js');
 
@@ -76,6 +78,10 @@ const cookieOf = (res) => (res.headers['set-cookie'] || []).map((c) => c.split('
     const state1 = m ? m[1] : '';
     check('state is long enough to be unguessable', state1.length >= 32, `len=${state1.length}`);
     check('redirect targets discord.com', loc.startsWith('https://discord.com/api/oauth2/authorize'));
+    const authorize = new URL(loc);
+    const challenge1 = authorize.searchParams.get('code_challenge') || '';
+    check('authorize URL enables PKCE S256', authorize.searchParams.get('code_challenge_method') === 'S256'
+        && /^[A-Za-z0-9_-]{43}$/.test(challenge1));
 
     const start2 = await req('/api/auth/discord');
     const m2 = /[?&]state=([^&]+)/.exec(start2.location);
@@ -103,6 +109,55 @@ const cookieOf = (res) => (res.headers['set-cookie'] || []).map((c) => c.split('
     // exchange then fails against the real Discord API, which is expected here).
     r = await req('/api/auth/discord/callback?code=abc&state=' + state1, { cookie: sess });
     check('state cannot be replayed after use', r.status === 400, `${r.status}`);
+
+    const pkceStart = await req('/api/auth/discord');
+    const pkceCookie = cookieOf(pkceStart);
+    const pkceUrl = new URL(pkceStart.location);
+    const pkceState = pkceUrl.searchParams.get('state');
+    const pkceChallenge = pkceUrl.searchParams.get('code_challenge');
+    const realPost = axios.post;
+    let tokenForm = null;
+    axios.post = async (_url, data) => {
+        tokenForm = new URLSearchParams(data.toString());
+        throw new Error('intentional test stop before external OAuth');
+    };
+    try {
+        r = await req(`/api/auth/discord/callback?code=fake&state=${encodeURIComponent(pkceState)}`, { cookie: pkceCookie });
+    } finally {
+        axios.post = realPost;
+    }
+    const submittedVerifier = tokenForm?.get('code_verifier') || '';
+    const derivedChallenge = crypto.createHash('sha256').update(submittedVerifier).digest('base64url');
+    check('token exchange sends the session-bound PKCE verifier',
+        !!submittedVerifier && derivedChallenge === pkceChallenge && r.status === 400);
+
+    process.env.GOOGLE_CLIENT_ID = '123456789012-example.apps.googleusercontent.com';
+    process.env.GOOGLE_CLIENT_SECRET = 'google-test-secret';
+    const googleStart = await req('/api/auth/google');
+    const googleUrl = new URL(googleStart.location);
+    const googleState = googleUrl.searchParams.get('state');
+    const googleChallenge = googleUrl.searchParams.get('code_challenge');
+    check('Google authorize URL also enables PKCE S256',
+        googleStart.status === 302 && googleUrl.searchParams.get('code_challenge_method') === 'S256'
+        && /^[A-Za-z0-9_-]{43}$/.test(googleChallenge || ''));
+    const googleCookie = cookieOf(googleStart);
+    let googleTokenForm = null;
+    axios.post = async (_url, data) => {
+        googleTokenForm = new URLSearchParams(data.toString());
+        throw new Error('intentional test stop before external OAuth');
+    };
+    try {
+        r = await req(`/api/auth/google/callback?code=fake&state=${encodeURIComponent(googleState)}`, { cookie: googleCookie });
+    } finally {
+        axios.post = realPost;
+    }
+    const googleVerifier = googleTokenForm?.get('code_verifier') || '';
+    check('Google token exchange sends the matching PKCE verifier',
+        !!googleVerifier
+        && crypto.createHash('sha256').update(googleVerifier).digest('base64url') === googleChallenge
+        && r.status === 400);
+    delete process.env.GOOGLE_CLIENT_ID;
+    delete process.env.GOOGLE_CLIENT_SECRET;
 
     console.log('\nSession hygiene:\n');
 

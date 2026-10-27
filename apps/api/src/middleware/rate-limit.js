@@ -31,9 +31,10 @@ if (typeof sweeper.unref === 'function') sweeper.unref();
 function identify(req) {
     const uid = req.session?.user?.id;
     if (uid) return `u:${uid}`;
-    const fwd = req.headers['x-forwarded-for'];
-    const ip = (typeof fwd === 'string' ? fwd.split(',')[0].trim() : null)
-        || req.socket?.remoteAddress || 'unknown';
+    // Express is configured with an explicit trusted-proxy hop count in the
+    // server. Use its resolved client address instead of parsing the raw header:
+    // the left-most X-Forwarded-For value may have been supplied by the caller.
+    const ip = req.ip || req.socket?.remoteAddress || 'unknown';
     return `ip:${ip}`;
 }
 
@@ -81,8 +82,8 @@ module.exports = {
     bulkModeration: () => limit('bulk-moderation', 3, 5 * 60 * 1000),
     /** Anything that makes the bot post into a channel. */
     botMessaging: () => limit('bot-messaging', 20, 60 * 1000),
-    /** Full-table scans and config exports. */
-    heavyRead: () => limit('heavy-read', 10, 60 * 1000),
+    /** Expensive reads, with endpoint-specific buckets to avoid cross-page starvation. */
+    heavyRead: (name = 'heavy-read') => limit(`heavy-read:${name}`, 10, 60 * 1000),
     /** Writes that replace large amounts of stored state. */
     restore: () => limit('restore', 3, 10 * 60 * 1000),
     getStats,

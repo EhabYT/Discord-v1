@@ -1,12 +1,29 @@
 const fs = require('fs');
 const path = require('path');
 const logger = require('eb-bot-shared/lib/logger');
+const registrations = new WeakMap();
+
+function detach(emitter, records) {
+    if (!emitter) return;
+    for (const { name, handler } of records) {
+        if (typeof emitter.off === 'function') emitter.off(name, handler);
+        else emitter.removeListener(name, handler);
+    }
+}
 
 /**
  * Loads and registers events for both Discord client and Music player.
  * @param {import('discord.js').Client} client 
  */
 function loadEvents(client) {
+    const previous = registrations.get(client);
+    if (previous) {
+        detach(client, previous.client);
+        detach(previous.playerEmitter, previous.player);
+    }
+    const current = { client: [], player: [], playerEmitter: null };
+    registrations.set(client, current);
+
     const eventsDir = __dirname;
     const playerEventsDir = path.join(eventsDir, 'player');
 
@@ -19,14 +36,16 @@ function loadEvents(client) {
         .forEach(dirent => {
             const event = require(path.join(eventsDir, dirent.name));
             if (Array.isArray(event)) {
-                event.forEach(e => registerClientEvent(client, e, dirent.name));
+                event.forEach(e => registerClientEvent(client, e, dirent.name, current.client));
             } else {
-                registerClientEvent(client, event, dirent.name);
+                registerClientEvent(client, event, dirent.name, current.client);
             }
         });
 
     // Load Player Events
     if (client.player && fs.existsSync(playerEventsDir)) {
+        const playerEmitter = client.player.events;
+        current.playerEmitter = playerEmitter;
         let registered = 0;
         fs.readdirSync(playerEventsDir)
             .filter(file => file.endsWith('.js'))
@@ -36,8 +55,9 @@ function loadEvents(client) {
                     logger.error(`Player event file ${file} is missing a name or execute().`);
                     return;
                 }
-                client.player.events.on(event.name,
-                    safeDispatch('Player', event.name, (...args) => event.execute(...args)));
+                const handler = safeDispatch('Player', event.name, (...args) => event.execute(...args));
+                playerEmitter.on(event.name, handler);
+                current.player.push({ name: event.name, handler });
                 registered++;
             });
         // A handler named "error" is normal; avoid logging
@@ -84,7 +104,7 @@ function safeDispatch(kind, name, fn) {
     };
 }
 
-function registerClientEvent(client, event, file) {
+function registerClientEvent(client, event, file, records) {
     if (!event.name) {
         logger.error(`Event file ${file} is missing a name.`);
         return;
@@ -102,6 +122,7 @@ function registerClientEvent(client, event, file) {
     } else {
         client.on(event.name, handler);
     }
+    records.push({ name: event.name, handler });
     logger.debug(`Loaded Client Event: ${event.name}`);
 }
 

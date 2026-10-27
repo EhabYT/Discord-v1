@@ -26,6 +26,9 @@ dist/
 build/
 coverage/
 
+# Test-run output (regenerated locally/CI)
+test-results/
+
 # Monorepo cache
 .turbo/
 .turbo/*
@@ -38,8 +41,6 @@ Thumbs.db
 .vscode/
 
 # Runtime logs, local backups, scratch/probe files
-logs/
-backups/
 *.log
 _*.js
 *.bak

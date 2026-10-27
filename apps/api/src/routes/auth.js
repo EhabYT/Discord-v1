@@ -8,6 +8,12 @@ const { getAccountStore } = require('eb-bot-database/accounts');
 const { attachSessionSecurity } = require('eb-bot-shared/services/account-sessions');
 const logger = require('eb-bot-shared/lib/logger');
 
+function createPkce() {
+    const verifier = crypto.randomBytes(32).toString('base64url');
+    const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
+    return { verifier, challenge };
+}
+
 function publicOrigin(req) {
     const xfHost = req.headers['x-forwarded-host'];
     const host = (typeof xfHost === 'string' ? xfHost.split(',')[0].trim() : null) || req.headers.host;
@@ -180,34 +186,45 @@ module.exports = (botClient) => {
         // feed a victim their own authorization code and silently sign the
         // victim's browser into the attacker's Discord account.
         const state = crypto.randomBytes(32).toString('hex');
+        const { verifier, challenge } = createPkce();
         req.session.oauthState = state;
+        req.session.oauthCodeVerifier = verifier;
         req.session.save((err) => {
             if (err) return res.redirect(303, loginResultUrl(req, 'session'));
-            const url = `https://discord.com/api/oauth2/authorize?client_id=${process.env.CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=identify%20guilds&state=${state}`;
+            const url = `https://discord.com/api/oauth2/authorize?client_id=${process.env.CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=identify%20guilds&state=${state}&code_challenge=${challenge}&code_challenge_method=S256`;
             res.redirect(url);
         });
     });
 
     async function oauthCallback(req, res) {
         if (req.query.error) {
+            const redirectUri = req.session.oauthRedirect || redirectUriFor(req);
+            delete req.session.oauthState;
+            delete req.session.oauthCodeVerifier;
             return oauthErrorPage(
                 res,
                 'Discord login cancelled',
                 req.query.error_description || req.query.error,
-                req.session.oauthRedirect || redirectUriFor(req)
+                redirectUri
             );
         }
         const { code } = req.query;
-        if (!code) return res.redirect(303, loginResultUrl(req, 'missing_code'));
+        if (!code) {
+            delete req.session.oauthState;
+            delete req.session.oauthCodeVerifier;
+            return res.redirect(303, loginResultUrl(req, 'missing_code'));
+        }
 
         // Constant-time comparison of the state we issued against the one returned.
         const expectedState = req.session.oauthState;
+        const expectedVerifier = req.session.oauthCodeVerifier;
         const gotState = typeof req.query.state === 'string' ? req.query.state : '';
         delete req.session.oauthState;          // single use, whatever the outcome
+        delete req.session.oauthCodeVerifier;
         const a = Buffer.from(String(expectedState || ''));
         const b = Buffer.from(gotState);
         const stateOk = !!expectedState && a.length === b.length && crypto.timingSafeEqual(a, b);
-        if (!stateOk) {
+        if (!stateOk || typeof expectedVerifier !== 'string' || expectedVerifier.length < 43) {
             return oauthErrorPage(res, 'Login verification failed',
                 'The login request could not be verified (state mismatch). Start the login again from the dashboard.',
                 '');
@@ -221,6 +238,7 @@ module.exports = (botClient) => {
                 grant_type: 'authorization_code',
                 code,
                 redirect_uri: redirectUri,
+                code_verifier: expectedVerifier,
             }), {
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
             });
@@ -322,32 +340,43 @@ module.exports = (botClient) => {
             delete req.session.oauthLinkAccountId;
         }
         const state = crypto.randomBytes(32).toString('hex');
+        const { verifier, challenge } = createPkce();
         req.session.oauthState = state;
+        req.session.oauthCodeVerifier = verifier;
         req.session.save((err) => {
             if (err) return res.redirect(303, loginResultUrl(req, 'session'));
-            const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${process.env.GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=email%20profile&state=${state}`;
+            const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${process.env.GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=email%20profile&state=${state}&code_challenge=${challenge}&code_challenge_method=S256`;
             res.redirect(url);
         });
     });
 
     async function googleOAuthCallback(req, res) {
         if (req.query.error) {
+            const redirectUri = req.session.oauthRedirect || googleRedirectUriFor(req);
+            delete req.session.oauthState;
+            delete req.session.oauthCodeVerifier;
             return oauthErrorPage(
                 res,
                 'Google login cancelled',
                 req.query.error_description || req.query.error,
-                req.session.oauthRedirect || googleRedirectUriFor(req)
+                redirectUri
             );
         }
         const { code } = req.query;
-        if (!code) return res.redirect(303, loginResultUrl(req, 'missing_code'));
+        if (!code) {
+            delete req.session.oauthState;
+            delete req.session.oauthCodeVerifier;
+            return res.redirect(303, loginResultUrl(req, 'missing_code'));
+        }
         const expectedState = req.session.oauthState;
+        const expectedVerifier = req.session.oauthCodeVerifier;
         const gotState = typeof req.query.state === 'string' ? req.query.state : '';
         delete req.session.oauthState;
+        delete req.session.oauthCodeVerifier;
         const a = Buffer.from(String(expectedState || ''));
         const b = Buffer.from(gotState);
         const stateOk = !!expectedState && a.length === b.length && crypto.timingSafeEqual(a, b);
-        if (!stateOk) {
+        if (!stateOk || typeof expectedVerifier !== 'string' || expectedVerifier.length < 43) {
             return oauthErrorPage(res, 'Login verification failed',
                 'The login request could not be verified (state mismatch). Start the login again from the dashboard.',
                 '');
@@ -360,6 +389,7 @@ module.exports = (botClient) => {
                 grant_type: 'authorization_code',
                 code,
                 redirect_uri: redirectUri,
+                code_verifier: expectedVerifier,
             }), {
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
             });

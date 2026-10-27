@@ -118,53 +118,46 @@ DEV_TOKEN
 
 ## 4. Pre-deployment gate
 
-From a clean checkout of the exact commit to deploy:
+Run from a clean checkout of the exact commit under consideration:
 
 ```bash
 npm ci --ignore-scripts
-npm --prefix dashboard ci --ignore-scripts
 npm run verify
 ```
 
-Required result:
+`npm run verify` is the authoritative local gate: release configuration,
+lint-baseline gate, unit/security tests, production dependency audit, and Vite
+production build must all pass. Do not rely on fixed suite counts; the test
+inventory changes over time.
 
-```text
-release configuration: PASS
-ESLint:                0 errors, 0 warnings
-unit suites:           4 PASS
-security suites:       22 PASS
-commands:              100
-HTTP routes:           159
-production audits:     0 vulnerabilities
-Dashboard build:       PASS
-```
-
-Confirm:
+Confirm the checkout has no unrelated changes:
 
 ```bash
 git status --short
 ```
 
-returns no output.
-
-Push the commit and wait for the GitHub Actions `Verify` workflow to pass. Do not
-deploy a commit with a red, cancelled, or missing verification run.
+Push/open the review for that commit and wait for GitHub Actions **Verify** to
+finish successfully for the **same commit SHA**. A local pass is not a substitute
+for GitHub CI. A red, cancelled, stale, or missing CI result is a hard stop.
 
 ## 5. Render deployment
 
-1. Select the verified commit in Render.
-2. Trigger **Deploy latest commit** (or the exact verified commit).
-3. Confirm the build uses Node `22.12.0`.
-4. Confirm the build command is only:
+Render auto-deploy is disabled in `render.yaml` to prevent a push from deploying
+before CI completes. Keep it disabled. After the exact commit has green GitHub
+Actions `Verify`:
+
+1. In Render, select that verified commit SHA (not merely the branch's latest
+   commit).
+2. Trigger **Deploy** manually.
+3. Confirm the build uses Node `22.12.0` and the configured build command is:
 
    ```bash
    npm ci
    ```
 
-5. Confirm root postinstall installs the Dashboard and invokes Vite exactly once.
-6. Confirm the service binds Render's injected `PORT` and reports the health
-   check as healthy.
-7. Inspect logs for categories, never values:
+4. Confirm root postinstall builds the Dashboard once, the service binds Render's
+   injected `PORT`, and `/api/health` is healthy.
+5. Inspect logs for categories, never secret values:
    - PostgreSQL connected
    - Dashboard active
    - Discord bot ready

@@ -44,6 +44,8 @@ requireMatch(render, /^\s*buildCommand:\s*npm ci\s*$/m,
 requireMatch(render, /^\s*startCommand:\s*npm start\s*$/m, 'Render startCommand must remain npm start');
 requireMatch(render, /^\s*healthCheckPath:\s*\/api\/health\s*$/m,
     'Render healthCheckPath must remain /api/health');
+requireMatch(render, /^\s*autoDeploy:\s*false\s*$/m,
+    'Render auto-deploy must stay disabled; deploy only after the exact commit has green GitHub CI');
 
 const env = renderEnvironment();
 const expectedValues = {

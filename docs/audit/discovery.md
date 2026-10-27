@@ -1,167 +1,169 @@
-# Phase 1 — Discovery Report
+# Phase 0 — Discovery Report
 
-**Project:** EB Bot v3.1.0 · **Date:** 2026-08-14
-**Scope:** full repository — bot, backend, dashboard, storage, tests, config, deployment
-**Files modified during Discovery: 0** (working tree verified clean; the one build artefact and lockfile touched while validating were reverted)
+**Project:** EB Bot v3.1.0
+**Discovery date:** 2026-10-25
+**Branch:** `arena/e30916a0-discord-v1`
+**Scope:** tracked repository files, workspace/package configuration, bot/API/web architecture, CI/deployment configuration, current automated checks, and the supplied project specification.
+**Implementation changes:** none at the time of discovery. This report replaces an older discovery document whose file paths, stack inventory, counts, and findings no longer match the checkout at that time.
 
----
-
-## 1. Technology stack & structure
-
-Plain **JavaScript** (no TypeScript), CommonJS on the server, ESM/JSX in the client.
-Single process serves both the Discord bot and the dashboard API.
-
-| Area | LOC | Files |
-| :--- | ---: | ---: |
-| `commands/` | 6 158 | 100 |
-| `dashboard/client/src/` | 11 210 | 45 |
-| `utils/` | 3 310 | 24 |
-| `dashboard/routes/` | 2 599 | 6 |
-| `events/` | 1 711 | 23 |
-| `scripts/` | 1 860 | 9 |
-| `dashboard/middleware/` | 368 | 5 |
-| root (`index.js`, `server.js`, …) | 822 | 5 |
-| **Total (excl. built assets)** | **~28 000** | **221** |
-
-**Stack:** discord.js 14 · discord-player 7 · Express 5 · Socket.IO 4 · quick.db + better-sqlite3 · React 19 · Vite 8 · Tailwind
-
-**Data flow:** Discord Gateway → `events/` → `utils/` services → `json.sqlite`.
-Dashboard → Express (`middleware` → `routes`) → same services/DB → Socket.IO/SSE push to React.
+> **Historical baseline:** this Phase 0 document intentionally records the pre-fix state. It is not a claim about the current working tree. The authorized follow-up preserved the existing architecture and deployment platform; follow-up fixes, optimization, cleanup, sort, and current verification/deployment status are tracked in [`phase1-progress.md`](phase1-progress.md).
 
 ---
 
-## 2. Feature inventory (must survive any refactor)
+## 1. Executive summary
 
-```
-Bot          100 slash commands · 13 gateway events · 9 player events
-             9 scheduler jobs · 24 service modules
-Backend      6 routers · 5 middleware · 152 endpoints · Socket.IO + SSE
-Dashboard    28 pages · 11 shared components
-Tests        6 security suites + 3 legacy scripts · 86 assertions
-```
+The repository is a JavaScript monorepo with separate `apps/bot`, `apps/api`, and `apps/web` workspaces, plus shared, database, config, and scripts packages. It has substantial security middleware and a sizeable unit/security test suite. The source lint, test suite, release-configuration check, and web build all passed in this discovery run.
 
-Verified present and loading: `npm test` passes 86/86, all 100 commands load with 0 errors.
+The project is **not compliant with the supplied target specification**. Principal gaps are: JavaScript rather than strict TypeScript, npm rather than pnpm, Express 5 rather than Express 4/Fastify 4, no Redis or Zod, no Docker/Compose or deployment workflow, and missing app-level scripts/typecheck. The web app uses React 19 and Vite; its pages are code-split and it uses HttpOnly cookie sessions rather than browser-stored auth tokens.
+
+**Release blocker:** the production dependency audit finds 5 fixable vulnerabilities (1 critical, 4 high). Since `npm run verify` includes this audit, the authoritative verification gate will fail until these are resolved or an explicit reviewed exception is made.
 
 ---
 
-## 3. Findings by severity
+## 2. Repository inventory
 
-### 🔴 CRITICAL — none outstanding
+- **400 tracked files** on the discovery branch.
+- Main code: `apps/api` (Express API), `apps/bot` (discord.js bot), `apps/web` (React/Vite client); shared code under `packages/shared`, `packages/database`, `packages/config`, and `packages/scripts`.
+- Tracked source extensions include **271 `.js`** and **55 `.jsx`** files; no TypeScript files or TS configuration were found.
+- Tests: **19 unit files** and **24 security files**, plus a manual command runner.
+- Bot command-loader test discovers **100 commands** with no load errors.
+- API route-discovery security test reports **200 routes**, all gated or explicitly allowlisted.
+- Dashboard is built into `apps/web/public` (ignored build output); Vite build transforms 1,964 modules and emits route-level chunks.
+- Workspace package manager is npm (`package-lock.json`, npm workspaces). Node is pinned to `22.12.0` in `.node-version`.
 
-The security programme from the previous passes holds. Re-ran the full suite rather than
-trusting it: **86/86 pass**. Four-layer model (authentication → authorisation → guild
-isolation → Discord hierarchy) intact.
+### Runtime and package layout
 
-### 🟠 HIGH
-
-**H1 — Unhandled promise rejections from every async event handler**
-`events/index.js:47,49` invokes `event.execute(...)` without `.catch()`. Every gateway
-handler is `async`, so any rejection escapes to `process.on('unhandledRejection')`.
-Reproduced:
-
-```
-unhandled rejection escaped to process level: handler blew up
-```
-
-Handlers have internal `try/catch` (7–12 blocks each), but coverage is partial — anything
-thrown outside those blocks is unhandled. *Root cause: no error boundary at the event
-dispatch layer.*
-
-**H2 — Error handlers can themselves throw**
-`index.js:101` does `reason.message` on the rejection value. Rejecting with a non-Error —
-which `axios`, `discord.js` and any `Promise.reject('string')` can produce — makes the
-handler read `.message` of a string (`undefined`) or of `null` (throws). Reproduced:
-`logged: undefined`.
-
-**H3 — `uncaughtException` does not exit**
-`index.js:105` logs and continues. Node's documented contract is that the process is in an
-undefined state after an uncaught exception; continuing risks corrupt SQLite writes.
-Should log, flush, and exit non-zero for a supervisor to restart.
-
-### 🟡 MEDIUM
-
-**M1 — `dashboard/routes/guilds.js` is 1 787 LOC / 104 routes**
-Single file holding roughly two-thirds of the API surface. This is the direct cause of the
-critical bug found in the last audit (the `permissions` router was overlooked because
-routing logic is not uniform across files). Highest-value structural fix.
-
-**M2 — 128 duplicated error handlers**
-`catch (err) { res.status(500).json({ error: err.message }) }` appears **104×** in
-`guilds.js` alone, 128× across routes. No error classification, no correlation ID, no
-mapping of Discord/DB errors to HTTP status. Violates §13.
-
-**M3 — 8 `db.all()` full-table scans in `guilds.js`**
-Each scans every key for every guild to filter by prefix. O(all guilds) per request.
-Abuse is mitigated by the `heavyRead` limiter; the cost remains.
-
-**M4 — Unbounded concurrency in 2 `Promise.all(.map(async …))` fan-outs**
-Sized by data (member lists), so a large guild issues many simultaneous Discord calls.
-No N+1 sequential-fetch loops found (checked: 0).
-
-**M5 — No API abstraction in the frontend**
-138 direct `api.*` calls scattered across 26 of 28 pages; no `api/` modules, no `hooks/`,
-no `stores/`. Violates §12. 27 pages manage server state in ad-hoc `useState`/`useEffect`.
-
-**M6 — Remaining read-modify-write races**
-`utils/db_lock.js` exists and is applied to `/pay`, but 7 candidate sites remain
-(XP, daily, work, rep, streak). Correctness rather than security — no value duplication —
-but the same class of bug.
-
-### 🔵 LOW / INFO
-
-- **L1** — No ESLint config. §26 quality gate absent.
-- **L2** — No Dockerfile / CI workflow. §26/§27 deployment gate absent.
-- **L3** — `DASHBOARD_ORIGIN` read by `csrf.js` but missing from `.env.example` (17/18 documented).
-- **L4** — `utils/public_url.js` exports `writePublicUrl` and `markDead`; **verified** zero external references. Genuinely dead.
-- **L5** — Client bundle 617 kB / 160 kB gzip in one chunk; Vite warns. No code splitting.
-- **L6** — 9 vulnerabilities, all `@discordjs/opus → node-pre-gyp → tar`, confirmed build-time only, no upstream fix.
-
-### Verified healthy (checked, no action)
-
-- **Build passes.** `vite build` succeeds and reproduces the committed hash
-  `index-C7v5IZlx.js` byte-for-byte — the committed SPA is in sync with source.
-- **No unused dependencies.** Every declared dependency is referenced.
-- **No secrets in source or history** (369 blobs scanned previously; unchanged).
-- **Event-name exports are not dead code** — the earlier heuristic flagged 11 candidates;
-  inspection showed 9 are `Events.X` constants consumed by the loader. Only L4 is real.
-- **No N+1 Discord fetch loops.**
-- **No TypeScript** — §17 does not apply.
+| Area | Current implementation | Specification alignment |
+|---|---|---|
+| Bot | JavaScript/CommonJS, discord.js 14, one bot client | discord.js major aligns; TypeScript, pino, zod, sharding absent |
+| API | Express 5, custom middleware, raw `pg`-backed database package | Express major differs; no Prisma/Drizzle, Redis, or Zod |
+| Web | Vite, React 19, JSX, Tailwind 3 | Vite aligns as an option; React version and TypeScript differ |
+| Shared/database | `packages/shared`, `packages/database`; custom PostgreSQL schema/adapter | Shared package exists; no required Zod schemas/TS types or Prisma/Drizzle package |
+| Task tooling | Turbo 2 config, ESLint 9 flat config, Prettier 3 | Versions align; root scripts do not consistently delegate to Turbo |
+| Package manager | npm workspaces and lockfile | Conflicts with pnpm 9 / no npm at root requirement |
 
 ---
 
-## 4. Risk classification & plan
+## 3. Current architecture and behavior
 
-| Phase | Work | Risk | Regression control |
-| :--- | :--- | :--- | :--- |
-| **2** | H1–H3: error boundary at event dispatch; harden process handlers | Low | New `test-resilience.js`; existing 86 must stay green |
-| **3** | M2: shared `asyncHandler` + error classifier; keep response shapes identical | Low–Med | Assert existing status codes/bodies unchanged |
-| **4** | M1: split `guilds.js` into domain routers behind one mount, no path changes | **Med** | Route-inventory diff must be byte-identical before/after |
-| **5** | M5: extract `api/` modules + `hooks/`; rebuild and compare bundle | Med | Build must succeed; manual page smoke |
-| **6** | M6, M3, M4: extend locking; cache/scope scans; bound fan-out | Low | Extend `test-concurrency.js` |
-| **7** | L1–L3, L5: ESLint, `.env.example`, docs, code splitting | Low | Lint gate added to `npm test` |
-| **8** | Final audit as a fresh reviewer; `docs/engineering-lessons.md` | — | Full re-run |
-
-**Explicitly rejected:** the `apps/ packages/ database/` monorepo layout from the brief.
-This is a single-process app with 28 k LOC and no separate deployables; splitting it into
-workspaces would add build complexity, break every relative `require`, and invalidate the
-committed SPA — cost without benefit. §3 permits a better-fitting structure. I will instead
-modularise **within** the existing layout, which addresses the actual defect (M1) without a
-Big-Bang rewrite (§29).
-
-**Ordering rationale:** correctness bugs (H1–H3) before structure, because refactoring on
-top of silent error-swallowing hides regressions. `guilds.js` (M1) comes after the shared
-error handler (M2) so the split moves already-clean code.
+- The bot and API run in the same Node process when started through the bot entrypoint; the API receives the live Discord client and uses its guild/member caches. The API can also be started independently.
+- Bot commands are recursively loaded once into a name-keyed collection during process startup. The normal bootstrap has a `servicesLoaded` guard. There is no general reload/unload path; the event loader itself does not detach existing listeners if called repeatedly. Duplicate command names would overwrite the earlier collection entry rather than be explicitly rejected.
+- Global `unhandledRejection` and `uncaughtException` process handlers exist. The bot does not register a `client.on('error')` handler.
+- `MessageContent` is used by message moderation and auto-response behavior; it is not demonstrably redundant. `GuildPresences` is enabled, but no corresponding feature use was confirmed in this discovery scan and it merits a focused check. No ShardingManager or shard threshold was found.
+- Slash commands are sent as one bulk REST `PUT` per configured guild and/or globally, not one request per command. The deploy helper catches and logs failures; no custom retry/backoff policy was confirmed.
+- API auth uses server-side sessions and HttpOnly cookies. OAuth has a random, single-use `state` check. PKCE was not found. JWT access/refresh tokens and refresh rotation are not used, so those checklist items do not directly describe the current session model.
+- CSRF origin checks, Helmet headers, fail-closed authentication, guild-access checks, request-size limits, global/per-operation rate limits, and Socket.IO origin restrictions are present. Rate-limit buckets are process-local; sessions use PostgreSQL when configured, with a bounded in-memory fallback for local/degraded use.
+- API validation uses a custom field-rule middleware plus route-level checks, not Zod schemas. Some endpoints validate explicitly; no central typed schema contract was found.
+- Frontend auth requests include credentials and use the server session. `localStorage`/`sessionStorage` references found in source are for UI state, locale, navigation, or user-created templates, not auth-token persistence.
+- Guild overview reads use a batched database `mget`; the guild list filters the bot's in-memory cache. No broad N+1 issue was established in these inspected paths. Database schema has useful indexes, but it is not a Prisma/Drizzle relational model for the required guild/user indexing review.
+- Vite has lazy-loaded pages and emits separate chunks. In the production build, the largest listed JS chunk was about 219 kB (vendor); individual chunks are below 500 kB. This meets the stated per-chunk scale goal better than the old report's single-bundle result.
 
 ---
 
-## 5. Baseline to protect
+## 4. Specification and infrastructure gaps
 
-```
-npm test          86 assertions, exit 0
-node --check      180 files, no syntax errors
-vite build        ✓ 1803 modules, hash index-C7v5IZlx.js
-git               640 commits, working tree clean
-endpoints         152 (inventory captured for byte-diff after refactor)
-```
+### Required stack / developer experience
 
-Awaiting approval to begin **Phase 2**.
+1. No TypeScript, `strict: true`, or typecheck task.
+2. npm is used instead of pnpm 9. Root package contains runtime dependencies, contrary to the requested scripts/dev-dependencies-only root.
+3. API uses Express 5, while the specification allows Express 4 or Fastify 4.
+4. Redis, Zod, Prisma/Drizzle, JWT, pino/pino-pretty, shadcn/ui, TanStack Query, Zustand, Recharts, Vitest, and Playwright were not found in the workspace manifests/configuration.
+5. API and bot package manifests have no scripts; web provides only `dev`, `build`, and `preview`. Required per-app `start`, `lint`, `typecheck`, and `test` scripts are incomplete/missing.
+6. Root task scripts mostly run npm scripts directly; they do not consistently delegate tasks through Turbo.
+
+### CI, deploy, and containers
+
+1. Only `.github/workflows/verify.yml` exists; no separate requested `ci.yml` and no deploy workflow.
+2. Verify workflow uses Node from `.node-version`, npm caching/install, and `npm run verify`; it does not run the requested Node 20 + pnpm 9 install/lint/typecheck/test/build sequence.
+3. No app Dockerfiles, Docker Compose definitions, Docker healthchecks, `.dockerignore`, or GHCR publish/deploy job were found.
+4. Deployment is configured for Render (`render.yaml`), not Docker-to-GHCR deployment. No separate API/bot health-check-after-deploy workflow was found.
+
+### Target structure
+
+The top-level app/package separation mostly exists. However, `tests/`, `docs/`, and root tooling/config files are also tracked outside `apps/` and `packages/`; a literal interpretation of “no code outside apps/packages” would require clarifying how tests and repository tooling are treated. Cross-app workspace imports are used for shared/database packages, but this was not exhaustively proven for every import.
+
+---
+
+## 5. Existing checklist: findings, not assumptions
+
+| Checklist item | Discovery result |
+|---|---|
+| Duplicate command loading | No repeated normal-start load observed; duplicate names are not explicitly rejected. |
+| Listener leak on reload | No reload path found; `loadEvents()` does not remove old listeners if called again. |
+| Global error handlers | Process-level rejection/exception handlers exist; Discord client error listener is absent. |
+| Slash-command 429 | Bulk PUT is used; Discord REST handles route limits. Custom retry policy not found. |
+| Broad intents | MessageContent is used; GuildPresences requires follow-up validation. |
+| Sharding threshold | No sharding implementation found. |
+| Wildcard CORS | No wildcard API CORS found; Socket.IO origin is configured restrictively. |
+| Auth/API rate limits | Present but primarily process-local, not Redis-backed. OAuth start has a specific limit. |
+| JWT refresh rotation | Not applicable to the current cookie-session architecture; no JWT refresh flow found. |
+| OAuth state / CSRF | OAuth state and unsafe-method origin checks are present; PKCE is absent. |
+| N+1 queries | No issue established in the examined guild overview/list code; overview uses batch reads. |
+| DB indexes | PostgreSQL indexes exist; comprehensive requirement-specific guild/user index audit remains open. |
+| Secrets / env files | `.env.example` exists and `.env` is ignored; no committed `.env` was found. Historical secret scanning was not repeated in this Phase 0. |
+| API boundary validation | Custom validation middleware and local checks exist; no Zod-based systematic boundary schemas. |
+| Login redirect loop | Existing auth tests pass, but no Playwright/browser E2E was available to verify a real OAuth redirect/cookie flow. |
+| Auth token in localStorage | Not found; browser uses credentials-included requests and HttpOnly session cookie. |
+| Loading/error states | Shared loading fallbacks and API error handling exist; no full-page manual UX audit was performed. |
+| Unnecessary re-renders | Not comprehensively profiled; no React performance profiler run. |
+| Bundle/code splitting | Lazy page loading and multiple chunks confirmed; build succeeds. |
+| Inconsistent imports | Workspace imports exist; full import-alias compliance has not been proven. |
+
+---
+
+## 6. Checks run in this discovery
+
+| Check | Result |
+|---|---|
+| `npm run lint` | **PASS** |
+| `npm test` (unit + security) | **PASS** |
+| `npm run build:web` | **PASS** — Vite 8.3, 1,964 modules transformed |
+| `npm run validate:release` | **PASS** |
+| `npm audit --omit=dev --audit-level=high` | **FAIL** — 5 production findings (4 high, 1 critical) |
+| `npm ci --ignore-scripts` | Completed; environment warned that installed Node 22.22.3 differs from pinned 22.12.x |
+
+Production audit findings reported by npm:
+
+- `proxy-addr`: **critical**, IPv4-mapped IPv6 trust-subnet IP spoofing.
+- `body-parser`: **high**, denial of service with malformed compressed request bodies.
+- `follow-redirects`: **high**, cross-origin credential stripping bypass / credential exposure advisories.
+- `multer`: **high**, denial of service on pending asynchronous file filter after request teardown.
+- `undici`: **high**, multiple denial-of-service and integrity advisories.
+
+npm reports fixes are available. This report does not update dependency manifests or the lockfile.
+
+---
+
+## 7. Phase 0 conclusions / decisions before implementation
+
+**Recommended first priority:** resolve and re-audit production dependency vulnerabilities, since the current release gate will fail at its production audit step.
+
+Before a larger migration, decide whether the specification requires literal stack replacement (pnpm, strict TypeScript, Redis, Zod, database ORM, Docker/GHCR) or whether the current tested architecture is allowed to meet equivalent goals. The requested target has significant cost and architectural impact; in particular, moving to separate services changes the current live-client/cache coupling between bot and API.
+
+If implementation is authorized, preserve the passing security and route-contract suites, and add missing checks before refactoring: explicit duplicate-command detection, listener idempotency/removal, client error handling, intent audit, sharding design, auth-flow browser E2E, and API schema coverage.
+
+## 8. Addendum checklist cross-check — remaining evidence gaps
+
+The Phase 0 checklist table above accounts for every Addendum problem-zone category. This cross-check adds detail where the report previously summarized the result or marked it as only partially checked. “Unverified” below means the repository evidence is not enough to claim the behavior is safe or defective; it is not a finding of a confirmed bug.
+
+| Addendum area | Report coverage / additional finding | Still needed for a conclusive check |
+|---|---|---|
+| Bot command duplication | Normal startup loads the command tree once; no reload path found. Duplicate names overwrite in the collection instead of failing explicitly. | Add a duplicate-name assertion and test repeated initialization if reload is ever supported. |
+| Event listener cleanup | The event loader does not unregister earlier listeners when invoked again. `loadServicesOnce` guards normal bootstrap. | Decide whether reload is supported; if yes, add listener ownership/removal and a repeated-load test. |
+| Global errors | Process-level handlers exist; `client.on('error')` was not found. | Verify handling/exit policy under simulated client errors and rejection cases. |
+| Bulk slash-command 429 | Commands are bulk PUT per guild/global. No custom retry was found; the `discord.js` REST client owns normal REST rate-limit handling. | No simulated 429/retry test was run; verify the failure behavior if deployment reliability requires it. |
+| Intents / sharding | `MessageContent` is used by moderation and auto-response. `GuildPresences` use was not established. No shard manager or threshold exists. | Confirm whether the live bot exceeds 2,500 guilds; inspect all intent-dependent features, especially presences, before changing intents. |
+| API rate limits | More specifically: a process-local global limit is 400 requests/minute/IP (health and auth-status are exempt); Discord OAuth start has 20/5 minutes; account registration/login/MFA/recovery and several account mutations use database-backed auth limits. Endpoint-specific coverage is not uniform, and shared Redis-backed limiting is absent. | Inventory every `/api/auth/*` and `/api/*` route, inspect its effective limit and key, and test multi-instance behavior. |
+| OAuth / session | OAuth `state` and CSRF origin checks exist; PKCE and JWT refresh rotation do not. Auth is a server-side session-cookie design rather than a JWT design. | Browser-level OAuth callback/cookie/redirect testing is absent; choose whether PKCE is a mandatory requirement for this design. |
+| N+1 / list queries | The report checked guild overview batching and the in-memory guild list only. | Trace every guild/member/user list path (including developer and member routes) and measure query/API call counts at representative sizes. |
+| Database indexes | `account_identities` has primary key `(provider, provider_user_id)` for Discord identity lookup; per-guild bot configuration is stored in `bot_kv` with a text prefix index, rather than a relational `guildId` column. | Review all query patterns and production query plans; no comprehensive guild/user index audit was run. |
+| Secrets / environment files | A current filesystem and Git-tracked filename scan found only `.env.example`; no committed `.env` was found. | No current source/history secret-pattern scan was run in Phase 0. Run one before declaring secret hygiene fully verified. |
+| Request validation | The custom validator and route-level checks are known; no route-by-route completeness matrix exists. | Map every mutating/API boundary to its validator, limits, and failure test; then decide whether Zod is required. |
+| Frontend auth storage / redirect | Auth token storage in localStorage was not found; the client uses cookie credentials. | Exercise real OAuth redirects and session persistence in a browser; the existing automated tests are not Playwright E2E. |
+| Loading/error UX | Shared loading fallbacks and API error handling exist. | Manually inspect every screen's loading, empty, network-error, and expired-session states. |
+| Re-renders / memoization | No React profiler or render trace was collected. | Profile representative heavy pages before proposing memoization changes. |
+| Bundle threshold | Route-level lazy chunks are confirmed and each emitted JS chunk is below 500 kB; the largest listed is ~219 kB. | Measure the actual initial-entry transfer (and clarify whether the 500 kB limit means raw or gzip); the report only recorded emitted chunk sizes. |
+| Imports / package placement | Web manifest does **not** depend on `discord.js`. Root does contain runtime `dotenv` and `file-type`, so it is not scripts/dev-dependencies-only. | Run a full dependency-ownership and import-alias audit; current report did not prove every cross-app import uses a workspace package. |
+| `.env.example` completeness | The example exists and no other `.env*` file was found in the current checkout. | Compare all environment-variable reads against the example and deployment configuration; presence alone does not establish completeness. |
+
+**Phase 0 ends here. No implementation changes were made.** The discovery report and this checklist cross-check are ready for review before proceeding to a migration/implementation phase.
