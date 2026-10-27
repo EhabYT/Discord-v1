@@ -1,7 +1,7 @@
 # Fixes → Optimize → Cleanup → Sort — Progress and Verification
 
-**Date:** 2026-10-25  
-**Branch:** `arena/e30916a0-discord-v1`
+**Date:** 2026-10-27
+**Branch:** `arena/752cd216-discord-v1`
 **Status:** implementation phases completed; local verification passes; GitHub deployment gate remains externally blocked.
 
 This report supersedes the earlier Phase 1-only progress notes. The Phase 0 discovery report remains a historical baseline; it records the repository before these changes.
@@ -45,6 +45,8 @@ This report supersedes the earlier Phase 1-only progress notes. The Phase 0 disc
 - Marked the Phase 0 report as a historical baseline so its original findings are not mistaken for current status.
 
 ## Verification
+
+The root Verify sequence builds the web assets before running tests because the security suite checks headers on the built static Dashboard. The release validator enforces this ordering so a clean `npm ci --ignore-scripts` run can pass.
 
 Latest completed checks:
 

@@ -116,6 +116,10 @@ for (const command of ['npm run validate:release', 'npm run lint:gate', 'npm tes
     'npm run audit:prod', 'npm run build:web']) {
     requireCondition(verify.includes(command), `npm run verify must include: ${command}`);
 }
+const buildIndex = verify.indexOf('npm run build:web');
+const testsIndex = verify.indexOf('npm test');
+requireCondition(buildIndex >= 0 && testsIndex >= 0 && buildIndex < testsIndex,
+    'npm run verify must build static Dashboard assets before security tests');
 
 if (failures.length) {
     for (const failure of failures) console.error(`  FAIL  ${failure}`);
