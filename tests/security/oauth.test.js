@@ -133,6 +133,13 @@ const cookieOf = (res) => (res.headers['set-cookie'] || []).map((c) => c.split('
 
     process.env.GOOGLE_CLIENT_ID = '123456789012-example.apps.googleusercontent.com';
     process.env.GOOGLE_CLIENT_SECRET = 'google-test-secret';
+    const priorNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    const googleWithoutDatabase = await req('/api/auth/google');
+    check('Google OAuth fails closed in production without persistent database configuration',
+        googleWithoutDatabase.status === 400 && /DATABASE_URL/.test(googleWithoutDatabase.body));
+    if (priorNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = priorNodeEnv;
     const googleStart = await req('/api/auth/google');
     const googleUrl = new URL(googleStart.location);
     const googleState = googleUrl.searchParams.get('state');

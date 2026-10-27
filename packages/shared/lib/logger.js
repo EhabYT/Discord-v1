@@ -125,11 +125,21 @@ class Logger {
     return value.replace(/[\r\n]+/g, ' ⏎ ').replace(/[\u0000-\u0008\u000B-\u001F\u007F]/g, '');
   }
 
+  static _sanitizeSensitiveText(value) {
+    if (typeof value !== 'string') return value;
+    return Logger._sanitize(value)
+      .replace(/\b(?:postgres(?:ql)?|mysql):\/\/[^\s"'<>]+/gi, '[REDACTED_DATABASE_URL]')
+      .replace(/\b(Bearer|Bot)\s+[A-Za-z0-9._~+\/-]{12,}/gi, '$1 [REDACTED]')
+      .replace(/\bmfa\.[A-Za-z0-9_-]{20,}\b/gi, '[REDACTED_DISCORD_TOKEN]')
+      .replace(/((?:password|passwd|secret|token|authorization|proxy-authorization|cookie|session[_-]?secret|database[_-]?url|api[_-]?key|client[_-]?secret|access[_-]?token|refresh[_-]?token)\s*[=:]\s*)(?:"[^"]*"|'[^']*'|[^\s,;]+)/gi, '$1[REDACTED]')
+      .replace(/([?&](?:access_token|refresh_token|client_secret|code|state|token|password|key)=)[^&#\s]*/gi, '$1[REDACTED]');
+  }
+
   static _sanitizeMeta(value, key = '', depth = 0, seen = new WeakSet()) {
     if (/token|secret|password|passwd|credential|authorization|database.?url|api.?key/i.test(key)) {
       return '[REDACTED]';
     }
-    if (typeof value === 'string') return Logger._sanitize(value);
+    if (typeof value === 'string') return Logger._sanitizeSensitiveText(value);
     if (value == null || typeof value !== 'object') return value;
     if (depth >= 5) return '[MAX_DEPTH]';
     if (seen.has(value)) return '[CIRCULAR]';
@@ -145,7 +155,7 @@ class Logger {
   _log(level, message, meta, type = level) {
     if (!this._shouldLog(level)) return;
 
-    message = Logger._sanitize(message);
+    message = Logger._sanitizeSensitiveText(message);
     if (meta && typeof meta === 'object') {
       meta = Logger._sanitizeMeta(meta);
     }

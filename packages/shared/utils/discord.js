@@ -108,11 +108,43 @@ function getGuildQueue(client, guildId) {
     }
 }
 
+const SAFE_DISCORD_FAILURES = new Map([
+    [10003, 'That channel no longer exists or is unavailable to the bot.'],
+    [10004, 'That server could not be found.'],
+    [10007, 'That member could not be found.'],
+    [10008, 'That message could not be found.'],
+    [10011, 'That role could not be found.'],
+    [10013, 'That user could not be found.'],
+    [50001, 'The bot cannot access that Discord resource.'],
+    [50013, 'The bot is missing permissions for that action.'],
+]);
+
+/** Return a bounded, user-safe command error without exposing internals. */
+function safeCommandError(err, fallback = 'The action could not be completed.') {
+    const code = typeof err?.code === 'number' ? err.code : null;
+    if (code !== null && SAFE_DISCORD_FAILURES.has(code)) return SAFE_DISCORD_FAILURES.get(code);
+    if (code !== null || err?.name === 'DiscordAPIError' || err?.name === 'HTTPError') return fallback;
+
+    const raw = typeof err?.message === 'string' ? err.message : '';
+    if (!raw) return fallback;
+    if (err?.expose === true && Number.isInteger(err.status) && err.status >= 400 && err.status < 500) {
+        const exposed = logger.constructor._sanitizeSensitiveText(raw).trim().slice(0, 200);
+        return exposed || fallback;
+    }
+    if (/database|postgres|sql|password|secret|token|credential|authorization|cookie|session|connection string|ENOENT|ECONN|ETIMEDOUT|EACCES|EPERM|TypeError|ReferenceError|SyntaxError|(?:\/|\\)(?:srv|home|etc|app)\//i.test(raw)
+        || /https?:\/\/|\bat\s+[^\s]+:\d+(?::\d+)?/i.test(raw)) {
+        return fallback;
+    }
+    const safe = logger.constructor._sanitizeSensitiveText(raw).trim().slice(0, 200);
+    return safe || fallback;
+}
+
 module.exports = {
     hasModPerms,
     parseTimeString,
     formatDuration,
     safeReply,
+    safeCommandError,
     checkDJPerms,
     getGuildQueue
 };

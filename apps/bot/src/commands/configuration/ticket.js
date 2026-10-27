@@ -1,3 +1,4 @@
+const safeCommandError = require('eb-bot-shared/utils/discord').safeCommandError;
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, MessageFlags } = require('discord.js');
 const { safeReply } = require('eb-bot-shared/utils/discord');
 
@@ -171,7 +172,7 @@ module.exports = {
                     .setTimestamp();
                 return safeReply(interaction, { embeds: [embed] });
             } catch (err) {
-                return safeReply(interaction, { content: `❌ Failed: ${err.message}`, flags: [MessageFlags.Ephemeral] });
+                return safeReply(interaction, { content: `❌ Failed: ${safeCommandError(err)}`, flags: [MessageFlags.Ephemeral] });
             }
         }
 
@@ -188,7 +189,7 @@ module.exports = {
                     .setTimestamp();
                 return safeReply(interaction, { embeds: [embed] });
             } catch (err) {
-                return safeReply(interaction, { content: `❌ Failed: ${err.message}`, flags: [MessageFlags.Ephemeral] });
+                return safeReply(interaction, { content: `❌ Failed: ${safeCommandError(err)}`, flags: [MessageFlags.Ephemeral] });
             }
         }
 

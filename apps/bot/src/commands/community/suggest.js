@@ -1,3 +1,4 @@
+const safeCommandError = require('eb-bot-shared/utils/discord').safeCommandError;
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const suggestions = require('eb-bot-shared/services/suggestions');
 
@@ -50,7 +51,7 @@ module.exports = {
                     flags: [MessageFlags.Ephemeral],
                 });
             } catch (err) {
-                return interaction.editReply({ content: err.message || 'Could not post suggestion.', flags: [MessageFlags.Ephemeral] });
+                return interaction.editReply({ content: safeCommandError(err, 'Could not post suggestion.'), flags: [MessageFlags.Ephemeral] });
             }
         }
 
@@ -89,7 +90,7 @@ module.exports = {
                 flags: [MessageFlags.Ephemeral],
             });
         } catch (err) {
-            return interaction.editReply({ content: err.message || `Suggestion #${id} was not found.`, flags: [MessageFlags.Ephemeral] });
+            return interaction.editReply({ content: safeCommandError(err, `Suggestion #${id} was not found.`), flags: [MessageFlags.Ephemeral] });
         }
     },
 };

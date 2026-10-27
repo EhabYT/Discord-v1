@@ -1,3 +1,4 @@
+const safeCommandError = require('eb-bot-shared/utils/discord').safeCommandError;
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ChannelType, MessageFlags } = require('discord.js');
 
 module.exports = {
@@ -87,7 +88,7 @@ module.exports = {
                 await channel.send(msg);
                 return interaction.reply({ content: `✅ Test message sent to ${channel}!`, flags: [MessageFlags.Ephemeral] });
             } catch (err) {
-                return interaction.reply({ content: `❌ Failed to send message: ${err.message}`, flags: [MessageFlags.Ephemeral] });
+                return interaction.reply({ content: `❌ Failed to send message: ${safeCommandError(err)}`, flags: [MessageFlags.Ephemeral] });
             }
         }
     }

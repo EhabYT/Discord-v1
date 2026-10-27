@@ -7,8 +7,6 @@
 
 const logger = require('eb-bot-shared/lib/logger');
 
-const IS_PROD = process.env.NODE_ENV === 'production';
-
 /**
  * Error types that can be safely exposed to clients
  */
@@ -102,16 +100,15 @@ function createErrorResponse(err, req, errorId) {
     const statusCode = getStatusCode(err);
     const isClientError = statusCode >= 400 && statusCode < 500;
 
+    const suppliedCode = typeof err.code === 'string' ? err.code : '';
+    const safeCode = /^[A-Z][A-Z0-9_]{0,63}$/.test(suppliedCode)
+        ? suppliedCode
+        : (isClientError ? `HTTP_${statusCode}` : 'INTERNAL_ERROR');
     const response = {
         error: isClientError ? sanitizeErrorMessage(err.message) : 'Internal server error',
-        code: err.code || 'INTERNAL_ERROR',
+        code: safeCode,
         errorId,
     };
-
-    if (!IS_PROD && !isClientError) {
-        response.stack = err.stack;
-        response.details = err.message;
-    }
 
     if (req.requestId) {
         response.requestId = req.requestId;
@@ -137,16 +134,18 @@ function errorHandler(err, req, res, _next) {
 
     const { statusCode, response } = createErrorResponse(err, req, errorId);
 
+    const route = typeof req.route?.path === 'string'
+        ? req.route.path.slice(0, 200)
+        : 'unmatched';
     const logData = {
         errorId,
         statusCode,
-        message: err.message,
-        stack: err.stack,
-        path: req.originalUrl,
-        method: req.method,
-        userId: req.userId,
-        ip: req.ip,
-        requestId: req.requestId,
+        code: response.code,
+        route,
+        method: typeof req.method === 'string' ? req.method.slice(0, 12) : 'UNKNOWN',
+        requestId: typeof req.requestId === 'string'
+            ? req.requestId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64)
+            : undefined,
     };
 
     if (statusCode >= 500) {

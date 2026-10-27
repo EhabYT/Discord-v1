@@ -1,3 +1,4 @@
+const safeCommandError = require('eb-bot-shared/utils/discord').safeCommandError;
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
 
 module.exports = {
@@ -28,7 +29,7 @@ module.exports = {
                 .setTimestamp();
             await client.helpers.safeReply(interaction, { embeds: [embed] });
         } catch (err) {
-            await client.helpers.safeReply(interaction, { content: `❌ Failed: ${err.message}`, flags: [MessageFlags.Ephemeral] });
+            await client.helpers.safeReply(interaction, { content: `❌ Failed: ${safeCommandError(err)}`, flags: [MessageFlags.Ephemeral] });
         }
     }
 };

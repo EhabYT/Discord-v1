@@ -17,6 +17,14 @@ const SECRET_KEYS = new Set([
     'DISCORD_TOKEN', 'DISCORD_CLIENT_SECRET', 'DATABASE_URL', 'SESSION_SECRET', 'DEV_TOKEN',
 ]);
 
+class SetupInputError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'SetupInputError';
+        this.code = 'SETUP_INPUT_INVALID';
+    }
+}
+
 function localSetupOnly(req, res, next) {
     // Never expose a credential-writing endpoint on Render, through a tunnel,
     // or behind any forwarding proxy. Production returns 404 so the endpoint
@@ -29,39 +37,39 @@ function localSetupOnly(req, res, next) {
 
 function validateUpdates(input) {
     if (!input || typeof input !== 'object' || Array.isArray(input)) {
-        throw new Error('Expected an object of environment values');
+        throw new SetupInputError('Expected an object of environment values');
     }
     const clean = {};
     for (const [key, raw] of Object.entries(input)) {
-        if (!ALLOWED_KEYS.has(key)) throw new Error(`Unsupported environment key: ${key}`);
-        if (typeof raw !== 'string') throw new Error(`${key} must be a string`);
+        if (!ALLOWED_KEYS.has(key)) throw new SetupInputError(`Unsupported environment key: ${key}`);
+        if (typeof raw !== 'string') throw new SetupInputError(`${key} must be a string`);
         const value = raw.trim();
         if (!value) continue; // blank fields leave the current value untouched
-        if (value.length > 4096 || /[\r\n\0]/.test(value)) throw new Error(`Invalid value for ${key}`);
+        if (value.length > 4096 || /[\r\n\0]/.test(value)) throw new SetupInputError(`Invalid value for ${key}`);
         clean[key] = value;
     }
     if (clean.CLIENT_ID && !/^\d{17,20}$/.test(clean.CLIENT_ID)) {
-        throw new Error('CLIENT_ID must be a Discord Application ID');
+        throw new SetupInputError('CLIENT_ID must be a Discord Application ID');
     }
     for (const key of ['OWNER_ID', 'GUILD_ID']) {
-        if (clean[key] && !/^\d{17,20}$/.test(clean[key])) throw new Error(`${key} must be a Discord ID`);
+        if (clean[key] && !/^\d{17,20}$/.test(clean[key])) throw new SetupInputError(`${key} must be a Discord ID`);
     }
     for (const key of ['DEVELOPER_IDS', 'SUPPORT_IDS']) {
         if (!clean[key]) continue;
         const ids = clean[key].split(',').map((id) => id.trim()).filter(Boolean);
         if (!ids.length || ids.some((id) => !/^\d{17,20}$/.test(id))) {
-            throw new Error(`${key} must contain comma-separated Discord IDs`);
+            throw new SetupInputError(`${key} must contain comma-separated Discord IDs`);
         }
     }
     if (clean.DATABASE_URL) {
         const issue = databaseConfigIssue(clean.DATABASE_URL);
-        if (issue) throw new Error(issue);
+        if (issue) throw new SetupInputError(issue);
     }
     for (const key of ['DASHBOARD_URL', 'DISCORD_REDIRECT_URI']) {
         if (!clean[key]) continue;
         let parsed;
-        try { parsed = new URL(clean[key]); } catch { throw new Error(`${key} must be a valid URL`); }
-        if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error(`${key} must use HTTP(S)`);
+        try { parsed = new URL(clean[key]); } catch { throw new SetupInputError(`${key} must be a valid URL`); }
+        if (!['http:', 'https:'].includes(parsed.protocol)) throw new SetupInputError(`${key} must use HTTP(S)`);
     }
     return clean;
 }
@@ -70,7 +78,7 @@ function writeEnv(updates, envFile = ENV_FILE) {
     const clean = validateUpdates(updates);
     if (!Object.keys(clean).length) return [];
     if (fs.existsSync(envFile) && fs.lstatSync(envFile).isSymbolicLink()) {
-        throw new Error('Refusing to overwrite a symbolic link');
+        throw new SetupInputError('Refusing to overwrite a symbolic link');
     }
     const existing = fs.existsSync(envFile) ? fs.readFileSync(envFile, 'utf8').split(/\r?\n/) : [];
     const written = new Set();
@@ -133,7 +141,17 @@ module.exports = () => {
             const updated = writeEnv(req.body);
             return res.json({ ok: true, updated, restartRequired: true });
         } catch (err) {
-            return res.status(400).json({ error: err.message });
+            if (err instanceof SetupInputError) {
+                return res.status(400).json({ error: err.message, code: err.code });
+            }
+            const code = typeof err?.code === 'string' && /^[A-Z0-9_]{1,40}$/.test(err.code)
+                ? err.code
+                : 'SETUP_WRITE_FAILED';
+            require('eb-bot-shared/lib/logger').error('Local environment setup write failed', { code });
+            return res.status(500).json({
+                error: 'Could not save local environment settings. Check file permissions and try again.',
+                code: 'SETUP_WRITE_FAILED',
+            });
         }
     });
     return router;
@@ -144,3 +162,4 @@ module.exports.writeEnv = writeEnv;
 module.exports.statusPayload = statusPayload;
 module.exports.ALLOWED_KEYS = ALLOWED_KEYS;
 module.exports.SECRET_KEYS = SECRET_KEYS;
+module.exports.SetupInputError = SetupInputError;

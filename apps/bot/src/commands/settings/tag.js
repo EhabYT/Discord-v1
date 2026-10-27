@@ -1,3 +1,4 @@
+const safeCommandError = require('eb-bot-shared/utils/discord').safeCommandError;
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
 const tags = require('eb-bot-shared/services/tags');
 
@@ -45,7 +46,7 @@ module.exports = {
                 await tags.remove(db, guildId, name);
                 return client.helpers.safeReply(interaction, { content: `🗑️ Deleted tag \`${tags.normalize(name)}\`.` });
             } catch (err) {
-                return client.helpers.safeReply(interaction, { content: `❌ ${err.message}`, flags: [MessageFlags.Ephemeral] });
+                return client.helpers.safeReply(interaction, { content: `❌ ${safeCommandError(err)}`, flags: [MessageFlags.Ephemeral] });
             }
         }
 

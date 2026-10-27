@@ -1,3 +1,4 @@
+const safeCommandError = require('eb-bot-shared/utils/discord').safeCommandError;
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
 const { safeReply } = require('eb-bot-shared/utils/discord');
 
@@ -68,7 +69,7 @@ module.exports = {
 
       await safeReply(interaction, { embeds: [embed] });
     } catch (err) {
-      await safeReply(interaction, { content: `❌ Failed to ban: ${err.message}`, flags: [MessageFlags.Ephemeral] });
+      await safeReply(interaction, { content: `❌ Failed to ban: ${safeCommandError(err)}`, flags: [MessageFlags.Ephemeral] });
     }
   }
 };

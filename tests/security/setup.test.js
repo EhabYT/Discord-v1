@@ -20,6 +20,10 @@ check('database placeholders are rejected before saving', (() => {
 check('Discord Application ID is validated', (() => {
     try { setup.validateUpdates({ CLIENT_ID: 'not-an-id' }); return false; } catch { return true; }
 })());
+let inputError;
+try { setup.validateUpdates({ CLIENT_ID: 'not-an-id' }); } catch (err) { inputError = err; }
+check('setup validation errors have an explicit safe type',
+    inputError instanceof setup.SetupInputError && inputError.code === 'SETUP_INPUT_INVALID');
 
 const file = path.join(os.tmpdir(), `eb-env-editor-${process.pid}`);
 fs.writeFileSync(file, '# existing\nLOG_LEVEL=debug\n', { mode: 0o600 });
@@ -42,6 +46,9 @@ check('status returns booleans, never secret values',
 const source = fs.readFileSync(path.join(__dirname, '..', '..', 'apps', 'api', 'src', 'routes', 'setup.js'), 'utf8');
 check('editor is disabled in production', /NODE_ENV === 'production'/.test(source));
 check('editor requires a direct loopback request', /!isLoopback\(req\)/.test(source));
+check('filesystem failures return a generic error instead of raw paths',
+    /Could not save local environment settings/.test(source)
+    && !/return res\.status\(400\)\.json\(\{ error: err\.message \}\)/.test(source));
 
 try { fs.unlinkSync(file); } catch { /* cleanup */ }
 console.log(fails === 0 ? '\nAll local setup checks passed.\n' : `\n${fails} CHECK(S) FAILED.\n`);

@@ -1,5 +1,5 @@
 const { MessageFlags } = require('discord.js');
-const { checkDJPerms } = require('./discord');
+const { checkDJPerms, safeCommandError } = require('./discord');
 const logger = require('../lib/logger');
 
 async function handleMusicButton(i, player, db) {
@@ -42,8 +42,13 @@ async function handleMusicButton(i, player, db) {
                 break;
         }
     } catch (err) {
-        logger.error('Music btn error', { error: err.message });
-        await i.reply({ content: `Error: ${err.message}`, flags: [MessageFlags.Ephemeral] }).catch(() => { });
+        logger.error('Music button action failed', {
+            code: typeof err?.code === 'number' ? `DISCORD_${err.code}` : 'MUSIC_BUTTON_FAILED',
+        });
+        await i.reply({
+            content: `Error: ${safeCommandError(err, 'That music action could not be completed.')}`,
+            flags: [MessageFlags.Ephemeral],
+        }).catch(() => { });
     }
 }
 
@@ -63,8 +68,12 @@ async function handleMusicFilterSelect(i, player, db) {
         queue.filters.ffmpeg.toggle([selection]);
         await i.editReply({ content: `Filter ${selection} toggled!` });
     } catch (err) {
-        logger.error('Filter error', { error: err.message });
-        await i.editReply({ content: `Failed: ${err.message}` });
+        logger.error('Music filter action failed', {
+            code: typeof err?.code === 'number' ? `DISCORD_${err.code}` : 'MUSIC_FILTER_FAILED',
+        });
+        await i.editReply({
+            content: `Failed: ${safeCommandError(err, 'That audio filter could not be applied.')}`,
+        });
     }
 }
 

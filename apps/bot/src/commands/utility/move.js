@@ -1,3 +1,4 @@
+const safeCommandError = require('eb-bot-shared/utils/discord').safeCommandError;
 const { SlashCommandBuilder, PermissionFlagsBits, ChannelType, EmbedBuilder, MessageFlags } = require('discord.js');
 
 module.exports = {
@@ -22,7 +23,7 @@ module.exports = {
                 .setDescription(`➡️ Moved ${member} to ${channel}.`);
             await client.helpers.safeReply(interaction, { embeds: [embed] });
         } catch (err) {
-            await client.helpers.safeReply(interaction, { content: `❌ ${err.message}`, flags: [MessageFlags.Ephemeral] });
+            await client.helpers.safeReply(interaction, { content: `❌ ${safeCommandError(err)}`, flags: [MessageFlags.Ephemeral] });
         }
     }
 };

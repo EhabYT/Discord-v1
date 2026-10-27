@@ -377,10 +377,12 @@ function guard(handler, options = {}) {
             return await handler(interaction, client, db);
         } catch (err) {
             const errorId = require('crypto').randomBytes(5).toString('hex');
+            const errorCode = typeof err?.code === 'number' && Number.isInteger(err.code)
+                ? `DISCORD_${err.code}`
+                : 'COMMAND_FAILED';
             logger.error(`Command error: /${interaction.commandName}`, {
                 errorId,
-                error: err.message,
-                stack: err.stack,
+                errorCode,
                 guildId: guild.id,
                 userId: user.id,
             });
@@ -394,7 +396,7 @@ function guard(handler, options = {}) {
                         `bot.command.${interaction.commandName}.failed`,
                         guild.id,
                         'error',
-                        { userId: user.id, error: err.message }
+                        { userId: user.id, errorCode }
                     );
                 } catch { /* audit must never fail */ }
             }

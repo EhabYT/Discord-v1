@@ -1,3 +1,4 @@
+const safeCommandError = require('eb-bot-shared/utils/discord').safeCommandError;
 const { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags } = require('discord.js');
 const board = require('eb-bot-shared/services/staff-board');
 
@@ -23,7 +24,7 @@ module.exports = {
             });
             await client.helpers.safeReply(interaction, { content: `✅ Posted in ${channel}.`, flags: [MessageFlags.Ephemeral] });
         } catch (err) {
-            await client.helpers.safeReply(interaction, { content: err.message || 'Could not post.', flags: [MessageFlags.Ephemeral] });
+            await client.helpers.safeReply(interaction, { content: safeCommandError(err, 'Could not post.'), flags: [MessageFlags.Ephemeral] });
         }
     },
 };

@@ -214,6 +214,16 @@ class AccountStore {
         return safeAccount(result.rows[0]);
     }
 
+    async byGoogleId(googleId, executor = this.pool) {
+        const result = await executor.query(`
+            SELECT a.id, a.status
+            FROM accounts a
+            JOIN account_identities i ON i.account_id = a.id
+            WHERE i.provider = 'google' AND i.provider_user_id = $1
+        `, [String(googleId)]);
+        return result.rows[0] || null;
+    }
+
     async byId(accountId, executor = this.pool) {
         const result = await executor.query(`
             SELECT a.*, EXISTS(SELECT 1 FROM account_mfa_totp m WHERE m.account_id = a.id) AS mfa_enabled,
@@ -644,6 +654,149 @@ class AccountStore {
         `, [identifier]);
         const row = result.rows[0];
         return row ? { account: safeAccount(row), passwordHash: row.password_hash } : null;
+    }
+
+    async ensureGoogleAccount(googleUser, requestId = null) {
+        await this.ready();
+        const googleId = String(googleUser?.id || '').trim();
+        const email = String(googleUser?.email || '').trim().toLowerCase();
+        if (!googleId || googleId.length > 255 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+            || googleUser?.emailVerified !== true) {
+            const error = new Error('A verified Google identity and email are required');
+            error.code = 'GOOGLE_IDENTITY_INVALID';
+            throw error;
+        }
+
+        const client = await this.pool.connect();
+        try {
+            await client.query('BEGIN');
+            const lockKeys = [`account:email:${email}`, `account:google:${googleId}`].sort();
+            for (const key of lockKeys) {
+                await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [key]);
+            }
+
+            const existingIdentity = await client.query(`
+                SELECT a.id, a.status
+                FROM accounts a
+                JOIN account_identities i ON i.account_id = a.id
+                WHERE i.provider = 'google' AND i.provider_user_id = $1
+                FOR UPDATE OF a
+            `, [googleId]);
+            let accountId = existingIdentity.rows[0]?.id;
+            if (existingIdentity.rows[0] && existingIdentity.rows[0].status !== 'active') {
+                const error = new Error('Account is not active'); error.code = 'ACCOUNT_INACTIVE'; throw error;
+            }
+
+            if (accountId) {
+                await client.query(`
+                    UPDATE account_identities
+                    SET provider_username = $1, provider_avatar_url = $2, updated_at = NOW()
+                    WHERE provider = 'google' AND provider_user_id = $3
+                `, [String(googleUser.username || '').slice(0, 255) || null,
+                    googleUser.avatar || null, googleId]);
+            } else {
+                const existingEmail = await client.query(`
+                    SELECT id, status FROM accounts WHERE LOWER(email) = LOWER($1) FOR UPDATE
+                `, [email]);
+                if (existingEmail.rows[0]) {
+                    if (existingEmail.rows[0].status !== 'active') {
+                        const error = new Error('Account is not active'); error.code = 'ACCOUNT_INACTIVE'; throw error;
+                    }
+                    accountId = existingEmail.rows[0].id;
+                    // Google has asserted this email is verified. This allows a
+                    // verified Google login to safely claim an existing local
+                    // account with the same address without changing its password.
+                    await client.query(`UPDATE accounts SET email_verified_at = COALESCE(email_verified_at, NOW()), updated_at = NOW()
+                        WHERE id = $1`, [accountId]);
+                } else {
+                    accountId = crypto.randomUUID();
+                    const preferred = String(googleUser.username || email.split('@')[0] || 'google_user');
+                    const username = await this.uniqueUsername(client, preferred, googleId);
+                    const displayName = String(googleUser.displayName || googleUser.username || preferred).slice(0, 64) || 'Google User';
+                    await client.query(`
+                        INSERT INTO accounts (id, display_name, username, email, email_verified_at, avatar_url)
+                        VALUES ($1, $2, $3, $4, NOW(), $5)
+                    `, [accountId, displayName, username, email, googleUser.avatar || null]);
+                }
+
+                const accountGoogleIdentity = await client.query(`
+                    SELECT provider_user_id FROM account_identities
+                    WHERE account_id = $1 AND provider = 'google' FOR UPDATE
+                `, [accountId]);
+                if (accountGoogleIdentity.rows[0]
+                    && String(accountGoogleIdentity.rows[0].provider_user_id) !== googleId) {
+                    const error = new Error('Account already has a different Google identity');
+                    error.code = 'GOOGLE_ACCOUNT_ALREADY_LINKED';
+                    throw error;
+                }
+                await client.query(`
+                    INSERT INTO account_identities
+                        (account_id, provider, provider_user_id, provider_username, provider_avatar_url)
+                    VALUES ($1, 'google', $2, $3, $4)
+                `, [accountId, googleId, String(googleUser.username || '').slice(0, 255) || null,
+                    googleUser.avatar || null]);
+                await client.query(`
+                    INSERT INTO account_security_events (id, account_id, event_type, request_id, metadata)
+                    VALUES ($1, $2, 'google_identity_linked', $3, '{}'::jsonb)
+                `, [crypto.randomUUID(), accountId, requestId]);
+            }
+
+            const account = await this.byId(accountId, client);
+            await client.query('COMMIT');
+            return account;
+        } catch (err) {
+            try { await client.query('ROLLBACK'); } catch { /* preserve original */ }
+            throw err;
+        } finally {
+            client.release();
+        }
+    }
+
+    async linkGoogleIdentity(accountId, googleUser, requestId = null) {
+        await this.ready();
+        const googleId = String(googleUser?.id || '').trim();
+        if (!googleId || googleId.length > 255 || googleUser?.emailVerified !== true) {
+            const error = new Error('A verified Google identity is required');
+            error.code = 'GOOGLE_IDENTITY_INVALID';
+            throw error;
+        }
+        const client = await this.pool.connect();
+        try {
+            await client.query('BEGIN');
+            await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`account:google:${googleId}`]);
+            const accountResult = await client.query('SELECT id, status FROM accounts WHERE id = $1 FOR UPDATE', [accountId]);
+            if (!accountResult.rows[0] || accountResult.rows[0].status !== 'active') {
+                const error = new Error('Account is not active'); error.code = 'ACCOUNT_INACTIVE'; throw error;
+            }
+            const accountIdentity = await client.query(`SELECT provider_user_id FROM account_identities
+                WHERE account_id = $1 AND provider = 'google' FOR UPDATE`, [accountId]);
+            if (accountIdentity.rows[0]
+                && String(accountIdentity.rows[0].provider_user_id) !== googleId) {
+                const error = new Error('Account already has a different Google identity');
+                error.code = 'GOOGLE_ACCOUNT_ALREADY_LINKED';
+                throw error;
+            }
+            const existing = await client.query(`SELECT account_id FROM account_identities
+                WHERE provider = 'google' AND provider_user_id = $1 FOR UPDATE`, [googleId]);
+            if (existing.rows[0] && String(existing.rows[0].account_id) !== String(accountId)) {
+                const error = new Error('Google identity is already linked'); error.code = 'GOOGLE_ALREADY_LINKED'; throw error;
+            }
+            await client.query(`INSERT INTO account_identities
+                (account_id, provider, provider_user_id, provider_username, provider_avatar_url)
+                VALUES ($1, 'google', $2, $3, $4)
+                ON CONFLICT (provider, provider_user_id) DO UPDATE SET
+                    provider_username = EXCLUDED.provider_username,
+                    provider_avatar_url = EXCLUDED.provider_avatar_url, updated_at = NOW()`,
+            [accountId, googleId, String(googleUser.username || '').slice(0, 255) || null, googleUser.avatar || null]);
+            await client.query(`INSERT INTO account_security_events (id, account_id, event_type, request_id, metadata)
+                VALUES ($1, $2, 'google_identity_linked', $3, '{}'::jsonb)`, [crypto.randomUUID(), accountId, requestId]);
+            const account = await this.byId(accountId, client);
+            await client.query('COMMIT');
+            return account;
+        } catch (err) {
+            try { await client.query('ROLLBACK'); } catch { /* preserve original */ }
+            throw err;
+        } finally { client.release(); }
     }
 
     async linkDiscordIdentity(accountId, discordUser, requestId = null) {

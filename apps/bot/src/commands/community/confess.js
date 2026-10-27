@@ -1,3 +1,4 @@
+const safeCommandError = require('eb-bot-shared/utils/discord').safeCommandError;
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const confessions = require('eb-bot-shared/services/confessions');
 
@@ -26,7 +27,7 @@ module.exports = {
             });
         } catch (err) {
             return interaction.editReply({
-                content: err.message || 'Could not post confession.',
+                content: safeCommandError(err, 'Could not post confession.'),
                 flags: [MessageFlags.Ephemeral],
             });
         }

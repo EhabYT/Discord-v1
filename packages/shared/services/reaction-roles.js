@@ -8,6 +8,7 @@ const {
 } = require('discord.js');
 const { randomUUID } = require('crypto');
 const logger = require('../lib/logger');
+const { safeCommandError } = require('../utils/discord');
 
 const KEY = (guildId) => `reactionroles_${guildId}`;
 
@@ -140,8 +141,13 @@ async function handleButton(interaction, db) {
         }
         return interaction.reply({ content: 'Nothing to change.', flags: [MessageFlags.Ephemeral] });
     } catch (err) {
-        logger.error('Button role failed', { error: err.message });
-        return interaction.reply({ content: `❌ ${err.message}`, flags: [MessageFlags.Ephemeral] }).catch(() => {});
+        logger.error('Button role action failed', {
+            code: typeof err?.code === 'number' ? `DISCORD_${err.code}` : 'ROLE_BUTTON_FAILED',
+        });
+        return interaction.reply({
+            content: `❌ ${safeCommandError(err, 'That role could not be changed.')}`,
+            flags: [MessageFlags.Ephemeral],
+        }).catch(() => {});
     }
 }
 

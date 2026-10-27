@@ -1,3 +1,4 @@
+const safeCommandError = require('eb-bot-shared/utils/discord').safeCommandError;
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, MessageFlags } = require('discord.js');
 
 module.exports = {
@@ -39,7 +40,7 @@ module.exports = {
             const verify = require('eb-bot-shared/services/verification');
             verify.assertRoleManageable(interaction.guild, role.id);
         } catch (err) {
-            return interaction.reply({ content: `❌ ${err.message}`, flags: [MessageFlags.Ephemeral] });
+            return interaction.reply({ content: `❌ ${safeCommandError(err)}`, flags: [MessageFlags.Ephemeral] });
         }
 
         try {
