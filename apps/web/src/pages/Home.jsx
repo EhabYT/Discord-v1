@@ -61,6 +61,14 @@ function formatUptime(ms) {
 
 export default function Home({ health, auth, onEnter }) {
   const { t } = useI18n();
+  const authError = String(auth?.oauthError || '');
+  const databaseUnavailable = authError.includes('Supabase PostgreSQL is unreachable');
+  const authErrorTitle = databaseUnavailable
+    ? t('home.loginTemporarilyUnavailable', 'Discord login temporarily unavailable')
+    : t('home.loginNotConfigured', 'Discord login is not configured');
+  const authErrorGuidance = databaseUnavailable
+    ? t('home.loginDatabaseHelp', 'Check that the Supabase project is active and Render DATABASE_URL uses its Session Pooler URI.')
+    : t('home.loginConfigHelp', 'Update the Render environment and redeploy.');
   const online = !!health?.botOnline;
   // Open Dashboard checks authentication first: signed-in users enter
   // directly, everyone else goes to /login with the requested page preserved
@@ -134,8 +142,8 @@ export default function Home({ health, auth, onEnter }) {
           <div className="cyber-warning text-sm">
             <AlertTriangle size={17} className="text-amber-300 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold text-amber-100">Discord login is not configured</p>
-              <p className="text-xs text-amber-200/70 mt-0.5">{auth.oauthError} Update the Render environment and redeploy.</p>
+              <p className="font-semibold text-amber-100">{authErrorTitle}</p>
+              <p className="text-xs text-amber-200/70 mt-0.5">{authError} {authErrorGuidance}</p>
             </div>
           </div>
         </div>
