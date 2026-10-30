@@ -1,4 +1,5 @@
-const { Scheduler } = require('../../apps/bot/src/scheduler');
+const { Scheduler } = require('../../packages/shared/services/scheduler');
+const { registerJobs } = require('../../packages/shared/services/scheduler-jobs');
 
 let fails = 0;
 const check = (label, ok) => {
@@ -33,6 +34,16 @@ const check = (label, ok) => {
     const failed = scheduler.listJobs().find((job) => job.name === 'failing-job');
     check('repeated failures stop the job', failed.status === 'stopped' && failed.errorCount === scheduler.maxErrors);
     check('stopped job can be explicitly resumed', scheduler.resumeJob('failing-job') === true);
+
+    const scheduledJobs = new Map();
+    let cleanupRuns = 0;
+    registerJobs(
+        { db: {} },
+        { addJob: (name, intervalMs, callback) => scheduledJobs.set(name, callback) },
+        { cleanupTrackingMaps: () => { cleanupRuns++; } },
+    );
+    scheduledJobs.get('map-cleanup')();
+    check('shared map-cleanup job calls the injected bot cleanup hook', cleanupRuns === 1);
 
     scheduler.removeAll();
     check('shutdown removes every job and timer', scheduler.listJobs().length === 0 && scheduler.jobs.size === 0);

@@ -1,4 +1,4 @@
-const logger = require('eb-bot-shared/lib/logger');
+const logger = require('../lib/logger');
 
 class Scheduler {
   constructor() {

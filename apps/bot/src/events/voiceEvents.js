@@ -5,7 +5,7 @@ const config = require('eb-bot-shared/config/bot-config').config;
 const voiceJoinTimes = new Map();
 
 function emitLog(guildId, event) {
-    try { require('eb-bot-api/websocket/socket').emitLog(guildId, event); } catch (e) {}
+    try { require('eb-bot-api/src/websocket/socket').emitLog(guildId, event); } catch (e) {}
 }
 
 module.exports = {

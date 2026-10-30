@@ -3,7 +3,7 @@ const config = require('eb-bot-shared/config/bot-config').config;
 const logger = require('eb-bot-shared/lib/logger');
 
 function emitLog(guildId, event) {
-    try { require('eb-bot-api/websocket/socket').emitLog(guildId, event); } catch (e) {}
+    try { require('eb-bot-api/src/websocket/socket').emitLog(guildId, event); } catch (e) {}
 }
 
 // Anti-raid: track recent join timestamps per guild

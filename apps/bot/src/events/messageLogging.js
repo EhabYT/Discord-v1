@@ -19,7 +19,7 @@ module.exports = [
             const cfg = await db.get(`logging_${message.guild.id}`) || {};
 
             try {
-                const { emitLog } = require('eb-bot-api/websocket/socket');
+                const { emitLog } = require('eb-bot-api/src/websocket/socket');
                 emitLog(message.guild.id, {
                     type: 'message_delete',
                     category: 'messages',
@@ -65,7 +65,7 @@ module.exports = [
             const cfg = await db.get(`logging_${oldMsg.guild.id}`) || {};
 
             try {
-                const { emitLog } = require('eb-bot-api/websocket/socket');
+                const { emitLog } = require('eb-bot-api/src/websocket/socket');
                 emitLog(oldMsg.guild.id, {
                     type: 'message_edit',
                     category: 'messages',

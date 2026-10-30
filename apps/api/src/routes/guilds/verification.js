@@ -1,4 +1,5 @@
 const { db } = require('eb-bot-database');
+const { emitLog } = require('../../websocket/socket');
 
 // Verification routes extracted from the monolithic guilds router (second
 // extraction after the staff board). Registered inline at the exact position
@@ -120,7 +121,7 @@ function registerVerificationRoutes(router, { requirePerm, rl, hierarchyError })
             if (!member) return res.status(404).json({ error: 'Member not found' });
             const actor = req.session?.user?.username || 'Dashboard';
             try {
-                const entry = await verify.applyVerification(member, cfg, { db, method: 'staff', actor });
+                const entry = await verify.applyVerification(member, cfg, { db, method: 'staff', actor, emitLog });
                 res.json({ success: true, entry });
             } catch (err) {
                 if (err.code === 'HIERARCHY' || err.code === 'MANAGED_ROLE' || err.code === 'EVERYONE' || err.code === 'NO_PERMS') {

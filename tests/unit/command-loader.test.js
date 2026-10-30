@@ -88,7 +88,6 @@ const dashFiles = [
     'apps/api/src/routes/stats.js',
     'apps/api/src/routes/permissions.js',
     'apps/api/src/middleware/permissions.js',
-    'apps/bot/src/scheduler.js',
     'packages/shared/lib/logger.js',
 ];
 for (const f of dashFiles) {

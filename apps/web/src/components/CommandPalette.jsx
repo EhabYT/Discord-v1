@@ -11,6 +11,8 @@ export default function CommandPalette({ open, onClose, onNavigate, permLevel = 
   const [active, setActive] = useState(0);
   const inputRef = useRef(null);
   const listRef = useRef(null);
+  const dialogRef = useRef(null);
+  const previousFocusRef = useRef(null);
   const recents = useMemo(() => (open ? readRecentPages() : []), [open]);
   const canSeeDeveloper = developerAccess.baseRole !== 'NONE'
     || developerAccess.role !== 'NONE'
@@ -75,11 +77,24 @@ export default function CommandPalette({ open, onClose, onNavigate, permLevel = 
   const ordered = useMemo(() => sections.flatMap((s) => s.items), [sections]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      const target = previousFocusRef.current;
+      previousFocusRef.current = null;
+      if (target?.isConnected && target !== document.body) target.focus();
+      else if (target) document.getElementById('main')?.focus();
+      return undefined;
+    }
+
+    previousFocusRef.current = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     setQuery('');
     setActive(0);
-    const t = setTimeout(() => inputRef.current?.focus(), 20);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => inputRef.current?.focus(), 20);
+    return () => {
+      clearTimeout(timer);
+      document.body.style.overflow = previousOverflow;
+    };
   }, [open]);
 
   useEffect(() => { setActive(0); }, [query]);
@@ -104,6 +119,18 @@ export default function CommandPalette({ open, onClose, onNavigate, permLevel = 
     if (!open) return;
     const onKey = (e) => {
       if (e.key === 'Escape') { e.preventDefault(); onClose(); }
+      if (e.key === 'Tab') {
+        const items = Array.from(dialogRef.current?.querySelectorAll(
+          'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        ) || []).filter((el) => el.getClientRects().length > 0);
+        if (!items.length) { e.preventDefault(); inputRef.current?.focus(); return; }
+        if (e.shiftKey && document.activeElement === items[0]) {
+          e.preventDefault(); items.at(-1).focus();
+        } else if (!e.shiftKey && document.activeElement === items.at(-1)) {
+          e.preventDefault(); items[0].focus();
+        }
+        return;
+      }
       if (e.key === 'ArrowDown') { e.preventDefault(); setActive((i) => Math.min(ordered.length - 1, i + 1)); }
       if (e.key === 'ArrowUp') { e.preventDefault(); setActive((i) => Math.max(0, i - 1)); }
       if (e.key === 'Enter' && ordered[active]) {
@@ -123,6 +150,7 @@ export default function CommandPalette({ open, onClose, onNavigate, permLevel = 
     <div className="fixed inset-0 z-[80] flex items-start justify-center px-4 pt-[10vh] sm:pt-[12vh]">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-md animate-fade-in" onClick={onClose} />
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label="Command palette"
@@ -139,6 +167,11 @@ export default function CommandPalette({ open, onClose, onNavigate, permLevel = 
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('pal.placeholder', 'Jump to a page, group, or action…  (try “dev log”)')}
             aria-label={t('common.search', 'Search')}
+            role="combobox"
+            aria-expanded="true"
+            aria-controls="command-palette-results"
+            aria-activedescendant={ordered[active] ? `palette-option-${active}` : undefined}
+            autoComplete="off"
             className="flex-1 bg-transparent text-sm text-white placeholder:text-zinc-500 outline-none min-w-0"
           />
           {query ? (
@@ -155,7 +188,13 @@ export default function CommandPalette({ open, onClose, onNavigate, permLevel = 
           )}
         </div>
 
-        <div ref={listRef} className="max-h-[54vh] overflow-y-auto p-2.5 space-y-3">
+        <div
+          ref={listRef}
+          id="command-palette-results"
+          role="listbox"
+          aria-label={t('pal.resultsLabel', 'Search results')}
+          className="max-h-[54vh] overflow-y-auto p-2.5 space-y-3"
+        >
           {ordered.length === 0 ? (
             <div className="px-3 py-10 text-center">
               <span className="w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center bg-white/[0.04] border border-white/[0.07]">
@@ -168,8 +207,8 @@ export default function CommandPalette({ open, onClose, onNavigate, permLevel = 
             </div>
           ) : (
             sections.map((section) => (
-              <div key={section.key}>
-                <p className="flex items-center gap-1.5 px-2.5 pb-1.5 pt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-400">
+              <div key={section.key} role="group" aria-labelledby={`palette-group-${section.key}`}>
+                <p id={`palette-group-${section.key}`} className="flex items-center gap-1.5 px-2.5 pb-1.5 pt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-400">
                   {section.icon && <section.icon size={10} />}
                   {section.title}
                   <span className="ml-auto text-[9px] tabular-nums text-zinc-500 bg-white/[0.04] border border-white/[0.06] rounded-md px-1.5 py-0.5">
@@ -187,6 +226,11 @@ export default function CommandPalette({ open, onClose, onNavigate, permLevel = 
                     const shortcut = SHORTCUT_BY_ID[item.id];
                     return (
                       <button
+                        type="button"
+                        id={`palette-option-${i}`}
+                        role="option"
+                        aria-selected={isActive}
+                        aria-current={isCurrent ? 'page' : undefined}
                         key={`${item.kind}-${item.id}`}
                         data-active={isActive}
                         onMouseEnter={() => setActive(i)}

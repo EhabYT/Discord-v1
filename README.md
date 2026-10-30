@@ -33,7 +33,7 @@ graph TD
     Client[Discord Guild / User] -->|Commands / Events| Bot[Discord.js Bot apps/bot/src/index.js]
     Bot -->|Reads / Writes| PG[(Supabase PostgreSQL bot_kv)]
     Bot -->|Loads Rules| Config[packages/config/bot.json + packages/shared/config/bot-config.js]
-    Bot -->|Triggers| Sched[Scheduler apps/bot/src/scheduler.js]
+    Bot -->|Uses| Sched[Shared Scheduler packages/shared/services/scheduler.js]
     Sched -->|timed-bans/giveaways/reminders/polls/birthdays| PG
     Sched -->|backup job every 6h| BackupMod[packages/shared/services/backup.js]
     BackupMod -->|writes JSON| Disk[(backups/ directory)]
@@ -141,7 +141,7 @@ npm start              # إنتاج: بوت + API + لوحة تحكم مبنية
 npm run dev            # تطوير: بوت + لوحة تحكم (nodemon, :3000) + Vite HMR على :5173
 npm run dev:bot        # بوت فقط (nodemon)
 npm run dev:api        # API فقط بدون عميل ديسكورد (nodemon) — ‎/api/guilds‎ يرد 503
-npm run dev:all        # بوت + API مستقلة + Vite (لوحة البوت تنتقل إلى :3001)
+npm run dev:all        # تشغيل كامل: بوت (ويضم API على :3000) + Vite على :5173
 npm run dev:web        # Vite HMR فقط
 npm run build:web      # إعادة بناء apps/web/public
 ```

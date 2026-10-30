@@ -3,7 +3,7 @@ const { finalizeGiveaway } = require('./giveaways');
 const { withKeyLock } = require('eb-bot-database/lock');
 const { scheduledBackup } = require('./backup');
 
-function registerJobs(client, scheduler) {
+function registerJobs(client, scheduler, { cleanupTrackingMaps = null } = {}) {
     const db = client.db;
 
     // Skip a tick only while the database is actually unreachable. With the
@@ -197,19 +197,11 @@ function registerJobs(client, scheduler) {
         }
     }));
 
-    // Performance jobs: Cleanup Maps
+    // The bot owns event-specific Maps; receive their cleanup hook from the
+    // caller instead of making this shared package import the bot workspace.
     scheduler.addJob('map-cleanup', 3600000, () => {
         try {
-            const voiceEvents = require('eb-bot/src/events/voiceEvents');
-            if (voiceEvents && typeof voiceEvents.cleanup === 'function') {
-                voiceEvents.cleanup();
-            }
-
-            const messageCreate = require('eb-bot/src/events/messageCreate');
-            if (messageCreate && typeof messageCreate.cleanup === 'function') {
-                messageCreate.cleanup();
-            }
-
+            cleanupTrackingMaps?.();
             logger.debug('Scheduled cleanup of tracking Maps completed');
         } catch (err) {
             logger.error('Cleanup job error', { error: err.message });

@@ -3,7 +3,8 @@ import AuthLayout from '../auth/AuthLayout.jsx';
 import PasswordField, { PasswordStrength } from '../auth/PasswordField.jsx';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { useI18n } from '../i18n.jsx';
-import { readReturnParam, sanitizeReturn, applyReturn, rememberReturn, clearReturn } from '../lib/returnUrl.js';
+import { readReturnParam, sanitizeReturn, applyReturn, clearReturn } from '../lib/returnUrl.js';
+import OAuthButtons from '../auth/OAuthButtons.jsx';
 
 export default function Register() {
   const { t } = useI18n();
@@ -31,21 +32,13 @@ export default function Register() {
     <AuthLayout eyebrow={t('auth.regEyebrow', 'Create account')} title={t('auth.regTitle', 'Join EB Dashboard')} description={t('auth.regDesc', 'Create an unverified EB account now. Email verification will be required before sensitive account recovery is available.')} footer={<>{t('auth.regFooterPre', 'Already registered?')} <a href="/login" className="text-cyan-300 hover:text-cyan-200">{t('auth.regFooterLink', 'Sign in')}</a></>}>
       <form onSubmit={submit} className="space-y-4">
         {error && <div className="cyber-warning text-sm text-amber-200" role="alert">{error}</div>}
+        <OAuthButtons auth={auth} returnParam={rawReturn} mode="signup" />
         <label className="block"><span className="cyber-label">{t('auth.displayName', 'Display name')}</span><input required maxLength={64} autoComplete="name" value={form.displayName} onChange={update('displayName')} className="cyber-input mt-1.5" /></label>
         <label className="block"><span className="cyber-label">{t('auth.username', 'Username')}</span><input required minLength={3} maxLength={24} pattern="[A-Za-z][A-Za-z0-9_]{2,23}" autoComplete="username" value={form.username} onChange={update('username')} className="cyber-input mt-1.5" /><span className="text-[11px] text-zinc-500 mt-1 block">{t('auth.usernameHint', '3–24 letters, numbers, or underscores; start with a letter.')}</span></label>
         <label className="block"><span className="cyber-label">{t('auth.email', 'Email')}</span><input type="email" required maxLength={254} autoComplete="email" value={form.email} onChange={update('email')} className="cyber-input mt-1.5" /></label>
         <div><PasswordField label={t('auth.password', 'Password')} required minLength={15} maxLength={128} autoComplete="new-password" value={form.password} onChange={update('password')} /><PasswordStrength password={form.password} /></div>
         <PasswordField label={t('auth.confirmPassword', 'Confirm password')} required minLength={15} maxLength={128} autoComplete="new-password" value={form.confirmPassword} onChange={update('confirmPassword')} />
         <button disabled={busy} className="cyber-button-solid w-full">{busy ? t('auth.creating', 'Creating account…') : t('auth.createAccount', 'Create account')}</button>
-        {(auth.oauthEnabled || auth.googleOAuthEnabled) && (
-          <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.14em] text-zinc-500" aria-hidden="true"><span className="h-px flex-1 bg-white/10" />{t('auth.or', 'or')}<span className="h-px flex-1 bg-white/10" /></div>
-        )}
-        {auth.oauthEnabled && (
-          <a href="/api/auth/discord" onClick={() => rememberReturn(rawReturn)} className="cyber-button w-full flex justify-center">{t('auth.signupDiscord', 'Sign up with Discord')}</a>
-        )}
-        {auth.googleOAuthEnabled && (
-          <a href="/api/auth/google" onClick={() => rememberReturn(rawReturn)} className="cyber-button w-full flex justify-center">{t('auth.signupGoogle', 'Sign up with Google')}</a>
-        )}
       </form>
     </AuthLayout>
   );

@@ -4,6 +4,7 @@ import clsx from 'clsx';
 import { LEVEL_LABELS, LEVEL_COLORS, NAV, GROUP_ORDER, SHORTCUT_BY_ID, isNavItemVisible, visibleNavNodes } from '../nav.js';
 import { readRecentPages } from '../lib/clipboard.js';
 import { useI18n } from '../i18n.jsx';
+import { SEARCH_SHORTCUT } from '../lib/shortcuts.js';
 
 function readCollapsedGroups() {
   try {
@@ -16,14 +17,23 @@ export default function Sidebar({
   page, setPage, guilds, guildsLoading = false, guildsError = '', onRetryGuilds,
   selectedGuild, setSelectedGuild, me, account,
   permLevel = 0, auth = {}, developerAccess = {}, mobileOpen, setMobileOpen, collapsed, onToggleCollapsed,
+  guildPickerOpen, onGuildPickerOpenChange,
 }) {
   const { t } = useI18n();
-  const [guildOpen, setGuildOpen] = useState(false);
+  const [localGuildOpen, setLocalGuildOpen] = useState(false);
+  const guildOpen = guildPickerOpen ?? localGuildOpen;
+  const setGuildOpen = onGuildPickerOpenChange || setLocalGuildOpen;
+  const guildOpenRef = useRef(guildOpen);
+  guildOpenRef.current = guildOpen;
   const [guildQuery, setGuildQuery] = useState('');
   const [collapsedGroups, setCollapsedGroups] = useState(readCollapsedGroups);
   const [recents, setRecents] = useState([]);
   const guildPopRef = useRef(null);
+  const guildTriggerRef = useRef(null);
+  const guildSearchRef = useRef(null);
   const navRef = useRef(null);
+  const mobilePanelRef = useRef(null);
+  const mobileTriggerRef = useRef(null);
   const canSeeDeveloper = developerAccess.baseRole !== 'NONE'
     || developerAccess.role !== 'NONE'
     || developerAccess.canUnlock === true;
@@ -36,6 +46,61 @@ export default function Sidebar({
     () => ({ permLevel, canSeeDeveloper, canSeeMusicDesk }),
     [permLevel, canSeeDeveloper, canSeeMusicDesk]
   );
+
+  // Treat the mobile navigation as a real modal drawer: keep keyboard focus
+  // inside it, prevent the page behind it from scrolling, and return focus to
+  // the menu trigger when it closes.
+  useEffect(() => {
+    if (!mobileOpen) return undefined;
+    const panel = mobilePanelRef.current;
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const getFocusable = () => Array.from(panel?.querySelectorAll(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    ) || []).filter((el) => el.getClientRects().length > 0);
+    const first = getFocusable()[0];
+    (first || panel)?.focus();
+
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        if (guildOpenRef.current) {
+          event.stopPropagation();
+          setGuildOpen(false);
+          setGuildQuery('');
+          requestAnimationFrame(() => guildTriggerRef.current?.focus());
+          return;
+        }
+        setMobileOpen(false);
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const items = getFocusable();
+      if (!items.length) {
+        event.preventDefault();
+        panel?.focus();
+        return;
+      }
+      const firstItem = items[0];
+      const lastItem = items[items.length - 1];
+      if (event.shiftKey && (document.activeElement === firstItem || !panel?.contains(document.activeElement))) {
+        event.preventDefault();
+        lastItem.focus();
+      } else if (!event.shiftKey && (document.activeElement === lastItem || !panel?.contains(document.activeElement))) {
+        event.preventDefault();
+        firstItem.focus();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = previousOverflow;
+      if (previousFocus?.isConnected && previousFocus !== document.body) previousFocus.focus();
+      else if (mobileTriggerRef.current?.getClientRects().length) mobileTriggerRef.current.focus();
+    };
+  }, [mobileOpen, setMobileOpen]);
 
   const filteredGuilds = useMemo(() => {
     const q = guildQuery.trim().toLowerCase();
@@ -85,10 +150,26 @@ export default function Sidebar({
     return () => el.removeEventListener('scroll', onScroll);
   }, [mobileOpen, collapsed]);
 
+  // Autofocus the picker search for keyboard/mouse users, but not touch users
+  // (where opening the keyboard would obscure the server list).
+  useEffect(() => {
+    if (!guildOpen || !window.matchMedia?.('(pointer: fine)').matches) return undefined;
+    const frame = requestAnimationFrame(() => guildSearchRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [guildOpen]);
+
   // Close the guild popover on Escape / outside click.
   useEffect(() => {
     if (!guildOpen) return;
-    const onKey = (e) => { if (e.key === 'Escape') { setGuildOpen(false); setGuildQuery(''); } };
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        setGuildOpen(false);
+        setGuildQuery('');
+        requestAnimationFrame(() => guildTriggerRef.current?.focus());
+      }
+    };
     const onPointer = (e) => {
       if (guildPopRef.current && !guildPopRef.current.contains(e.target)) {
         setGuildOpen(false);
@@ -113,177 +194,187 @@ export default function Sidebar({
     setGuildOpen(false);
   };
 
-  const GuildButton = ({ compact }) => (
-    <div className="relative" ref={guildPopRef}>
-      <button
-        onClick={() => setGuildOpen(!guildOpen)}
-        title={selectedGuild?.name || t('side.selectServer', 'Select server')}
-        aria-expanded={guildOpen}
-        aria-haspopup="listbox"
-        className={clsx(
-          'w-full flex items-center rounded-2xl border transition-all duration-200',
-          'bg-gradient-to-b from-white/[0.06] to-white/[0.02] border-white/[0.08] hover:border-cyan-300/30 hover:shadow-[0_0_24px_rgba(34,211,238,0.1)]',
-          compact ? 'justify-center p-2' : 'gap-2.5 px-3 py-2.5'
-        )}
-      >
-        {selectedGuild?.icon
-          ? <img src={selectedGuild.icon} alt="" className="w-7 h-7 rounded-full ring-1 ring-white/15" />
-          : <div className="w-7 h-7 rounded-full bg-gradient-to-br from-cyan-400/30 to-indigo-400/30 border border-cyan-300/20 flex items-center justify-center text-xs text-cyan-200 font-bold">
-              {selectedGuild?.name?.[0] || '?'}
-            </div>
-        }
-        {!compact && (
-          <>
-            <span className="min-w-0 flex-1 text-left">
-              <span className="block text-xs text-zinc-100 truncate font-semibold leading-tight">
-                {selectedGuild?.name || t('side.selectServer', 'Select server')}
-              </span>
-              <span className="block text-[10px] text-zinc-500 truncate">
-                {guildsLoading
-                  ? t('side.loadingServers', 'Loading servers…')
-                  : guildsError
-                    ? t('side.serversFailed', 'Couldn’t load servers')
-                    : guilds.length > 0
-                      ? `${guilds.length} ${guilds.length === 1 ? t('side.server', 'server') : t('side.servers', 'servers')}`
-                      : t('side.noServers', 'No servers yet')}
-              </span>
-            </span>
-            <ChevronDown size={14} className={clsx('text-zinc-500 transition-transform duration-200', guildOpen && 'rotate-180')} />
-          </>
-        )}
-      </button>
-      {guildOpen && (
-        <div
-          role="listbox"
-          aria-label={t('side.selectServer', 'Select server')}
+  // Keep these as render helpers, not nested component types: Sidebar updates
+  // while typing/searching, and remounting the tree would lose focus and scroll.
+  const renderGuildButton = (compact, context) => {
+    const pickerId = `guild-picker-${context}-${compact ? 'compact' : 'full'}`;
+    return (
+      <div className="relative" ref={guildPopRef}>
+        <button
+          ref={guildTriggerRef}
+          onClick={() => setGuildOpen(!guildOpen)}
+          type="button"
+          title={selectedGuild?.name || t('side.selectServer', 'Select server')}
+          aria-expanded={guildOpen}
+          aria-haspopup="dialog"
+          aria-controls={pickerId}
           className={clsx(
-            'glass-popover overflow-hidden z-50 animate-palette-in',
-            compact ? 'absolute start-16 top-0 w-72' : 'absolute inset-x-0 top-full mt-2 z-50'
+            'w-full flex items-center rounded-2xl border transition-all duration-200',
+            'bg-gradient-to-b from-white/[0.06] to-white/[0.02] border-white/[0.08] hover:border-cyan-300/30 hover:shadow-[0_0_24px_rgba(34,211,238,0.1)]',
+            compact ? 'justify-center p-2' : 'gap-2.5 px-3 py-2.5'
           )}
         >
-          <div className="p-2 border-b border-white/[0.06]">
-            <div className="relative">
-              <Search size={12} className="absolute start-2.5 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
-              <input
-                ref={(el) => {
-                  // Autofocus only on precise pointers: on touch devices it
-                  // pops the keyboard and covers the server list (bad UX).
-                  if (el && window.matchMedia?.('(pointer: fine)').matches) el.focus();
-                }}
-                value={guildQuery}
-                onChange={(e) => setGuildQuery(e.target.value)}
-                placeholder={t('side.findServer', 'Find a server… (name or id)')}
-                aria-label={t('side.findServer', 'Find a server… (name or id)')}
-                className="cyber-input ps-7 py-2 min-h-[40px] text-xs"
-              />
+          {selectedGuild?.icon
+            ? <img src={selectedGuild.icon} alt="" className="w-7 h-7 rounded-full ring-1 ring-white/15" />
+            : <div className="w-7 h-7 rounded-full bg-gradient-to-br from-cyan-400/30 to-indigo-400/30 border border-cyan-300/20 flex items-center justify-center text-xs text-cyan-200 font-bold">
+                {selectedGuild?.name?.[0] || '?'}
+              </div>
+          }
+          {!compact && (
+            <>
+              <span className="min-w-0 flex-1 text-left">
+                <span className="block text-xs text-zinc-100 truncate font-semibold leading-tight">
+                  {selectedGuild?.name || t('side.selectServer', 'Select server')}
+                </span>
+                <span className="block text-[10px] text-zinc-500 truncate">
+                  {guildsLoading
+                    ? t('side.loadingServers', 'Loading servers…')
+                    : guildsError
+                      ? t('side.serversFailed', 'Couldn’t load servers')
+                      : guilds.length > 0
+                        ? `${guilds.length} ${guilds.length === 1 ? t('side.server', 'server') : t('side.servers', 'servers')}`
+                        : t('side.noServers', 'No servers yet')}
+                </span>
+              </span>
+              <ChevronDown size={14} className={clsx('text-zinc-500 transition-transform duration-200', guildOpen && 'rotate-180')} />
+            </>
+          )}
+        </button>
+        {guildOpen && (
+          <div
+            id={pickerId}
+            role="dialog"
+            aria-modal="false"
+            aria-label={t('side.selectServer', 'Select server')}
+            className={clsx(
+              'glass-popover overflow-hidden z-50 animate-palette-in',
+              compact ? 'absolute start-16 top-0 w-72' : 'absolute inset-x-0 top-full mt-2 z-50'
+            )}
+          >
+            <div className="p-2 border-b border-white/[0.06]">
+              <div className="relative">
+                <Search size={12} className="absolute start-2.5 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+                <input
+                  ref={guildSearchRef}
+                  value={guildQuery}
+                  onChange={(e) => setGuildQuery(e.target.value)}
+                  placeholder={t('side.findServer', 'Find a server… (name or id)')}
+                  aria-label={t('side.findServer', 'Find a server… (name or id)')}
+                  className="cyber-input ps-7 py-2 min-h-[40px] text-xs"
+                />
+              </div>
             </div>
-          </div>
-          <div className="max-h-64 overflow-y-auto p-1">
-            {guildsLoading ? (
-              <div className="space-y-1 p-1" aria-label={t('side.loadingServers', 'Loading servers…')} role="status">
-                {[0, 1, 2].map((n) => (
-                  <div key={n} className="flex items-center gap-2.5 px-2.5 py-2.5">
-                    <div className="skeleton h-6 w-6 !rounded-full flex-shrink-0" aria-hidden="true" />
-                    <div className="space-y-1.5 flex-1">
-                      <div className="skeleton h-3 w-2/3" aria-hidden="true" />
-                      <div className="skeleton h-2 w-1/3" aria-hidden="true" />
+            <div
+              className="max-h-64 overflow-y-auto p-1"
+              role="group"
+              aria-label={t('side.selectServer', 'Available servers')}
+            >
+              {guildsLoading ? (
+                <div className="space-y-1 p-1" aria-label={t('side.loadingServers', 'Loading servers…')} role="status">
+                  {[0, 1, 2].map((n) => (
+                    <div key={n} className="flex items-center gap-2.5 px-2.5 py-2.5">
+                      <div className="skeleton h-6 w-6 !rounded-full flex-shrink-0" aria-hidden="true" />
+                      <div className="space-y-1.5 flex-1">
+                        <div className="skeleton h-3 w-2/3" aria-hidden="true" />
+                        <div className="skeleton h-2 w-1/3" aria-hidden="true" />
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : guildsError ? (
-              <div className="px-3 py-4 text-center" role="alert">
-                <p className="text-xs text-red-300 leading-relaxed">{guildsError}</p>
-                <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed">
-                  {t('side.serversFailedHint', 'The bot may be starting, or the connection dropped.')}
-                </p>
-                <button
-                  onClick={() => onRetryGuilds?.()}
-                  className="cyber-button-solid inline-flex items-center gap-1.5 mt-3 text-xs px-3 py-1.5"
-                >
-                  <RefreshCw size={12} aria-hidden="true" />
-                  {t('common.retry', 'Retry')}
-                </button>
-              </div>
-            ) : filteredGuilds.length === 0 ? (
-              guilds.length === 0 && !auth?.loggedIn ? (
-                <div className="px-3 py-4 text-center">
-                  <p className="text-xs text-zinc-500 leading-relaxed">
-                    {auth?.oauthEnabled
-                      ? t('shell.loginToSee', 'Sign in with Discord to see the servers you can manage.')
-                      : t('side.oauthUnavailable', 'Discord login is unavailable — the backend has OAuth or its database unconfigured.')}
-                  </p>
-                  {auth?.oauthEnabled && (
-                    <a href="/api/auth/discord" className="cyber-button-solid inline-flex items-center gap-1.5 mt-3 text-xs px-3 py-1.5">
-                      <LogIn size={12} />
-                      {t('common.loginDiscord', 'Login with Discord')}
-                    </a>
-                  )}
+                  ))}
                 </div>
-              ) : auth?.loggedIn && !auth?.discordLinked ? (
-                <div className="px-3 py-4 text-center">
-                  <p className="text-xs text-zinc-300 font-medium">
-                    {t('side.linkDiscordTitle', 'Link Discord to manage servers')}
-                  </p>
+              ) : guildsError ? (
+                <div className="px-3 py-4 text-center" role="alert">
+                  <p className="text-xs text-red-300 leading-relaxed">{guildsError}</p>
                   <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed">
-                    {t('side.linkDiscordHint', 'Your EB account is signed in, but server administration needs a linked Discord identity.')}
-                  </p>
-                  <a href="/api/auth/discord" className="cyber-button-solid inline-flex items-center gap-1.5 mt-3 text-xs px-3 py-1.5">
-                    <LogIn size={12} aria-hidden="true" />
-                    {t('common.loginDiscord', 'Login with Discord')}
-                  </a>
-                </div>
-              ) : guilds.length === 0 ? (
-                <div className="px-3 py-4 text-center">
-                  <p className="text-xs text-zinc-300 font-medium">
-                    {t('side.noSharedServers', 'No shared servers found')}
-                  </p>
-                  <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed">
-                    {t('side.noSharedHint', 'Invite the bot to a server you manage, then try again.')}
+                    {t('side.serversFailedHint', 'The bot may be starting, or the connection dropped.')}
                   </p>
                   <button
                     onClick={() => onRetryGuilds?.()}
-                    className="cyber-button inline-flex items-center gap-1.5 mt-3 text-xs px-3 py-1.5"
+                    className="cyber-button-solid inline-flex items-center gap-1.5 mt-3 text-xs px-3 py-1.5"
                   >
                     <RefreshCw size={12} aria-hidden="true" />
                     {t('common.retry', 'Retry')}
                   </button>
                 </div>
-              ) : (
-                <p className="px-3 py-4 text-xs text-zinc-500 text-center">{t('side.noMatch', 'No servers match')} “{guildQuery}”</p>
-              )
-            ) : filteredGuilds.map((g) => {
-              const selected = selectedGuild?.id === g.id;
-              return (
-                <button
-                  key={g.id}
-                  role="option"
-                  aria-selected={selected}
-                  onClick={() => { setSelectedGuild(g); setGuildOpen(false); setGuildQuery(''); }}
-                  className={clsx(
-                    'w-full flex items-center gap-2.5 px-2.5 py-2.5 min-h-[48px] text-xs rounded-xl transition-all text-left border border-transparent',
-                    selected ? 'text-cyan-200 bg-cyan-400/[0.09] border-cyan-300/20' : 'text-zinc-300 hover:bg-white/[0.05] hover:border-white/[0.06]'
-                  )}
-                >
-                  {g.icon
-                    ? <img src={g.icon} alt="" className="w-6 h-6 rounded-full ring-1 ring-white/10" />
-                    : <div className="w-6 h-6 rounded-full bg-gradient-to-br from-cyan-400/25 to-indigo-400/25 border border-white/10 flex items-center justify-center text-[10px] text-cyan-200 font-bold">{(g.name || '?')[0]}</div>
-                  }
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-semibold">{g.name}</span>
-                    <span className="block text-[10px] text-zinc-500 tabular-nums truncate">{g.id}{g.memberCount ? ` · ${Number(g.memberCount).toLocaleString()} ${t('ov.members', 'members')}` : ''}</span>
-                  </span>
-                  {selected && <Check size={13} className="text-cyan-300 flex-shrink-0" />}
-                </button>
-              );
-            })}
+              ) : filteredGuilds.length === 0 ? (
+                guilds.length === 0 && !auth?.loggedIn ? (
+                  <div className="px-3 py-4 text-center">
+                    <p className="text-xs text-zinc-500 leading-relaxed">
+                      {auth?.oauthEnabled
+                        ? t('shell.loginToSee', 'Sign in with Discord to see the servers you can manage.')
+                        : t('side.oauthUnavailable', 'Discord login is unavailable — the backend has OAuth or its database unconfigured.')}
+                    </p>
+                    {auth?.oauthEnabled && (
+                      <a href="/api/auth/discord" className="cyber-button-solid inline-flex items-center gap-1.5 mt-3 text-xs px-3 py-1.5">
+                        <LogIn size={12} />
+                        {t('common.loginDiscord', 'Login with Discord')}
+                      </a>
+                    )}
+                  </div>
+                ) : auth?.loggedIn && !auth?.discordLinked ? (
+                  <div className="px-3 py-4 text-center">
+                    <p className="text-xs text-zinc-300 font-medium">
+                      {t('side.linkDiscordTitle', 'Link Discord to manage servers')}
+                    </p>
+                    <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed">
+                      {t('side.linkDiscordHint', 'Your EB account is signed in, but server administration needs a linked Discord identity.')}
+                    </p>
+                    <a href="/api/auth/discord" className="cyber-button-solid inline-flex items-center gap-1.5 mt-3 text-xs px-3 py-1.5">
+                      <LogIn size={12} aria-hidden="true" />
+                      {t('common.loginDiscord', 'Login with Discord')}
+                    </a>
+                  </div>
+                ) : guilds.length === 0 ? (
+                  <div className="px-3 py-4 text-center">
+                    <p className="text-xs text-zinc-300 font-medium">
+                      {t('side.noSharedServers', 'No shared servers found')}
+                    </p>
+                    <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed">
+                      {t('side.noSharedHint', 'Invite the bot to a server you manage, then try again.')}
+                    </p>
+                    <button
+                      onClick={() => onRetryGuilds?.()}
+                      className="cyber-button inline-flex items-center gap-1.5 mt-3 text-xs px-3 py-1.5"
+                    >
+                      <RefreshCw size={12} aria-hidden="true" />
+                      {t('common.retry', 'Retry')}
+                    </button>
+                  </div>
+                ) : (
+                  <p className="px-3 py-4 text-xs text-zinc-500 text-center">{t('side.noMatch', 'No servers match')} “{guildQuery}”</p>
+                )
+              ) : filteredGuilds.map((g) => {
+                const selected = selectedGuild?.id === g.id;
+                return (
+                  <button
+                    key={g.id}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => { setSelectedGuild(g); setGuildOpen(false); setGuildQuery(''); setMobileOpen(false); }}
+                    className={clsx(
+                      'w-full flex items-center gap-2.5 px-2.5 py-2.5 min-h-[48px] text-xs rounded-xl transition-all text-left border border-transparent',
+                      selected ? 'text-cyan-200 bg-cyan-400/[0.09] border-cyan-300/20' : 'text-zinc-300 hover:bg-white/[0.05] hover:border-white/[0.06]'
+                    )}
+                  >
+                    {g.icon
+                      ? <img src={g.icon} alt="" className="w-6 h-6 rounded-full ring-1 ring-white/10" />
+                      : <div className="w-6 h-6 rounded-full bg-gradient-to-br from-cyan-400/25 to-indigo-400/25 border border-white/10 flex items-center justify-center text-[10px] text-cyan-200 font-bold">{(g.name || '?')[0]}</div>
+                    }
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-semibold">{g.name}</span>
+                      <span className="block text-[10px] text-zinc-500 tabular-nums truncate">{g.id}{g.memberCount ? ` · ${Number(g.memberCount).toLocaleString()} ${t('ov.members', 'members')}` : ''}</span>
+                    </span>
+                    {selected && <Check size={13} className="text-cyan-300 flex-shrink-0" />}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      )}
-    </div>
-  );
+        )}
+      </div>
+    );
+  };
 
-  const NavItem = ({ id, icon: Icon, label, compact }) => {
+  const renderNavItem = ({ id, icon: Icon, label, compact }) => {
     const isActive = page === id;
     const shortcut = SHORTCUT_BY_ID[id];
     return (
@@ -310,7 +401,7 @@ export default function Sidebar({
     );
   };
 
-  const Content = ({ compact }) => {
+  const renderContent = (compact, context) => {
     const nodes = visibleNavNodes({ compact, ...visibility });
 
     if (compact) {
@@ -326,7 +417,7 @@ export default function Sidebar({
           </div>
 
           <div className="px-2 py-3 border-b border-white/[0.06]">
-            <GuildButton compact />
+            {renderGuildButton(true, context)}
           </div>
 
           <nav ref={navRef} aria-label={t('side.nav', 'Dashboard navigation')} className="flex-1 py-3 space-y-0.5 overflow-y-auto px-2">
@@ -334,7 +425,7 @@ export default function Sidebar({
               if (node.type === 'divider') return <div key={node.key} className="my-2 mx-2 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />;
               if (node.type !== 'page') return null;
               const { id, icon, label, hint } = node.item;
-              return <NavItem key={node.key} id={id} icon={icon} label={label} hint={hint} compact />;
+              return renderNavItem({ id, icon, label, hint, compact: true });
             })}
           </nav>
 
@@ -402,7 +493,7 @@ export default function Sidebar({
         </div>
 
         <div className="px-3 py-3 border-b border-white/[0.06]">
-          <GuildButton compact={false} />
+          {renderGuildButton(false, context)}
         </div>
 
         <nav ref={navRef} aria-label={t('side.nav', 'Dashboard navigation')} className="flex-1 py-2 overflow-y-auto px-3 space-y-1">
@@ -468,9 +559,13 @@ export default function Sidebar({
                     </button>
                     {!isCollapsed && (
                       <div className="space-y-0.5 pb-1 animate-fade-in">
-                        {group.items.map((item) => (
-                          <NavItem key={item.id} id={item.id} icon={item.icon} label={item.label} hint={item.hint} compact={false} />
-                        ))}
+                        {group.items.map((item) => renderNavItem({
+                          id: item.id,
+                          icon: item.icon,
+                          label: item.label,
+                          hint: item.hint,
+                          compact: false,
+                        }))}
                       </div>
                     )}
                   </div>
@@ -526,7 +621,7 @@ export default function Sidebar({
             ) : null}
 
             <p className="hidden md:flex items-center justify-center gap-1.5 text-[10px] text-zinc-500">
-              <kbd className="kbd">⌘K</kbd> {t('side.or', 'or')} <kbd className="kbd">/</kbd> {t('side.toJump', 'to jump')}
+              <kbd className="kbd">{SEARCH_SHORTCUT}</kbd> {t('side.or', 'or')} <kbd className="kbd">/</kbd> {t('side.toJump', 'to jump')}
             </p>
 
             <button
@@ -545,11 +640,15 @@ export default function Sidebar({
   return (
     <>
       <button
+        ref={mobileTriggerRef}
+        type="button"
         onClick={() => setMobileOpen(!mobileOpen)}
-        className="mobile-menu-button md:hidden fixed top-3 left-3 z-50 w-10 h-10 dock-glass rounded-2xl flex items-center justify-center text-cyan-200"
+        className={clsx('mobile-menu-button md:hidden fixed top-3 left-3 z-50 w-10 h-10 dock-glass rounded-2xl flex items-center justify-center text-cyan-200', mobileOpen && 'invisible')}
         aria-label={mobileOpen ? t('side.closeMenu', 'Close menu') : t('side.openMenu', 'Open menu')}
         aria-expanded={mobileOpen}
         aria-controls="mobile-sidebar"
+        aria-hidden={mobileOpen || undefined}
+        tabIndex={mobileOpen ? -1 : 0}
       >
         {mobileOpen ? <X size={18} /> : <Menu size={18} />}
       </button>
@@ -560,20 +659,30 @@ export default function Sidebar({
         collapsed ? 'w-[76px]' : 'w-64'
       )}>
         <div className="absolute inset-y-0 right-0 w-px bg-gradient-to-b from-cyan-300/20 via-transparent to-indigo-400/15 pointer-events-none" />
-        <Content compact={collapsed} />
+        {renderContent(collapsed, 'desktop')}
       </aside>
 
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-40">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-md animate-fade-in" onClick={() => setMobileOpen(false)} />
           <aside
+            ref={mobilePanelRef}
             id="mobile-sidebar"
             role="dialog"
             aria-modal="true"
             aria-label={t('side.nav', 'Dashboard navigation')}
+            tabIndex={-1}
             className="mobile-sidebar-panel relative z-10 w-[19rem] max-w-[86vw] h-full flex flex-col animate-slide-in border-r border-white/10 bg-gradient-to-b from-[#0C121C] to-[#070A0F]"
           >
-            <Content compact={false} />
+            <button
+              type="button"
+              onClick={() => setMobileOpen(false)}
+              aria-label={t('side.closeMenu', 'Close menu')}
+              className="absolute top-3 end-3 z-20 w-10 h-10 rounded-xl border border-white/10 bg-white/[0.05] text-zinc-300 hover:text-white hover:bg-white/[0.1] flex items-center justify-center"
+            >
+              <X size={16} aria-hidden="true" />
+            </button>
+            {renderContent(false, 'mobile')}
           </aside>
         </div>
       )}
