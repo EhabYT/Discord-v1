@@ -11,7 +11,7 @@
  * callers must use that adapter rather than the shared pool-backed instance.
  */
 
-const { db: defaultDb } = require('eb-bot-database');
+const { db: defaultDb } = require('./index');
 
 const chains = new Map();
 

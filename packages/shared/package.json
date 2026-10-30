@@ -9,6 +9,7 @@
   },
   "license": "MIT",
   "dependencies": {
+    "eb-bot-database": "*",
     "@napi-rs/canvas": "^1.0.8",
     "argon2": "0.44.0",
     "axios": "^1.20.0",
@@ -17,6 +18,6 @@
   },
   "scripts": {
     "lint": "eslint .",
-    "test": "node ../../tests/unit/bot-config.test.js && node ../../tests/unit/welcome-vars.test.js && node ../../tests/unit/async-utils.test.js"
+    "test": "node ../../tests/unit/bot-config.test.js && node ../../tests/unit/welcome-vars.test.js && node ../../tests/unit/async-utils.test.js && node ../../tests/unit/verification-logs.test.js"
   }
 }

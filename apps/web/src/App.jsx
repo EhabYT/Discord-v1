@@ -54,7 +54,8 @@ import { useAuth } from './auth/AuthContext.jsx';
 import { PAGE_TITLES, PAGE_HINTS, DOCK_PAGES, SEARCHABLE_PAGES } from './nav.js';
 import { rememberRecentPage } from './lib/clipboard.js';
 import { useI18n } from './i18n.jsx';
-import { Activity, AlertTriangle, CheckCircle2, Search, Wifi, WifiOff, X } from 'lucide-react';
+import { SEARCH_SHORTCUT } from './lib/shortcuts.js';
+import { Activity, AlertTriangle, CheckCircle2, LoaderCircle, RefreshCw, Search, Server, Wifi, WifiOff, X } from 'lucide-react';
 
 const PAGES = {
   overview: Overview,
@@ -400,6 +401,7 @@ export default function App() {
   const [browserOnline, setBrowserOnline] = useState(() => window.navigator.onLine);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [guildPickerOpen, setGuildPickerOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(rememberedCollapsed);
 
   const navigate = useCallback((p) => {
@@ -465,8 +467,8 @@ export default function App() {
         setPaletteOpen((v) => !v);
         return;
       }
-      // ⌘1…⌘6 quick-switch between primary desks (palette stays authoritative
-      // for permission gating: hidden pages are ignored).
+      // Command/Ctrl+1…6 quick-switch between primary desks (palette stays
+      // authoritative for permission gating: hidden pages are ignored).
       if ((e.metaKey || e.ctrlKey) && /^[1-6]$/.test(e.key)) {
         const target = quickIds[Number(e.key) - 1];
         if (target) {
@@ -733,9 +735,11 @@ export default function App() {
             setMobileOpen={setMobileOpen}
             collapsed={collapsed}
             onToggleCollapsed={toggleCollapsed}
+            guildPickerOpen={guildPickerOpen}
+            onGuildPickerOpenChange={setGuildPickerOpen}
           />
           <div className="flex-1 min-w-0 flex flex-col">
-            <header className="min-h-16 flex-shrink-0 pl-14 md:pl-5 pr-3 sm:pr-5 py-2 glass-header flex items-center justify-between gap-3">
+            <header className="relative z-30 min-h-16 flex-shrink-0 ps-14 md:ps-5 pe-3 sm:pe-5 py-2 glass-header flex items-center justify-between gap-3">
               <div className="min-w-0 flex items-center gap-3 flex-1">
                 {selectedGuild ? (
                   selectedGuild.icon
@@ -765,18 +769,18 @@ export default function App() {
                 <button
                   onClick={() => setPaletteOpen(true)}
                   className="hidden md:flex items-center gap-2.5 h-10 px-3.5 rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.05] to-white/[0.02] text-zinc-400 hover:text-zinc-100 hover:border-cyan-300/35 hover:shadow-[0_0_24px_rgba(34,211,238,0.12)] transition-all min-w-[220px] lg:min-w-[260px] group"
-                  aria-label="Open command palette"
+                  aria-label={t('common.search', 'Search')}
                 >
                   <Search size={14} className="text-zinc-400 group-hover:text-cyan-300 transition-colors flex-shrink-0" />
                   <span className="text-xs flex-1 text-start truncate">{t('shell.searchPlaceholder', 'Search pages, members, music…')}</span>
                   <span className="flex items-center gap-1 flex-shrink-0">
-                    <kbd className="kbd">⌘K</kbd>
+                    <kbd className="kbd">{SEARCH_SHORTCUT}</kbd>
                   </span>
                 </button>
                 <button
                   onClick={() => setPaletteOpen(true)}
                   className="md:hidden w-10 h-10 dock-glass rounded-2xl flex items-center justify-center text-zinc-400"
-                  aria-label="Search"
+                  aria-label={t('common.search', 'Search')}
                 >
                   <Search size={16} />
                 </button>
@@ -787,11 +791,11 @@ export default function App() {
                   </div>
                 )}
 
-                <div className="hidden sm:flex items-center gap-1 p-1 rounded-2xl border border-white/[0.07] bg-white/[0.02]">
+                <div className="flex items-center gap-0.5 sm:gap-1 p-0.5 sm:p-1 rounded-2xl border border-white/[0.07] bg-white/[0.02]">
                   <LanguageMenu />
-                  <span className="w-px h-5 bg-white/[0.07]" />
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold" title={health?.uptime ? `Uptime ${formatUptime(health.uptime)}` : undefined}>
-                    <span className={`relative flex w-2 h-2`}>
+                  <span className="hidden sm:block w-px h-5 bg-white/[0.07]" aria-hidden="true" />
+                  <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold" title={health?.uptime ? `Uptime ${formatUptime(health.uptime)}` : undefined}>
+                    <span className="relative flex w-2 h-2" aria-hidden="true">
                       <span className={`absolute inline-flex h-full w-full rounded-full opacity-60 animate-ping ${health?.botOnline ? 'bg-emerald-400' : 'bg-red-400'}`} />
                       <span className={`relative inline-flex rounded-full h-2 w-2 ${health?.botOnline ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]' : 'bg-red-400'}`} />
                     </span>
@@ -801,17 +805,23 @@ export default function App() {
                     {health?.uptime ? <span className="hidden lg:inline text-zinc-400 font-normal tabular-nums">· {formatUptime(health.uptime)}</span> : null}
                   </span>
                   <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-zinc-400 text-[11px] tabular-nums" title="Connected servers">
-                    <Activity size={11} className="text-zinc-400" />
+                    <Activity size={11} className="text-zinc-400" aria-hidden="true" />
                     {health?.guilds ?? 0}
                   </span>
                 </div>
-                {/* Compact status for small screens */}
-                <span className={`sm:hidden inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-[11px] font-medium ${
-                  health?.botOnline
-                    ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300'
-                    : 'border-red-500/25 bg-red-500/10 text-red-300'
-                }`}>
-                  {health?.botOnline ? <Wifi size={11} /> : <WifiOff size={11} />}
+                <span
+                  role="status"
+                  aria-label={health?.botOnline ? t('common.online', 'Online') : t('common.offline', 'Offline')}
+                  title={health?.botOnline ? t('common.online', 'Online') : t('common.offline', 'Offline')}
+                  className={`sm:hidden inline-flex w-9 h-9 items-center justify-center rounded-xl border ${
+                    health?.botOnline
+                      ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300'
+                      : 'border-red-500/25 bg-red-500/10 text-red-300'
+                  }`}
+                >
+                  {health?.botOnline
+                    ? <Wifi size={14} aria-hidden="true" />
+                    : <WifiOff size={14} aria-hidden="true" />}
                 </span>
               </div>
             </header>
@@ -846,7 +856,7 @@ export default function App() {
               </div>
             )}
 
-            <main id="main" className={`flex-1 min-w-0 ${isLive ? 'overflow-hidden' : 'overflow-auto'}`}>
+            <main id="main" tabIndex={-1} className={`flex-1 min-w-0 outline-none ${isLive ? 'overflow-hidden' : 'overflow-auto'}`}>
               {auth.oauthEnabled && !auth.loggedIn && auth.redirectUri && !auth.redirectUri.includes('localhost') && (
                 <div className="mx-4 sm:mx-6 mt-4 px-4 py-3 rounded-xl bg-cyan-500/10 border border-cyan-500/25 text-xs text-cyan-200">
                   {t('shell.oauthRedirect', 'Add this Redirect URI in the Discord Developer Portal → OAuth2 → Redirects:')}
@@ -885,22 +895,53 @@ export default function App() {
                   </PageErrorBoundary>
                 </div>
               ) : !selectedGuild ? (
-                <div className="min-h-full flex items-center justify-center p-8">
-                  <div className="text-center max-w-sm cyber-card p-8 animate-slide-up">
-                    <img src="/eb_logo.svg" alt="EB BOT" className="w-14 h-14 mx-auto mb-4 rounded-2xl object-cover ring-1 ring-white/10" />
-                    <p className="text-white font-semibold mb-2">{t('shell.noServer', 'No server selected')}</p>
+                <div className="min-h-full flex items-center justify-center p-4 sm:p-8">
+                  <div className="text-center w-full max-w-md cyber-card p-6 sm:p-8 animate-slide-up" role={guildsLoading ? 'status' : undefined}>
+                    <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-cyan-400/[0.08] border border-cyan-300/15 flex items-center justify-center">
+                      {guildsLoading
+                        ? <LoaderCircle size={24} className="text-cyan-200 animate-spin" aria-hidden="true" />
+                        : <Server size={24} className="text-cyan-200" aria-hidden="true" />}
+                    </div>
+                    <p className="text-white font-semibold mb-2">
+                      {guildsLoading
+                        ? t('shell.loadingServers', 'Finding your Discord servers…')
+                        : t('shell.noServer', 'No server selected')}
+                    </p>
                     <p className="text-sm text-zinc-400 mb-5 leading-relaxed">
-                      {auth.oauthEnabled && !auth.loggedIn
-                        ? t('shell.loginToSee', 'Log in with Discord to see the servers you can manage.')
-                        : auth.loggedIn && !auth.discordLinked
-                          ? t('side.linkDiscordHint', 'Your EB account is signed in, but server administration needs a linked Discord identity.')
-                          : t('shell.inviteRefresh', 'Invite the bot to a server, then refresh this page.')}
+                      {guildsLoading
+                        ? t('shell.loadingServersHint', 'This usually takes a few seconds.')
+                        : guildsError
+                          ? t('side.serversFailedHint', 'The bot may be starting, or the connection dropped.')
+                          : auth.oauthEnabled && !auth.loggedIn
+                            ? t('shell.loginToSee', 'Log in with Discord to see the servers you can manage.')
+                            : auth.loggedIn && !auth.discordLinked
+                              ? t('side.linkDiscordHint', 'Your EB account is signed in, but server administration needs a linked Discord identity.')
+                              : guilds.length > 0
+                                ? t('shell.chooseServerHint', 'Choose a server to open its dashboard and tools.')
+                                : t('shell.inviteRefresh', 'Invite the bot to a server you manage, then refresh your server list.')}
                     </p>
                     {auth.oauthEnabled && !auth.loggedIn && (
-                      <a href="/api/auth/discord" className="cyber-button-solid inline-flex items-center min-h-[44px]">{t('common.loginDiscord', 'Login with Discord')}</a>
+                      <a href="/api/auth/discord" className="cyber-button-solid inline-flex items-center justify-center min-h-[44px]">{t('common.loginDiscord', 'Login with Discord')}</a>
                     )}
                     {auth.oauthEnabled && auth.loggedIn && !auth.discordLinked && (
-                      <a href="/api/auth/discord" className="cyber-button-solid inline-flex items-center min-h-[44px]">{t('common.loginDiscord', 'Login with Discord')}</a>
+                      <a href="/api/auth/discord" className="cyber-button-solid inline-flex items-center justify-center min-h-[44px]">{t('common.loginDiscord', 'Login with Discord')}</a>
+                    )}
+                    {!guildsLoading && auth.loggedIn && auth.discordLinked && guilds.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setGuildPickerOpen(true);
+                          if (window.matchMedia('(max-width: 767px)').matches) setMobileOpen(true);
+                        }}
+                        className="cyber-button-solid inline-flex items-center justify-center gap-2 min-h-[44px]"
+                      >
+                        <Server size={15} aria-hidden="true" /> {t('side.selectServer', 'Choose a server')}
+                      </button>
+                    )}
+                    {!guildsLoading && auth.loggedIn && auth.discordLinked && (guildsError || guilds.length === 0) && (
+                      <button type="button" onClick={loadGuilds} className="cyber-button inline-flex items-center justify-center gap-2 min-h-[44px]">
+                        <RefreshCw size={14} aria-hidden="true" /> {t('common.retry', 'Try again')}
+                      </button>
                     )}
                   </div>
                 </div>

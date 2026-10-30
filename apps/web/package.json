@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "start": "vite preview --host 0.0.0.0",
     "lint": "eslint src",
-    "test": "node ../../tests/security/account-contract.test.js"
+    "test": "node ../../tests/security/account-contract.test.js && node ../../tests/unit/oauth-buttons.test.js"
   },
   "dependencies": {
     "clsx": "^2.1.1",

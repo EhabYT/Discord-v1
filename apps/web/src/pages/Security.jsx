@@ -36,6 +36,8 @@ export default function Security({ guild, guildData, onNavigate, permLevel = 0 }
   const [raid, setRaid] = useState({ enabled: false, threshold: 5, windowMs: 8000, autoAction: 'none', alertChannel: '' });
   const [perf, setPerf] = useState(null);
   const [saving, setSaving] = useState('');
+  const [automodSaving, setAutomodSaving] = useState({});
+  const [thresholdDrafts, setThresholdDrafts] = useState({});
 
   const channels = guildData?.guild?.channels?.filter(c => c.type === 0) || [];
   // Backend gates: POST /security needs level 3, POST /automod needs level 2.
@@ -86,19 +88,46 @@ export default function Security({ guild, guildData, onNavigate, permLevel = 0 }
   };
 
   const toggleAutomod = async (setting, value, extra = {}) => {
-    if (!canEditAutomod) { toast.error('Mod access required.'); return; }
+    if (!canEditAutomod) { toast.error('Mod access required.'); return false; }
+    if (automodSaving[setting]) return false;
+    const previousValue = automod[setting];
+    const updated = { ...automod };
+    if (['antiSpam', 'antiLinks', 'antiInvite', 'badWords'].includes(setting)) {
+      updated[setting] = value;
+    } else {
+      updated[setting] = { ...(updated[setting] || { enabled: false, threshold: 5 }), enabled: value, ...extra };
+    }
+    setAutomod(updated);
+    setAutomodSaving((current) => ({ ...current, [setting]: true }));
     try {
-      const updated = { ...automod };
-      if (['antiSpam', 'antiLinks', 'antiInvite', 'badWords'].includes(setting)) {
-        updated[setting] = value;
-      } else {
-        updated[setting] = { ...(updated[setting] || { enabled: false, threshold: 5 }), enabled: value, ...extra };
-      }
-      setAutomod(updated);
       await api.post(`/api/guild/${guild.id}/automod`, { setting, value, ...extra });
       toast.success(`${setting} ${value ? 'enabled' : 'disabled'}`);
+      return true;
     } catch (e) {
+      // Revert optimistic changes so the switch never implies a setting was
+      // saved when the API rejected the request.
+      setAutomod((current) => ({ ...current, [setting]: previousValue }));
       toast.error(e.message || 'Failed to update AutoMod.');
+      return false;
+    } finally {
+      setAutomodSaving((current) => ({ ...current, [setting]: false }));
+    }
+  };
+
+  const saveThreshold = async (key, enabled) => {
+    const raw = String(thresholdDrafts[key] ?? '').trim();
+    const threshold = Number(raw);
+    if (!raw || !Number.isInteger(threshold) || threshold < 1 || threshold > 50) {
+      toast.error('Enter a whole-number threshold from 1 to 50.');
+      return;
+    }
+    const saved = await toggleAutomod(key, enabled, { threshold });
+    if (saved) {
+      setThresholdDrafts((current) => {
+        const next = { ...current };
+        delete next[key];
+        return next;
+      });
     }
   };
 
@@ -207,26 +236,26 @@ export default function Security({ guild, guildData, onNavigate, permLevel = 0 }
             onChange={(v) => setRaid((r) => ({ ...r, enabled: v }))}
             label="Detect join bursts"
             description="Alert (and optionally lock down) when too many members join at once"
-            disabled={!canEditSecurity}
+            disabled={!canEditSecurity || saving === 'raid'}
           />
           <div className="grid sm:grid-cols-3 gap-3">
             <div>
               <label className="text-xs text-gray-500 block mb-1.5">Joins</label>
               <input type="number" min="2" max="30" value={raid.threshold}
-                disabled={!canEditSecurity}
+                disabled={!canEditSecurity || saving === 'raid'}
                 onChange={(e) => setRaid((r) => ({ ...r, threshold: parseInt(e.target.value) || 5 }))}
                 className="cyber-input text-xs" />
             </div>
             <div>
               <label className="text-xs text-gray-500 block mb-1.5">Window (seconds)</label>
               <input type="number" min="3" max="120" value={Math.round((raid.windowMs || 8000) / 1000)}
-                disabled={!canEditSecurity}
+                disabled={!canEditSecurity || saving === 'raid'}
                 onChange={(e) => setRaid((r) => ({ ...r, windowMs: (parseInt(e.target.value) || 8) * 1000 }))}
                 className="cyber-input text-xs" />
             </div>
             <div>
               <label className="text-xs text-gray-500 block mb-1.5">Auto action</label>
-              <select value={raid.autoAction} disabled={!canEditSecurity} onChange={(e) => setRaid((r) => ({ ...r, autoAction: e.target.value }))} className="cyber-select text-xs">
+              <select value={raid.autoAction} disabled={!canEditSecurity || saving === 'raid'} onChange={(e) => setRaid((r) => ({ ...r, autoAction: e.target.value }))} className="cyber-select text-xs">
                 <option value="none">Alert only</option>
                 <option value="lockdown">Lockdown @everyone</option>
               </select>
@@ -234,7 +263,7 @@ export default function Security({ guild, guildData, onNavigate, permLevel = 0 }
           </div>
           <div>
             <label className="text-xs text-gray-500 block mb-1.5">Alert channel</label>
-            <select value={raid.alertChannel || ''} disabled={!canEditSecurity} onChange={(e) => setRaid((r) => ({ ...r, alertChannel: e.target.value }))} className="cyber-select">
+            <select value={raid.alertChannel || ''} disabled={!canEditSecurity || saving === 'raid'} onChange={(e) => setRaid((r) => ({ ...r, alertChannel: e.target.value }))} className="cyber-select">
               <option value="">— Member log / none —</option>
               {channels.map((c) => <option key={c.id} value={c.id}>#{c.name}</option>)}
             </select>
@@ -259,6 +288,8 @@ export default function Security({ guild, guildData, onNavigate, permLevel = 0 }
         <div className="grid md:grid-cols-2 gap-3">
           {AUTOMOD_FEATURES.map(({ key, label, desc, simple, icon: Icon }) => {
             const val = simple ? !!automod[key] : !!(automod[key]?.enabled);
+            const currentThreshold = String(automod[key]?.threshold || 5);
+            const thresholdDraft = thresholdDrafts[key];
             return (
               <div
                 key={key}
@@ -270,26 +301,48 @@ export default function Security({ guild, guildData, onNavigate, permLevel = 0 }
               >
                 <div className="flex items-start gap-2">
                   <Icon size={16} className={`mt-0.5 flex-shrink-0 ${val ? 'text-cyan-400' : 'text-zinc-600'}`} />
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0" aria-busy={automodSaving[key] || undefined}>
                     <CyanToggle
                       enabled={val}
                       onChange={v => toggleAutomod(key, v)}
                       label={label}
                       description={desc}
-                      disabled={!canEditAutomod}
+                      disabled={!canEditAutomod || !!automodSaving[key]}
                     />
+                    {automodSaving[key] && <p role="status" className="text-[10px] text-cyan-200 mt-1">Saving protection setting…</p>}
                     {!simple && val && (
-                      <div className="mt-3 flex items-center gap-2">
-                        <label className="text-[11px] text-gray-500 flex-shrink-0">Threshold:</label>
-                        <input
-                          type="number"
-                          value={automod[key]?.threshold || 5}
-                          disabled={!canEditAutomod}
-                          onChange={e => toggleAutomod(key, val, { threshold: parseInt(e.target.value) || 5 })}
-                          className="cyber-input w-20 text-xs"
-                          min="1" max="50"
-                        />
-                        <span className="text-[11px] text-gray-600">messages</span>
+                      <div className="mt-3 space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <label htmlFor={`automod-threshold-${key}`} className="text-[11px] text-gray-400 flex-shrink-0">Threshold:</label>
+                          <input
+                            id={`automod-threshold-${key}`}
+                            type="number"
+                            value={thresholdDraft ?? currentThreshold}
+                            disabled={!canEditAutomod || !!automodSaving[key]}
+                            onChange={e => setThresholdDrafts((current) => ({ ...current, [key]: e.target.value }))}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') { e.preventDefault(); saveThreshold(key, val); }
+                              if (e.key === 'Escape') setThresholdDrafts((current) => {
+                                const next = { ...current };
+                                delete next[key];
+                                return next;
+                              });
+                            }}
+                            aria-label={`${label} message threshold`}
+                            className="cyber-input w-24 text-xs"
+                            min="1" max="50" step="1"
+                          />
+                          <span className="text-[11px] text-gray-400">messages</span>
+                          <button
+                            type="button"
+                            onClick={() => saveThreshold(key, val)}
+                            disabled={!canEditAutomod || !!automodSaving[key] || thresholdDraft === undefined || thresholdDraft === currentThreshold}
+                            className="cyber-button text-[11px] px-3 min-h-[36px] ms-auto"
+                          >
+                            {automodSaving[key] ? 'Saving…' : 'Save'}
+                          </button>
+                        </div>
+                        <p className="text-[10px] text-zinc-400">Choose how many messages trigger this protection; press Enter or Save to apply.</p>
                       </div>
                     )}
                   </div>

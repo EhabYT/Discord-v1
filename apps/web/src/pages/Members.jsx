@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Users, Search, Crown, UserX, Clock, AlertTriangle, Shield,
-  Loader2, ChevronDown, ScrollText, Trash2, User, StickyNote,
+  Loader2, ChevronDown, ScrollText, Trash2, User, StickyNote, RefreshCw,
   Ban, TimerReset, Type, ShieldOff, X, Plus, Pencil, Copy, MoreHorizontal,
 } from 'lucide-react';
 import PageHeader from '../components/PageHeader.jsx';
@@ -790,8 +790,10 @@ export default function Members({ guild, permLevel = 0 }) {
   const [members, setMembers] = useState([]);
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [membersError, setMembersError] = useState('');
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
+  const membersRequestRef = useRef(0);
   const [warnCounts, setWarnCounts] = useState({});
   const [noteCounts, setNoteCounts] = useState({});
   const [warnings, setWarnings] = useState([]);
@@ -801,13 +803,29 @@ export default function Members({ guild, permLevel = 0 }) {
 
   const loadMembers = useCallback(async (q = '') => {
     if (!guild?.id) return;
-    q ? setSearching(true) : setLoading(true);
+    const term = String(q || '').trim();
+    const requestId = ++membersRequestRef.current;
+    setMembersError('');
+    if (term) {
+      setSearching(true);
+      setLoading(false);
+    } else {
+      setSearching(false);
+      setLoading(true);
+    }
     try {
-      const data = await api.get(`/api/guild/${guild.id}/members${q ? `?q=${encodeURIComponent(q)}` : ''}`);
-      setMembers(data);
-    } catch { /* ignore */ }
-    setLoading(false);
-    setSearching(false);
+      const data = await api.get(`/api/guild/${guild.id}/members${term ? `?q=${encodeURIComponent(term)}` : ''}`);
+      if (requestId === membersRequestRef.current) setMembers(Array.isArray(data) ? data : []);
+    } catch (error) {
+      if (requestId === membersRequestRef.current) {
+        setMembersError(error?.message || 'Could not load members. Check your connection and try again.');
+      }
+    } finally {
+      if (requestId === membersRequestRef.current) {
+        setLoading(false);
+        setSearching(false);
+      }
+    }
   }, [guild?.id]);
 
   const loadMeta = useCallback(async () => {
@@ -829,11 +847,21 @@ export default function Members({ guild, permLevel = 0 }) {
     } catch { /* ignore */ }
   }, [guild?.id]);
 
-  useEffect(() => { loadMembers(); loadMeta(); }, [loadMembers, loadMeta]);
+  useEffect(() => { loadMeta(); }, [loadMeta]);
   useEffect(() => {
-    const t = setTimeout(() => { if (query !== undefined) loadMembers(query); }, 400);
-    return () => clearTimeout(t);
-  }, [query, loadMembers]);
+    if (!guild?.id) return undefined;
+    // Invalidate any request for an older search as soon as the input changes,
+    // not only after the debounce timer starts the next request.
+    membersRequestRef.current += 1;
+    if (!query.trim()) {
+      loadMembers('');
+      return undefined;
+    }
+    setMembersError('');
+    setSearching(true);
+    const timer = setTimeout(() => loadMembers(query), 350);
+    return () => clearTimeout(timer);
+  }, [query, guild?.id, loadMembers]);
 
   const handleAction = (userId, action) => {
     if (['kick', 'ban', 'softban'].includes(action)) {
@@ -915,10 +943,12 @@ export default function Members({ guild, permLevel = 0 }) {
         <p className="text-[11px] text-amber-300/80 flex items-center gap-1.5" role="note">Read-only access — Mod level or higher is required for staff actions.</p>
       )}
 
-      <div className="seg-tabs mb-1">
+      <div className="seg-tabs mb-1" role="group" aria-label="Member views">
         {tabs.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
+            type="button"
+            aria-pressed={tab === id}
             onClick={() => setTab(id)}
             className={tab === id ? 'seg-tab-active' : 'seg-tab'}
           >
@@ -989,18 +1019,38 @@ export default function Members({ guild, permLevel = 0 }) {
                   className="cyber-input ps-9"
                 />
                 {searching && <Loader2 size={14} className="absolute end-3 top-1/2 -translate-y-1/2 text-cyan-400 animate-spin" aria-hidden="true" />}
+                {searching && <span className="sr-only" role="status">Searching members…</span>}
               </div>
             </div>
           )}
 
-          {loading ? (
-            <div className="space-y-2">{[...Array(6)].map((_, i) => <div key={i} className="cyber-card h-16 animate-pulse bg-white/[0.03]" />)}</div>
+          {membersError && tab === 'members' && (
+            <div className="cyber-warning flex items-center justify-between gap-3" role="alert">
+              <p className="text-xs text-amber-100 leading-relaxed">{membersError}</p>
+              <button
+                type="button"
+                onClick={() => loadMembers(query)}
+                disabled={loading || searching}
+                className="cyber-button flex items-center gap-1.5 text-xs flex-shrink-0"
+              >
+                <RefreshCw size={12} aria-hidden="true" /> Retry
+              </button>
+            </div>
+          )}
+
+          {loading && tab === 'members' ? (
+            <div className="space-y-2" role="status" aria-label="Loading members">
+              {[...Array(6)].map((_, i) => <div key={i} className="cyber-card h-16 animate-pulse bg-white/[0.03]" aria-hidden="true" />)}
+            </div>
           ) : list.length === 0 ? (
             <div className="cyber-card">
               <EmptyState
                 icon={tab === 'staff' ? Crown : Users}
-                title={tab === 'staff' ? 'No staff found' : (query ? 'No members found' : 'No members to show')}
-                subtitle={tab === 'staff' ? 'Members with Manage Messages appear here.' : undefined}
+                title={tab === 'staff' ? 'No staff found' : membersError ? 'Members could not be loaded' : (query ? 'No members found' : 'No members to show')}
+                subtitle={tab === 'staff' ? 'Members with Manage Messages appear here.' : membersError ? 'Retry the request, or check your connection.' : query ? 'Try a different name or ID.' : 'Members will appear here when the server list loads.'}
+                action={tab === 'members' && query && !membersError ? (
+                  <button type="button" onClick={() => setQuery('')} className="cyber-button text-xs">Clear search</button>
+                ) : undefined}
               />
             </div>
           ) : (
@@ -1022,9 +1072,12 @@ export default function Members({ guild, permLevel = 0 }) {
                 ))}
               </div>
               <div className="px-4 py-2.5 border-t border-white/5 bg-white/[0.02]">
-                <p className="text-[11px] text-zinc-600">
-                  Showing {list.length} {tab === 'staff' ? 'staff' : `member${list.length !== 1 ? 's' : ''}`}
-                  {tab === 'members' && query ? ` matching “${query}”` : tab === 'members' ? ' (up to 50)' : ''}
+                <p className="text-[11px] text-zinc-400" role={searching && tab === 'members' ? 'status' : undefined} aria-live={searching && tab === 'members' ? 'polite' : undefined}>
+                  {membersError && tab === 'members' && members.length > 0
+                    ? (query.trim() ? 'Search failed — showing the previous results.' : 'Refresh failed — showing the previous member list.')
+                    : searching && tab === 'members'
+                      ? `Searching for “${query.trim()}”…`
+                      : <>Showing {list.length} {tab === 'staff' ? 'staff' : `member${list.length !== 1 ? 's' : ''}`}{tab === 'members' && query ? ` matching “${query.trim()}”` : tab === 'members' ? ' (up to 50)' : ''}</>}
                 </p>
               </div>
             </div>

@@ -1,3 +1,4 @@
+import { getQuickSwitchShortcut } from './lib/shortcuts.js';
 import {
   Activity, LayoutDashboard, Music, MessageSquare, Ticket, TrendingUp,
   ScrollText, Shield, Gift, Users, BarChart3, Settings,
@@ -113,16 +114,15 @@ export const GROUP_ORDER = [
   'Security',
 ];
 
-// Mnemonic shortcuts shown in the sidebar + palette (no global binding yet,
-// except ⌘K / / which opens the palette). Single chars stay unbound to avoid
-// colliding with typing; displayed as discovery hints.
+// Shortcuts shown in the sidebar + palette. The global binding accepts the
+// platform's Command/Ctrl modifier; the labels match that behavior.
 export const SHORTCUT_BY_ID = {
-  overview: '⌘1',
-  analytics: '⌘2',
-  livefeed: '⌘3',
-  members: '⌘4',
-  tickets: '⌘5',
-  music: '⌘6',
+  overview: getQuickSwitchShortcut(1),
+  analytics: getQuickSwitchShortcut(2),
+  livefeed: getQuickSwitchShortcut(3),
+  members: getQuickSwitchShortcut(4),
+  tickets: getQuickSwitchShortcut(5),
+  music: getQuickSwitchShortcut(6),
 };
 
 // Single source of truth for "may this identity see this nav entry?".

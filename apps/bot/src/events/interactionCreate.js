@@ -4,6 +4,7 @@ const { handleMusicButton, handleMusicFilterSelect } = require('eb-bot-shared/ut
 const { handleHelpSelect } = require('eb-bot-shared/utils/help-interactions');
 const { handleGameButton } = require('eb-bot-shared/utils/game-interactions');
 const { guard } = require('../guards/command-guard');
+const { emitLog } = require('eb-bot-api/src/websocket/socket');
 
 module.exports = {
     name: Events.InteractionCreate,
@@ -47,11 +48,11 @@ module.exports = {
             }
             else if (interaction.customId === 'verification_entry') {
                 const { handleVerifyClick } = require('eb-bot-shared/services/verification');
-                await handleVerifyClick(interaction, db);
+                await handleVerifyClick(interaction, db, { emitLog });
             }
             else if (interaction.customId.startsWith('verify_cap_')) {
                 const { handleCaptchaClick } = require('eb-bot-shared/services/verification');
-                await handleCaptchaClick(interaction, db);
+                await handleCaptchaClick(interaction, db, { emitLog });
             }
             else if (interaction.customId.startsWith('rr_btn_')) {
                 const { handleButton } = require('eb-bot-shared/services/reaction-roles');

@@ -352,7 +352,7 @@ async function staffLog(guild, cfg, embed) {
     if (ch) await ch.send({ embeds: [embed] }).catch(() => {});
 }
 
-async function applyVerification(member, cfg, { db, method = 'button', actor = null } = {}) {
+async function applyVerification(member, cfg, { db, method = 'button', actor = null, emitLog = null } = {}) {
     const guild = member.guild;
     if (cfg.roleId) {
         let me = guild.members.me;
@@ -427,16 +427,20 @@ async function applyVerification(member, cfg, { db, method = 'button', actor = n
         }
     }
 
-    try {
-        require('eb-bot-backend').emitLog(guild.id, {
-            type: 'member_verified',
-            category: 'members',
-            icon: '✅',
-            title: 'Member Verified',
-            description: `${member.user?.tag || member.id} verified (${method})`,
-            guildId: guild.id,
-        });
-    } catch { /* socket optional */ }
+    if (typeof emitLog === 'function') {
+        try {
+            emitLog(guild.id, {
+                type: 'member_verified',
+                category: 'members',
+                icon: '✅',
+                title: 'Member Verified',
+                description: `${member.user?.tag || member.id} verified (${method})`,
+                guildId: guild.id,
+            });
+        } catch (err) {
+            logger.debug('Verification realtime log failed', { error: err?.message || String(err) });
+        }
+    }
 
     return entry;
 }
@@ -494,7 +498,7 @@ async function resolveClickMember(interaction) {
     return cached;
 }
 
-async function handleVerifyClick(interaction, db) {
+async function handleVerifyClick(interaction, db, { emitLog = null } = {}) {
     const cfg = await getConfig(db, interaction.guildId);
     const problem = setupProblem(cfg, interaction.guild);
     if (problem) {
@@ -537,7 +541,7 @@ async function handleVerifyClick(interaction, db) {
     }
 
     try {
-        await applyVerification(member, cfg, { db, method: 'button' });
+        await applyVerification(member, cfg, { db, method: 'button', emitLog });
         return interaction.reply({
             content: replaceVars(cfg.successMessage, member, interaction.guild),
             flags: [MessageFlags.Ephemeral],
@@ -621,7 +625,7 @@ async function handleCaptchaClick(interaction, db) {
     }
 
     try {
-        await applyVerification(captchaMember, cfg, { db, method: 'captcha' });
+        await applyVerification(captchaMember, cfg, { db, method: 'captcha', emitLog });
         return interaction.update({
             content: replaceVars(cfg.successMessage, captchaMember, interaction.guild),
             components: [],

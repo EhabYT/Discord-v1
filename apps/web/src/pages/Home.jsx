@@ -1,6 +1,7 @@
 import React from 'react';
 import { useI18n } from '../i18n.jsx';
 import LanguageMenu from '../components/LanguageMenu.jsx';
+import OAuthButtons from '../auth/OAuthButtons.jsx';
 import {
   AlertTriangle, ArrowRight, BarChart3, Gift, LayoutDashboard, Music, Shield, Ticket,
   Trophy, Users, Wifi, WifiOff, Zap, Command, Radio, Terminal, Sparkles,
@@ -200,23 +201,9 @@ export default function Home({ health, auth, onEnter }) {
                     {t('home.login', 'Log in')}
                   </a>
                 </div>
-                {(auth?.oauthEnabled || auth?.googleOAuthEnabled) && (
-                  <>
-                    <div className="flex items-center gap-3 my-3 text-[10px] uppercase tracking-[0.14em] text-zinc-500" aria-hidden="true">
-                      <span className="h-px flex-1 bg-white/10" />{t('auth.or', 'or')}<span className="h-px flex-1 bg-white/10" />
-                    </div>
-                    {auth?.oauthEnabled && (
-                      <a href="/api/auth/discord" className="cyber-button w-full flex items-center justify-center gap-2 px-5 py-2.5 border-indigo-400/25 hover:border-indigo-300/50 hover:text-indigo-100">
-                        {t('common.loginDiscord', 'Login with Discord')}
-                      </a>
-                    )}
-                    {auth?.googleOAuthEnabled && (
-                      <a href="/api/auth/google" className={`cyber-button w-full flex items-center justify-center gap-2 px-5 py-2.5 ${auth?.oauthEnabled ? 'mt-2.5' : ''}`}>
-                        {t('auth.continueGoogle', 'Continue with Google')}
-                      </a>
-                    )}
-                  </>
-                )}
+                <div className="mt-3">
+                  <OAuthButtons auth={auth} returnParam="#overview" />
+                </div>
               </div>
             )}
           </div>
@@ -370,16 +357,6 @@ export default function Home({ health, auth, onEnter }) {
               {t('home.openDashboard', 'Open dashboard')} <ArrowRight size={16} aria-hidden="true" />
             </button>
             {inviteUrl && <a href={inviteUrl} target="_blank" rel="noreferrer" className="cyber-button px-5 py-2.5">{t('home.invite', 'Invite')}</a>}
-            {!auth?.loggedIn && auth?.oauthEnabled && (
-              <a href="/api/auth/discord" className="cyber-button px-5 py-2.5 inline-flex items-center gap-1.5 border-indigo-400/25 hover:border-indigo-300/50 hover:text-indigo-100">
-                {t('common.loginDiscord', 'Login with Discord')}
-              </a>
-            )}
-            {!auth?.loggedIn && auth?.googleOAuthEnabled && (
-              <a href="/api/auth/google" className="cyber-button px-5 py-2.5 inline-flex items-center gap-1.5">
-                {t('auth.continueGoogle', 'Continue with Google')}
-              </a>
-            )}
             <button onClick={() => go('developer')} className="cyber-button px-5 py-2.5 inline-flex items-center gap-1.5">
               <Terminal size={13} /> Developer
             </button>

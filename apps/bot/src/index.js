@@ -6,7 +6,7 @@ const { db, closePool } = require('eb-bot-database');
 const { config: botConfig } = require('eb-bot-shared/config/bot-config');
 
 const logger = require('eb-bot-shared/lib/logger');
-const scheduler = require('./scheduler.js');
+const scheduler = require('eb-bot-shared/services/scheduler');
 const { loadEvents } = require('./events');
 const { loadCommands } = require('./handlers/command-loader');
 const { attachClientErrorHandler } = require('./handlers/client-errors');
@@ -136,6 +136,11 @@ function scheduleRetry(reason) {
   retryTimer.unref();
 }
 
+function cleanupTrackingMaps() {
+  require('./events/voiceEvents').cleanup?.();
+  require('./events/messageCreate').cleanup?.();
+}
+
 /* eslint-disable require-atomic-updates -- bootstrap attempts are serialized by retryTimer; these assignments intentionally publish lifecycle state after awaited I/O. */
 async function loadServicesOnce() {
   if (servicesLoaded) return;
@@ -167,7 +172,7 @@ async function loadServicesOnce() {
     logger.error('YouTube extractor error', { error: err.message });
   }
   loadEvents(client);
-  registerJobs(client, scheduler);
+  registerJobs(client, scheduler, { cleanupTrackingMaps });
   if (process.env.DEPLOY_COMMANDS === 'true') {
     await deployCommands(process.env.DISCORD_TOKEN, process.env.CLIENT_ID, process.env.GUILD_ID || null);
   }

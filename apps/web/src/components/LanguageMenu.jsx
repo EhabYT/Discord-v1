@@ -10,11 +10,18 @@ export default function LanguageMenu({ className = '' }) {
   const { locale, locales, setLocale, t } = useI18n();
   const [open, setOpen] = useState(false);
   const popRef = useRef(null);
+  const triggerRef = useRef(null);
   const active = locales.find((l) => l.id === locale) || locales[0];
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setOpen(false);
+        requestAnimationFrame(() => triggerRef.current?.focus());
+      }
+    };
     const onPointer = (e) => {
       if (popRef.current && !popRef.current.contains(e.target)) setOpen(false);
     };
@@ -29,6 +36,8 @@ export default function LanguageMenu({ className = '' }) {
   return (
     <div className={clsx('relative', className)} ref={popRef}>
       <button
+        ref={triggerRef}
+        type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="listbox"
@@ -52,9 +61,14 @@ export default function LanguageMenu({ className = '' }) {
             return (
               <button
                 key={l.id}
+                type="button"
                 role="option"
                 aria-selected={selected}
-                onClick={() => { setLocale(l.id); setOpen(false); }}
+                onClick={() => {
+                  setLocale(l.id);
+                  setOpen(false);
+                  requestAnimationFrame(() => triggerRef.current?.focus());
+                }}
                 className={clsx(
                   'w-full flex items-center gap-2.5 px-2.5 py-2.5 min-h-[48px] rounded-xl text-left text-xs transition-all border border-transparent',
                   selected

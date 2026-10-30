@@ -3,7 +3,8 @@ import AuthLayout from '../auth/AuthLayout.jsx';
 import PasswordField from '../auth/PasswordField.jsx';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { useI18n } from '../i18n.jsx';
-import { readReturnParam, sanitizeReturn, applyReturn, rememberReturn, clearReturn } from '../lib/returnUrl.js';
+import { readReturnParam, sanitizeReturn, applyReturn, clearReturn } from '../lib/returnUrl.js';
+import OAuthButtons from '../auth/OAuthButtons.jsx';
 
 export default function Login() {
   const { t } = useI18n();
@@ -47,19 +48,11 @@ export default function Login() {
       ) : (
         <form onSubmit={submit} className="space-y-4">
           {error && <div className="cyber-warning text-sm text-amber-200" role="alert">{error}</div>}
+          <OAuthButtons auth={auth} returnParam={rawReturn} />
           <label className="block"><span className="cyber-label">{t('auth.identifier', 'Email or username')}</span><input autoComplete="username" required value={form.identifier} onChange={e => setForm({ ...form, identifier: e.target.value })} className="cyber-input mt-1.5" /></label>
           <PasswordField label={t('auth.password', 'Password')} autoComplete="current-password" required value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
           <div className="flex justify-end"><a href="/forgot-password" className="text-xs text-cyan-300 hover:text-cyan-200">{t('auth.forgot', 'Forgot password?')}</a></div>
           <button disabled={busy} className="cyber-button-solid w-full">{busy ? t('auth.signingIn', 'Signing in…') : t('auth.signIn', 'Sign in')}</button>
-            {(auth.oauthEnabled || auth.googleOAuthEnabled) && (
-              <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.14em] text-zinc-500" aria-hidden="true"><span className="h-px flex-1 bg-white/10" />{t('auth.or', 'or')}<span className="h-px flex-1 bg-white/10" /></div>
-            )}
-            {auth.oauthEnabled && (
-                <a href="/api/auth/discord" onClick={() => rememberReturn(rawReturn)} className="cyber-button w-full flex justify-center">{t('auth.continueDiscord', 'Continue with Discord')}</a>
-            )}
-            {auth.googleOAuthEnabled && (
-                <a href="/api/auth/google" onClick={() => rememberReturn(rawReturn)} className="cyber-button w-full flex justify-center">{t('auth.continueGoogle', 'Continue with Google')}</a>
-            )}
         </form>
       )}
     </AuthLayout>

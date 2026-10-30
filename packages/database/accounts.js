@@ -1,6 +1,6 @@
 const argon2 = require('argon2');
 const crypto = require('crypto');
-const { getPool } = require('eb-bot-database');
+const { getPool } = require('./index');
 
 const ACCOUNT_SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS accounts (
