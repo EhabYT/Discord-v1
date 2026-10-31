@@ -8,6 +8,7 @@ const nodeVersion = read('.node-version').trim();
 const render = read('render.yaml');
 const workflow = read('.github/workflows/verify.yml');
 const vercelConfig = JSON.parse(read('apps/web/vercel.json'));
+const webPackage = JSON.parse(read('apps/web/package.json'));
 
 const failures = [];
 function requireCondition(condition, message) {
@@ -114,6 +115,8 @@ requireCondition(actionRefs.includes('actions/setup-node@249970729cb0ef3589644e2
 
 requireCondition(pkg.scripts?.['build:dashboard'] === 'npm run build:web',
     'Vercel dashboard build alias must delegate to the canonical web build');
+requireCondition(webPackage.engines?.node === '22.12.x',
+    'Vercel dashboard package must pin Node to the repository-supported 22.12.x range');
 requireCondition(vercelConfig.buildCommand === 'npm run build',
     'Vercel must run the Vite build from the apps/web project root');
 requireCondition(vercelConfig.outputDirectory === 'public',
@@ -144,5 +147,6 @@ console.log('  PASS  CI triggers, permissions, timeout, and cancellation are bou
 console.log('  PASS  GitHub Actions are pinned to reviewed immutable commits');
 console.log('  PASS  CI and local verification use the same authoritative gate');
 console.log('  PASS  Vercel dashboard build alias delegates to the canonical web build');
+console.log('  PASS  Vercel dashboard package pins the supported Node version');
 console.log('  PASS  Vercel deploys the Vite SPA output with client-side route fallback');
 console.log('\nAll release configuration checks passed.\n');
