@@ -24,6 +24,7 @@
     "dev_frontend": "npm run dev:web",
     "build": "npm run build:web",
     "build:web": "turbo run build --filter=discord-dashboard-client",
+    "build:dashboard": "npm run build:web",
     "build:api": "echo 'API has no build step'",
     "build_web": "npm run build:web",
     "build_api": "npm run build:api",

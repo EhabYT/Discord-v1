@@ -111,6 +111,9 @@ requireCondition(actionRefs.includes('actions/checkout@fbc6f3992d24b796d5a048ff2
 requireCondition(actionRefs.includes('actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38'),
     'setup-node must remain pinned to the reviewed v6 commit');
 
+requireCondition(pkg.scripts?.['build:dashboard'] === 'npm run build:web',
+    'Vercel dashboard build alias must delegate to the canonical web build');
+
 const verify = pkg.scripts?.verify || '';
 for (const command of ['npm run validate:release', 'npm run lint:gate', 'npm test',
     'npm run audit:prod', 'npm run build:web']) {
@@ -133,4 +136,5 @@ console.log('  PASS  Render secrets contain no committed values');
 console.log('  PASS  CI triggers, permissions, timeout, and cancellation are bounded');
 console.log('  PASS  GitHub Actions are pinned to reviewed immutable commits');
 console.log('  PASS  CI and local verification use the same authoritative gate');
+console.log('  PASS  Vercel dashboard build alias delegates to the canonical web build');
 console.log('\nAll release configuration checks passed.\n');
