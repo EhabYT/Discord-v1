@@ -1,7 +1,7 @@
 # EB Bot V2 — Deployment and Live Acceptance Runbook
 
 Date: 2026-08-23  
-Target: `https://discord-v1-jrip.onrender.com`
+Target: `https://discord-v1-1-zk9g.onrender.com`
 
 ## 1. Safety rules
 
@@ -78,7 +78,7 @@ Requirements:
 The OAuth redirect must be exactly:
 
 ```text
-https://discord-v1-jrip.onrender.com/api/auth/discord/callback
+https://discord-v1-1-zk9g.onrender.com/api/auth/discord/callback
 ```
 
 Confirm the application ID belongs to the same application as the new bot token
@@ -93,8 +93,8 @@ NODE_VERSION=22.12.0
 NODE_ENV=production
 DASHBOARD_AUTH=true
 DASHBOARD_SECURE=true
-DASHBOARD_URL=https://discord-v1-jrip.onrender.com
-DISCORD_REDIRECT_URI=https://discord-v1-jrip.onrender.com/api/auth/discord/callback
+DASHBOARD_URL=https://discord-v1-1-zk9g.onrender.com
+DISCORD_REDIRECT_URI=https://discord-v1-1-zk9g.onrender.com/api/auth/discord/callback
 DATABASE_SSL=true
 DATABASE_SSL_REJECT_UNAUTHORIZED=false
 ```
@@ -173,7 +173,7 @@ The first request may wait up to three minutes for a cold Render instance:
 
 ```bash
 npm run smoke:live -- \
-  --url https://discord-v1-jrip.onrender.com \
+  --url https://discord-v1-1-zk9g.onrender.com \
   --allow-degraded \
   --expect-release 2.0.0 \
   --wake-timeout 180000 \
@@ -202,7 +202,7 @@ After credentials are configured and bootstrap has completed:
 
 ```bash
 npm run smoke:live -- \
-  --url https://discord-v1-jrip.onrender.com \
+  --url https://discord-v1-1-zk9g.onrender.com \
   --expect-release 2.0.0 \
   --wake-timeout 180000 \
   --json live-acceptance.json

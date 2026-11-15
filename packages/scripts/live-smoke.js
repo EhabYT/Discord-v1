@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const DEFAULT_URL = process.env.DEPLOYMENT_URL || 'https://discord-v1-jrip.onrender.com';
+const DEFAULT_URL = process.env.DEPLOYMENT_URL || 'https://discord-v1-1-zk9g.onrender.com';
 const DEFAULT_WAKE_TIMEOUT = 180_000;
 const REQUEST_TIMEOUT = 20_000;
 

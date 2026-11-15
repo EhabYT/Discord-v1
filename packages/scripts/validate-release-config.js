@@ -7,8 +7,10 @@ const pkg = JSON.parse(read('package.json'));
 const nodeVersion = read('.node-version').trim();
 const render = read('render.yaml');
 const workflow = read('.github/workflows/verify.yml');
+const liveSmoke = read('packages/scripts/live-smoke.js');
 const vercelConfig = JSON.parse(read('apps/web/vercel.json'));
 const webPackage = JSON.parse(read('apps/web/package.json'));
+const canonicalDashboardUrl = 'https://discord-v1-1-zk9g.onrender.com';
 
 const failures = [];
 function requireCondition(condition, message) {
@@ -55,6 +57,8 @@ const expectedValues = {
     NODE_ENV: 'production',
     DASHBOARD_AUTH: 'true',
     DASHBOARD_SECURE: 'true',
+    DASHBOARD_URL: canonicalDashboardUrl,
+    DISCORD_REDIRECT_URI: `${canonicalDashboardUrl}/api/auth/discord/callback`,
     EMAIL_PROVIDER: 'resend',
     SUPABASE_AVATAR_BUCKET: 'avatars',
 };
@@ -62,6 +66,8 @@ for (const [key, expected] of Object.entries(expectedValues)) {
     requireCondition(env.get(key)?.properties.get('value') === expected,
         `Render ${key} must be ${expected}`);
 }
+requireCondition(liveSmoke.includes(`process.env.DEPLOYMENT_URL || '${canonicalDashboardUrl}'`),
+    'Live smoke default must match the confirmed canonical Render URL');
 
 const externalSecrets = [
     'DATABASE_URL', 'DISCORD_TOKEN', 'CLIENT_ID', 'DISCORD_CLIENT_SECRET',
@@ -142,6 +148,7 @@ if (failures.length) {
 
 console.log('  PASS  Node pins agree at 22.12.0');
 console.log('  PASS  Render build/start/health/auth contract is valid');
+console.log('  PASS  Render OAuth and live-smoke URLs match the confirmed service origin');
 console.log('  PASS  Render secrets contain no committed values');
 console.log('  PASS  CI triggers, permissions, timeout, and cancellation are bounded');
 console.log('  PASS  GitHub Actions are pinned to reviewed immutable commits');
